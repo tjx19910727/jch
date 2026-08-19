@@ -755,20 +755,49 @@ class GoodsClient extends ManagementClient
         }
 
         $pageNum = intval($postData['pageNum'] ?? 0);
+        $pageIndex = max(1, intval($postData['page'] ?? 1));
         $query = $this->buildOperatingGoodsQuery($postData);
         $query->orderRaw($this->getOperatingGoodsOrder($postData));
 
         if ($pageNum > 0) {
-            $page = $query->paginate($pageNum, false, ["query" => request()->param()]);
+            $page = $query->paginate([
+                'list_rows' => $pageNum,
+                'page' => $pageIndex,
+                'query' => request()->param(),
+            ], false);
             $result = $page->toArray();
             $rows = $result['data'] ?? [];
             $result['data'] = $this->appendOperatingGoodsDetail($rows, $postData);
+            $result['request_params'] = $this->getOperatingGoodsRequestParams($postData);
             return $this->rQ($result);
         }
 
         $rows = $query->select()->toArray();
         $rows = $this->appendOperatingGoodsDetail($rows, $postData);
         return $this->rQ($rows);
+    }
+
+    /**
+     * 返回已生效的业务查询参数，不回传 token 或未知字段。
+     * @param array $postData
+     * @return array
+     */
+    private function getOperatingGoodsRequestParams($postData)
+    {
+        $params = [];
+        $fields = [
+            'g_id', 'g_name', 'sku', 'm_id', 'machine_id', 'ao_id',
+            'start_time', 'end_time', 'create_time', 'sort_by', 'sort_order',
+        ];
+        foreach ($fields as $field) {
+            if (isset($postData[$field]) && $postData[$field] !== '') {
+                $params[$field] = $postData[$field];
+            }
+        }
+        $params['page'] = max(1, intval($postData['page'] ?? 1));
+        $params['pageNum'] = max(0, intval($postData['pageNum'] ?? 0));
+        $params['is_operating'] = $this->getOperatingGoodsStatus($postData);
+        return $params;
     }
 
     /**
@@ -828,6 +857,7 @@ class GoodsClient extends ManagementClient
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', '>', 0)
+
             ->fieldRaw('
                 mc.g_id,
                 MAX(IFNULL(NULLIF(g.g_name, ""), mc.g_name)) AS g_name,
@@ -861,6 +891,7 @@ class GoodsClient extends ManagementClient
                 $query->where('mc.m_id', 'in', $permittedMIds);
             }
         }
+
 
         $gIds = $this->parseOperatingGoodsIds($postData['g_id'] ?? []);
         if ($gIds) {
@@ -1058,6 +1089,7 @@ class GoodsClient extends ManagementClient
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', 'in', $gIds)
+
             ->field('mc.mc_id,mc.mg_id,mc.m_id,mc.machine_id,m.machine_name,m.ao_id,mc.g_id,mc.channel_code,mc.channel_name,mc.stock,mc.capacity,mc.frozen_stock,mc.sku')
             ->order('mc.g_id desc,mc.m_id asc,mc.channel_code asc,mc.mc_id asc');
 

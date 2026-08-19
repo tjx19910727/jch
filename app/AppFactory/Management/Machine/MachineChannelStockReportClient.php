@@ -29,9 +29,6 @@ class MachineChannelStockReportClient extends ManagementClient
      */
     public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "",$isOperating = null)
     {
-        if (!$this->validateStockReportOperatingStatus($isOperating)) {
-            return $this->rValidate('设备在营状态参数错误');
-        }
         $where = $this->applyStockReportOperatingWhere($where, $isOperating);
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
@@ -67,9 +64,6 @@ class MachineChannelStockReportClient extends ManagementClient
      */
     public function export($where,$eType = 1,$isOperating = null)
     {
-        if (!$this->validateStockReportOperatingStatus($isOperating)) {
-            return $this->rValidate('设备在营状态参数错误');
-        }
         $group = "";
         $field = "*";
         if ($eType == 1) {
@@ -132,17 +126,5 @@ class MachineChannelStockReportClient extends ManagementClient
             return $this->sendToExport("统计报表-库存报表", $filename, $title, $list);
         }
         return $this->rFail();
-    }
-    /**
-     * 库存报表只支持在营、在库两种设备状态。
-     * @param mixed $isOperating
-     * @return bool
-     */
-    private function validateStockReportOperatingStatus($isOperating)
-    {
-        if ($isOperating === '' || $isOperating === null) {
-            return true;
-        }
-        return in_array(intval($isOperating), [1, 2], true);
     }
 }

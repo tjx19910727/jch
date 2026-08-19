@@ -20,8 +20,9 @@ class MachineCheckStockClient extends ManagementClient
     public function exportExcel($where)
     {
         $list = $this->getMachineCheckStockList($where,0,
-            'machine_id,machine_name,sku,g_name,gc_name,channel_code,
-            system_stock,check_stock,
+            'machine_id,machine_name,sku,g_name,gc_name,
+            (CASE WHEN channel_code IS NULL OR channel_code = "" THEN "备用库存" ELSE channel_code END) channel_code,
+            system_stock,check_stock,(system_stock-check_stock) stock_profit_loss,
             FROM_UNIXTIME(create_time,"%Y-%m-%d %H:%i:%d") create_time,
             create_date,
             creator,
@@ -30,6 +31,11 @@ class MachineCheckStockClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             if ($list) {
+                $checkStockTotal = 0;
+                foreach ($list as $item) {
+                    $checkStockTotal += intval($item['check_stock']);
+                }
+                $list[] = ['check_stock' => '累计总和：' . $checkStockTotal];
                 $filename = $this->manager['nickname'] . "-库存盘点详情-按商品-" . date("Y-m-d");
                 $title = [
                     "machine_id" => "设备ID",
@@ -39,6 +45,7 @@ class MachineCheckStockClient extends ManagementClient
                     "channel_code" => "货架编号",
                     "system_stock" => "系统库存",
                     "check_stock" => "实际库存",
+                    "stock_profit_loss" => "盘盈/盘亏",
                     "creator_nickname" => "盘点人",
                     "status" => "盘点结果",
                     "create_time" => "盘点时间",

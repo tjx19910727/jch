@@ -129,7 +129,8 @@ class RemoteActionLogClient extends ManagementClient
     {
         return 'ral.id,ral.machine_id,m.m_id,m.machine_name,ral.type,ral.msgType,
             ral.order_id,so.trade_no,ral.sod_id,ral.goods_id,ral.channel_code,
-            ral.status,ral.operator_at,ral.manager_id,
+            ral.status,ral.operator_at,ral.manager_id,ral.field,
+            ral.video_total,ral.video_count,ral.video_status,
             IFNULL(NULLIF(am.nickname, \'\'), am.account) manager_name,ral.field';
     }
 
@@ -154,10 +155,64 @@ class RemoteActionLogClient extends ManagementClient
         $status = intval($item['status'] ?? 0);
         $item['type_name'] = $typeMap[$type] ?? $type;
         $item['status_name'] = $statusMap[$status] ?? ('未知状态' . $status);
+        $videoStatus = intval($item['video_status'] ?? 0);
+        $videoStatusMap = [
+            0 => '未获取',
+            1 => '获取中',
+            2 => '已完成',
+            3 => '获取失败',
+        ];
+        $item['has_video'] = intval($item['video_count'] ?? 0) > 0;
+        $item['video_complete'] = $videoStatus === 2;
+        $item['video_status_name'] = $videoStatusMap[$videoStatus] ?? ('未知状态' . $videoStatus);
         if (!empty($item['field'])) {
             $item['field'] = checkStrDomain($item['field']);
         }
 
         return $item;
+    }
+
+    /**
+     * 将日志表内的版本化JSON或历史单地址统一转为管理端视频列表。
+     *
+     * @param array $log
+     * @return array
+     */
+    public function formatRemoteOutGoodsVideo($log)
+    {
+        $raw = trim((string)($log['transaction_video'] ?? ''));
+        $payload = $raw !== '' ? json_decode($raw, true) : null;
+        $segments = is_array($payload) && isset($payload['segments']) && is_array($payload['segments'])
+            ? $payload['segments']
+            : [];
+        if (!$segments && $raw !== '' && !is_array($payload)) {
+            $segments[] = ['segment_no' => 0, 'url' => $raw];
+        }
+
+        $videos = [];
+        foreach ($segments as $segment) {
+            $path = trim((string)($segment['url'] ?? $segment['transaction_video'] ?? ''));
+            if ($path === '') continue;
+            $videos[] = [
+                'segment_no' => max(0, intval($segment['segment_no'] ?? 0)),
+                'transaction_video' => checkStrDomain($path),
+            ];
+        }
+        usort($videos, function ($left, $right) {
+            return intval($left['segment_no']) <=> intval($right['segment_no']);
+        });
+
+        $status = intval($log['video_status'] ?? 0);
+        $statusMap = [0 => '未获取', 1 => '获取中', 2 => '已完成', 3 => '获取失败'];
+        return [
+            'id' => intval($log['id'] ?? 0),
+            'video_key' => 'remote_out_goods_log_' . intval($log['id'] ?? 0),
+            'video_status' => $status,
+            'video_status_name' => $statusMap[$status] ?? ('未知状态' . $status),
+            'video_total' => intval($log['video_total'] ?? 0),
+            'video_count' => count($videos),
+            'video_complete' => $status === 2,
+            'transaction_videos' => $videos,
+        ];
     }
 }
