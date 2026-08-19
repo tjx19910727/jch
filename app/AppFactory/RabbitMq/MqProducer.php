@@ -19,9 +19,13 @@ class MqProducer
      * 下发设备发送数据
      * @param $data
      * @param $machine_id
+     * @param bool $waitAck 是否等待broker发布确认。
+     *       后台HTTP请求场景传 true（可靠性优先，最多等1秒）；
+     *       MQ消费线程内嵌套下发会自动缩短到200ms（无需显式传false），
+     *       避免阻塞消费线程导致MQ队列堆积。
      * @return string
      */
-    public static function dataSend($data, $machine_id)
+    public static function dataSend($data, $machine_id, $waitAck = true)
     {
         $connection = null;
         $channel = null;
@@ -139,7 +143,10 @@ class MqProducer
              *
              */
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
-            $channel->wait_for_pending_acks(1);
+            // 消费线程内嵌套下发只短等200ms，避免阻塞消费线程导致MQ堆积；
+            // 后台HTTP场景保持最多1秒，保证发布可靠性。
+            $waitTimeout = ($waitAck && !MqConsumer::isInsideConsumerThread()) ? 1 : 0.2;
+            $channel->wait_for_pending_acks($waitTimeout);
 //            $channel->tx_commit();
             return true;
         } catch (\Throwable $e) {
@@ -188,7 +195,8 @@ class MqProducer
                 ['msg_id' => $msgId, 'machine_id' => $machineId]
             );
         } catch (\Throwable $e) {
-            actionException($e, 1);
+            // 发布确认回调内的记录更新失败不放大日志IO，写error_log即可
+            error_log('MQ publish status record update failed: ' . $e->getMessage());
         }
     }
 
