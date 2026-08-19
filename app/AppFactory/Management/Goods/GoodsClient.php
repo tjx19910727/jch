@@ -881,6 +881,10 @@ class GoodsClient extends ManagementClient
      */
     private function applyOperatingGoodsWhere(&$query, $postData)
     {
+        if (isset($postData['is_operating']) && $postData['is_operating'] !== '') {
+            $query->where('m.is_operating', '=', intval($postData['is_operating']));
+        }
+        
         $query->where('m.is_operating', $this->getOperatingGoodsStatus($postData));
 
         $permittedMIds = $this->resolveGoodsOperatingPermittedMachineIds();
