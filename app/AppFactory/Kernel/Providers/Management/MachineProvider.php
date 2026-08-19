@@ -45,6 +45,7 @@ use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
 use app\AppFactory\Management\Machine\MachineLayoutModelClient;
 use app\AppFactory\Management\Machine\MachineServiceLogClient;
+use app\AppFactory\Management\Machine\MachineRemarkClient;
 use app\AppFactory\Management\Machine\MachineSchemeClient;
 use app\AppFactory\Management\Machine\MachineVideoRecordClient;
 
@@ -154,6 +155,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineServiceLog'] = function ($app) {
             return new MachineServiceLogClient($app);
+        };
+        $app['machineRemark'] = function ($app) {
+            return new MachineRemarkClient($app);
         };
         $app['simCardInfo'] = function ($app) {
             return new SimCardInfoClient($app);
