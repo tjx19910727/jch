@@ -1441,6 +1441,14 @@ class GoodsClient extends ManagementClient
                 $query->where('sod.g_id', $op, $value);
                 continue;
             }
+            if ($field == 'sku') {
+                $query->where('sod.sku', $op, $value);
+                continue;
+            }
+            if ($field == 'g_name') {
+                $query->where('sod.g_name', $op, $value);
+                continue;
+            }
         }
     }
     

@@ -316,6 +316,17 @@ class Index extends Common
             }
         }
 
+        if (!$forMachine) {
+            $sku = isset($postData['sku']) ? trim($postData['sku']) : '';
+            if ($sku !== '') {
+                $where[] = ['sku', 'like', '%' . $sku . '%'];
+            }
+            $gName = isset($postData['g_name']) ? trim($postData['g_name']) : '';
+            if ($gName !== '') {
+                $where[] = ['g_name', 'like', '%' . $gName . '%'];
+            }
+        }
+
         $mIds = $this->resolveRankingMIds($postData);
         if ($mIds !== null) {
             if (!$mIds) {
