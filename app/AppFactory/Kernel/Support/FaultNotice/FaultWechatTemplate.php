@@ -27,6 +27,18 @@ class FaultWechatTemplate
             : [];
     }
 
+    /**
+     * 根据当前环境取得实际发送使用的微信模板ID。
+     */
+    public static function getTemplateId($templateType)
+    {
+        $template = self::find($templateType);
+        $field = filter_var(env('CglPay.is_test', false), FILTER_VALIDATE_BOOLEAN)
+            ? 'test_template_id'
+            : 'template_id';
+        return trim(strval($template[$field] ?? ''));
+    }
+
     public static function options()
     {
         $items = [];
@@ -53,7 +65,7 @@ class FaultWechatTemplate
     {
         $template = self::find($templateType);
         return $template
-            && trim(strval($template['template_id'] ?? '')) !== ''
+            && self::getTemplateId($templateType) !== ''
             && !empty($template['body'])
             && is_array($template['body']);
     }
