@@ -1047,7 +1047,6 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 保存设备逐个上报的视频。旧设备未上报 segment_no 时按单视频处理。
      * 将无订单远程出货视频分段幂等合并到 remote_action_log。
      */
     protected function saveRemoteActionLogVideo($tradeNo, $logId = 0)
