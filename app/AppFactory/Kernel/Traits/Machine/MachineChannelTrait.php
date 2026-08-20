@@ -675,32 +675,88 @@ trait MachineChannelTrait
             return;
         }
 
-        // 查找下一个等待中的批次
-        $nextBatch = Db::name('channel_goods_batch')
+        // 按当前队首展开环形队列，售罄切换后将原队首移动到队尾。
+        $batchList = Db::name('channel_goods_batch')
             ->where('mc_id', $mc_id)
-            ->where('status', 2)
-            ->where('stock', '>', 0)
-            ->order('sequence asc')
-            ->find();
+            ->whereIn('status', [1, 2, 3])
+            ->order('sequence asc,batch_id asc')
+            ->select()
+            ->toArray();
+        $currentHead = null;
+        $currentHeadIndex = -1;
+        $firstWaitingBatch = null;
+        $firstWaitingBatchIndex = -1;
+        $nextBatch = null;
+        $nextBatchIndex = -1;
+        foreach ($batchList as $index => $batch) {
+            $status = intval($batch['status']);
+            if ($status === 1 && $currentHead === null) {
+                $currentHead = $batch;
+                $currentHeadIndex = $index;
+                continue;
+            }
+            if ($status !== 2 || intval($batch['stock']) <= 0) {
+                continue;
+            }
+            if ($firstWaitingBatch === null) {
+                $firstWaitingBatch = $batch;
+                $firstWaitingBatchIndex = $index;
+            }
+            if ($currentHead !== null && $nextBatch === null) {
+                $nextBatch = $batch;
+                $nextBatchIndex = $index;
+            }
+        }
+        if ($currentHead === null) {
+            return;
+        }
+
+        // 队首之后没有可售批次时，从队列开头继续查找。
+        if ($nextBatch === null && $firstWaitingBatch !== null) {
+            $nextBatch = $firstWaitingBatch;
+            $nextBatchIndex = $firstWaitingBatchIndex;
+        }
+
+        // 将新队首之前的记录整体移到队尾，一条 SQL 即可完成队列旋转。
+        $rotationIndex = $nextBatch === null ? $currentHeadIndex : $nextBatchIndex;
+        $rotationOffset = 0;
+        $headNeedsRotate = false;
+        if ($rotationIndex > 0) {
+            $rotationRows = array_slice($batchList, 0, $rotationIndex);
+            $maxSequence = intval($batchList[count($batchList) - 1]['sequence']);
+            $rotationOffset = $maxSequence - intval($rotationRows[0]['sequence']) + 1;
+            $rotationBatchIds = array_column($rotationRows, 'batch_id');
+            $headNeedsRotate = $nextBatch !== null && $currentHeadIndex < $rotationIndex;
+            if ($headNeedsRotate) {
+                unset($rotationBatchIds[$currentHeadIndex]);
+            }
+            if ($rotationBatchIds) {
+                Db::name('channel_goods_batch')
+                    ->whereIn('batch_id', array_values($rotationBatchIds))
+                    ->inc('sequence', $rotationOffset)
+                    ->update();
+            }
+        }
 
         if (!$nextBatch) {
             // 最后一批售罄后仍保留为当前队首；无库存不属于设备故障，货道状态保持不变。
             Db::name('channel_goods_batch')
-                ->where('mc_id', $mc_id)
-                ->where('status', 1)
+                ->where('batch_id', $currentHead['batch_id'])
                 ->update(['stock' => 0]);
             $this->updateMachineChannel(['stock' => 0], ['mc_id' => $mc_id]);
             return;
         }
 
         // 只有存在下一批时，当前队首才结束并退出队列。
-        Db::name('channel_goods_batch')
-            ->where('mc_id', $mc_id)
-            ->where('status', 1)
-            ->update([
-                'status' => 3,
-                'stock' => 0,
-            ]);
+        $currentHeadQuery = Db::name('channel_goods_batch')
+            ->where('batch_id', $currentHead['batch_id']);
+        if ($headNeedsRotate) {
+            $currentHeadQuery->inc('sequence', $rotationOffset);
+        }
+        $currentHeadQuery->update([
+            'status' => 3,
+            'stock' => 0,
+        ]);
 
         // 切换到下一批次
         Db::name('channel_goods_batch')
