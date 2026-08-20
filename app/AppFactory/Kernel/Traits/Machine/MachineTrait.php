@@ -1728,7 +1728,7 @@ trait MachineTrait
         try {
             $now = time();
             $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
-            $checkCoolDown = 180;
+            $checkCoolDown = 300;
 
             // 心跳兜底时限频检查，避免每次心跳都查数据库。偶发文件缓存读取失败导致的漏发问题
             $lastCheckTime = cache($checkKey);
@@ -1736,13 +1736,13 @@ trait MachineTrait
                  return;
             }
              cache($checkKey, $now, $checkCoolDown);
-            //create_time大于此功能上线的时间，避免历史数据上线时被补发。2026-04-15
+            //create_time大于最近3天，避免历史数据上线时被补发。
             $plan = Db::name('machine_version_plan')->where([
                 'machine_id' => $this->machine['machine_id'],
                 'download_progress' => 0,
                 'status' => 1,
             ])->where('publish_time', '<=', $now)
-            ->where('create_time', '>', 1776219898)
+            ->where('create_time', '>', $now - 259200)
             ->field('mvp_id,machine_id,mv_id,version_no,publish_time')
             ->order('publish_time asc,mvp_id asc')
             ->find();
