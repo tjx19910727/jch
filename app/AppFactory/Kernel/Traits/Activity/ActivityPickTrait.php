@@ -88,17 +88,17 @@ trait ActivityPickTrait
      */
     public function getActivityPickByCode()
     {
-        // 该类型取货码关联订单而非活动，走 activity_pick 表 inner join 查询会匹配不到（查无活动）
-        // 精确限定 ap_id=0 与 pick_type=3，不影响活动取货码（pick_type=1/2, ap_id>0）的原有逻辑
-        $apcDirect = $this->getActivityPickCodeFind([
-            'code'      => $this->data['pick_code'],
-            'pick_type' => 3,
-            'ap_id'     => 0,
-            'status'    => 1,
-        ], 'apc_id,ap_id,code,order_id,trade_no,m_id,machine_id,machine_name,pick_type,status,used_time');
-        if ($apcDirect) {
-            return $apcDirect->toArray();
-        }
+        // // 该类型取货码关联订单而非活动，走 activity_pick 表 inner join 查询会匹配不到（查无活动）
+        // // 精确限定 ap_id=0 与 pick_type=3，不影响活动取货码（pick_type=1/2, ap_id>0）的原有逻辑
+        // $apcDirect = $this->getActivityPickCodeFind([
+        //     'code'      => $this->data['pick_code'],
+        //     'pick_type' => 3,
+        //     'ap_id'     => 0,
+        //     'status'    => 1,
+        // ], 'apc_id,ap_id,code,order_id,trade_no,m_id,machine_id,machine_name,pick_type,status,used_time');
+        // if ($apcDirect) {
+        //     return $apcDirect->toArray();
+        // }
 
         //$where['code'] = $this->data['pick_code'];
         $where['apc.code'] = $this->data['pick_code'];
