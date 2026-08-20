@@ -464,6 +464,7 @@ return [
         "mcList_require" => "批量配置列表参数不能为空",
         "run_mode_in" => "设备模式参数错误",
         "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
+        "add_other_org_goods_in" => "是否允许设备加载其他组织商品仅支持1或2",
         "subcar_mix_in" => "是否允许混合下单仅支持1或2",
         "subcar_offline_sp_ids_invalid" => "线下商品收款策略ID格式错误",
         "subcar_online_sp_ids_invalid" => "线上商品收款策略ID格式错误",
