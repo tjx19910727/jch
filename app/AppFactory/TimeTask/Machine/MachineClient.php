@@ -1087,6 +1087,21 @@ class MachineClient extends TimeTaskBase
                     continue;
                 }
 
+                // 下位机晶振不准，设备可能提前约10分钟开机；距离当日配置开机时间不足15分钟时，
+                // 设备很可能已实际开机（在线属正常），不再发送未关机提醒；今日未配置开机时间则继续往下走
+                if (
+                    $todayOnOff &&
+                    $todayOnOff['startup_sec'] > $nowSec &&
+                    $todayOnOff['startup_sec'] - $nowSec <= 900
+                ) {
+                    actionLog([
+                        'm_id' => $item['m_id'],
+                        'machine_id' => $item['machine_id'],
+                        'startup_time' => date('Y-m-d H:i:s', $today + $todayOnOff['startup_sec']),
+                    ], '距离当日开机不足15分钟，跳过未关机提醒', 'checkOperatingShutdown');
+                    continue;
+                }
+
                 $sentCacheKey = 'machine_shutdown_exception_sent:' . $item['m_id'] . ':' . date('Ymd', $shutdownTimestamp);
                 if (Cache::get($sentCacheKey)) {
                     continue;
