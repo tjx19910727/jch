@@ -55,11 +55,6 @@ class MqConsumer
         }
     }
 
-    // 验签失败时允许重试的最大次数（避免死循环）
-    protected $signVerifyRetryMax = 3;
-    // 验签失败时允许重试的关键业务消息类型
-    protected $signVerifyRetryMsgTypes = ['outGoods', 'paySuccess', 'remoteOutGoods'];
-
     /**
      * 消息处理
      * @param $message
@@ -123,31 +118,9 @@ class MqConsumer
             }
             $this->logConsumerExceptionSafely($e);
             $this->recordMachineMqStatusSafely($data, 3);
-            // 认证/格式错误默认属于永久错误；但验签失败的关键业务消息允许重试，
-            // 避免设备认证恢复前 outGoods/paySuccess 等指令被直接丢弃。
+            // 认证/格式错误属于永久错误；其他瞬时异常最多重试一次。
             $isPermanent = $e instanceof \InvalidArgumentException;
-            $retryableSignVerify = false;
-            $msgType = '';
-            if ($isPermanent && strpos($e->getMessage(), '验签') !== false && is_array($data) && !empty($data['data'])) {
-                $actionData = json2arr($data['data']);
-                $msgType = $actionData['msgType'] ?? '';
-                if (in_array($msgType, $this->signVerifyRetryMsgTypes, true)) {
-                    $retryableSignVerify = true;
-                }
-            }
-            $isRedelivered = $message->isRedelivered();
-            $requeue = $retryableSignVerify
-                ? !$isRedelivered || $this->isRetryableRedelivery($data)
-                : (!$isPermanent && !$isRedelivered);
-            if ($requeue) {
-                $this->actionLogSafely([
-                    'msg_id' => $data['msg_id'] ?? '',
-                    'machine_id' => $data['machine_id'] ?? '',
-                    'msgType' => $msgType,
-                    'error' => $e->getMessage(),
-                    'redelivered' => $isRedelivered,
-                ], 'MQ消息重试入队', 'DataUpload');
-            }
+            $requeue = !$isPermanent && !$message->isRedelivered();
             $message->nack($requeue, false);
             return;
         }
@@ -237,44 +210,6 @@ class MqConsumer
         } catch (\Throwable $e) {
             error_log('MQ record status update failed: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * 判断业务消息在多次 redelivery 后是否仍需继续重试（限制最大重试次数）。
-     * @param array $data MQ消息数据
-     * @return bool
-     */
-    protected function isRetryableRedelivery($data)
-    {
-        $retryCount = 0;
-        $retryKey = '';
-        try {
-            if (is_array($data) && !empty($data['msg_id'])) {
-                $retryKey = 'mq_verify_retry_' . ($data['msg_id'] ?? '');
-                $retryCount = intval(cache($retryKey) ?: 0);
-            }
-        } catch (\Throwable $e) {
-            // 缓存抖动不影响重试判定，按可重试处理
-            return true;
-        }
-        $maxRetry = intval($this->signVerifyRetryMax ?: 3);
-        if ($retryCount >= $maxRetry) {
-            $this->actionLogSafely([
-                'msg_id' => $data['msg_id'] ?? '',
-                'machine_id' => $data['machine_id'] ?? '',
-                'retry_count' => $retryCount,
-                'max_retry' => $maxRetry,
-            ], '验签关键消息重试次数达上限，丢弃', 'DataUpload');
-            return false;
-        }
-        if ($retryKey) {
-            try {
-                cache($retryKey, $retryCount + 1, 300);
-            } catch (\Throwable $e) {
-                // 缓存失败不阻塞
-            }
-        }
-        return true;
     }
 
     /**
