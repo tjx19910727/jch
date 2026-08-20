@@ -112,6 +112,7 @@ trait MachineChannelReplenishmentTrait
         $flag = [];
         $goodsChangeRows = [];
         $repRows = [];
+        $machineGoodsMqMap = [];
         $this->startTrans();
         try {
             $mcIds = array_keys($repMap);
@@ -153,7 +154,15 @@ trait MachineChannelReplenishmentTrait
                 $mc = $mcMap[$value['mc_id']];
                 // ==================== 单货道多商品相关开始 ====================
                 if (intval($mc['is_multi_goods'] ?? 2) === 1) {
-                    $result = $this->handleMultiGoodsReplenishment($mc, $value, $insertGChange, $goodsChangeRows, $repRows, $flag);
+                    $result = $this->handleMultiGoodsReplenishment(
+                        $mc,
+                        $value,
+                        $insertGChange,
+                        $goodsChangeRows,
+                        $repRows,
+                        $flag,
+                        $machineGoodsMqMap
+                    );
                     if ($result !== true) {
                         $this->rollbackTrans();
                         return $this->rFail($result);
@@ -279,7 +288,20 @@ trait MachineChannelReplenishmentTrait
             }
 
             $result = $this->checkFlag($flag);
-            return $this->checkTrans($result);
+            if (!$this->checkTrans($result, 0)) {
+                return $this->rAction(false);
+            }
+
+            // 商品库数据提交成功后再通知设备拉取，避免设备读到未提交的数据。
+            if ($machineGoodsMqMap) {
+                $machineGoodsMq = reset($machineGoodsMqMap);
+                try {
+                    $this->afterMgInsert($machineGoodsMq);
+                } catch (\Exception $e) {
+                    actionException($e, 1);
+                }
+            }
+            return $this->rAction(true);
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
@@ -302,31 +324,33 @@ trait MachineChannelReplenishmentTrait
     /**
      * 处理单货道多商品补货。
      */
-    private function handleMultiGoodsReplenishment($mc, $value, $insertGChange, &$goodsChangeRows, &$repRows, &$flag)
+    private function handleMultiGoodsReplenishment(
+        $mc,
+        $value,
+        $insertGChange,
+        &$goodsChangeRows,
+        &$repRows,
+        &$flag,
+        &$machineGoodsMqMap
+    )
     {
         $batchItems = array_values($value['batch_arr'] ?? []);
 
         // 顶层 quantity 固定表示正在售卖的队首批次，batch_arr 只表示非队首批次。
-        if ((int)$value['quantity'] != 0 || (int)$value['standby_quantity'] != 0) {
-            $headBatch = Db::name('channel_goods_batch')
-                ->where('mc_id', $mc['mc_id'])
-                ->where('status', 1)
-                ->lock(true)
-                ->find();
-            if (!$headBatch) {
-                return '多商品货道未找到队首批次';
-            }
-            array_unshift($batchItems, [
-                'batch_id' => $headBatch['batch_id'],
-                'quantity' => (int)$value['quantity'],
-                'standby_quantity' => (int)$value['standby_quantity'],
-                'is_head' => 1,
-            ]);
+        $headBatch = Db::name('channel_goods_batch')
+            ->where('mc_id', $mc['mc_id'])
+            ->where('status', 1)
+            ->lock(true)
+            ->find();
+        if (!$headBatch) {
+            return '多商品货道未找到队首批次';
         }
-
-        if (!$batchItems) {
-            return true;
-        }
+        array_unshift($batchItems, [
+            'batch_id' => $headBatch['batch_id'],
+            'quantity' => (int)$value['quantity'],
+            'standby_quantity' => (int)$value['standby_quantity'],
+            'is_head' => 1,
+        ]);
 
         $batchIds = array_values(array_unique(array_column($batchItems, 'batch_id')));
         $batchList = Db::name('channel_goods_batch')
@@ -341,28 +365,8 @@ trait MachineChannelReplenishmentTrait
             return '多商品补货批次不存在';
         }
 
-        $gIds = array_values(array_unique(array_column($batchList, 'g_id')));
-        $goodsMap = [];
-        if ($gIds) {
-            $goodsList = GoodsModel::where([['g_id', 'in', $gIds]])
-                ->field('g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price')
-                ->select()
-                ->toArray();
-            $goodsMap = array_column($goodsList, null, 'g_id');
-        }
-
-        $mgMap = [];
-        if ($gIds) {
-            $mgList = MachineGoodsModel::where([
-                ['m_id', '=', $this->machine['m_id']],
-                ['g_id', 'in', $gIds],
-            ])->field('mg_id,g_id,standby_stock')->select()->toArray();
-            $mgMap = array_column($mgList, null, 'g_id');
-        }
-
         foreach ($batchItems as $batchItem) {
-            $batchId = (int)$batchItem['batch_id'];
-            $batch = $batchMap[$batchId];
+            $batch = $batchMap[(int)$batchItem['batch_id']];
             if (empty($batchItem['is_head']) && (int)$batch['status'] === 1) {
                 return 'batch_arr只能传非队首批次';
             }
@@ -370,13 +374,101 @@ trait MachineChannelReplenishmentTrait
                 return '多商品补货批次商品不匹配';
             }
 
-            $quantity = (int)($batchItem['quantity'] ?? 0);
-            $standbyQuantity = (int)($batchItem['standby_quantity'] ?? 0);
-            if ($quantity == 0 && $standbyQuantity == 0) {
+            if (!empty($batchItem['is_head'])) {
+                $headStock = (int)$batch['stock']
+                    + (int)($batchItem['quantity'] ?? 0)
+                    + (int)($batchItem['standby_quantity'] ?? 0);
+                if ($headStock <= 0) {
+                    return '多商品货道队首补货后库存必须大于0';
+                }
+            }
+        }
+
+        $gIds = array_values(array_unique(array_column($batchList, 'g_id')));
+        $goodsMap = [];
+        if ($gIds) {
+            $goodsList = GoodsModel::where([['g_id', 'in', $gIds]])
+                ->field('g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,intergral_rate,gift_points,cost_points,ao_id')
+                ->select()
+                ->toArray();
+            $goodsMap = array_column($goodsList, null, 'g_id');
+        }
+        if (count($goodsMap) != count($gIds)) {
+            return '多商品补货商品不存在';
+        }
+
+        $mgMap = [];
+        if ($gIds) {
+            $mgList = MachineGoodsModel::where([
+                ['m_id', '=', $this->machine['m_id']],
+                ['g_id', 'in', $gIds],
+            ])->field('mg_id,g_id,standby_stock,is_shelf')->select()->toArray();
+            $mgMap = array_column($mgList, null, 'g_id');
+        }
+
+        foreach ($gIds as $gId) {
+            $gId = (int)$gId;
+            if (isset($mgMap[$gId])) {
+                if ((int)($mgMap[$gId]['is_shelf'] ?? 2) === 2) {
+                    $flag[] = $this->updateMachineGoods([
+                        'mg_id' => $mgMap[$gId]['mg_id'],
+                        'is_shelf' => 1,
+                    ]);
+                    $mgMap[$gId]['is_shelf'] = 1;
+                    $machineGoodsMqMap[(int)$mgMap[$gId]['mg_id']] = [
+                        'mg_id' => (int)$mgMap[$gId]['mg_id'],
+                        'machine_id' => $this->machine['machine_id'],
+                    ];
+                }
                 continue;
             }
 
+            $goods = $goodsMap[$gId];
+            $mgId = $this->addMachineGoods([
+                'm_id' => $this->machine['m_id'],
+                'machine_id' => $this->machine['machine_id'],
+                'ao_id' => $this->machine['ao_id'] ?? ($goods['ao_id'] ?? 0),
+                'g_id' => $gId,
+                'g_name' => $goods['g_name'] ?? '',
+                'gc_id' => $goods['gc_id'] ?? 0,
+                'gc_name' => $goods['gc_name'] ?? '',
+                'pic' => str_replace($this->host, '', $goods['pic'] ?? ''),
+                'sku' => $goods['sku'] ?? '',
+                'bar_code' => $goods['bar_code'] ?? '',
+                'cost_price' => $goods['cost_price'] ?? 0,
+                'market_price' => $goods['market_price'] ?? 0,
+                'retail_price' => $goods['retail_price'] ?? 0,
+                'intergral_rate' => $goods['intergral_rate'] ?? 0,
+                'gift_points' => $goods['gift_points'] ?? 0,
+                'cost_points' => $goods['cost_points'] ?? 0,
+                'is_shelf' => 1,
+            ]);
+            if (!$mgId) {
+                return '设备商品库新增失败:' . ($goods['g_name'] ?? $gId);
+            }
+
+            $flag[] = $mgId;
+            $mgMap[$gId] = [
+                'mg_id' => $mgId,
+                'g_id' => $gId,
+                'standby_stock' => 0,
+                'is_shelf' => 1,
+            ];
+            $machineGoodsMqMap[(int)$mgId] = [
+                'mg_id' => (int)$mgId,
+                'machine_id' => $this->machine['machine_id'],
+            ];
+        }
+
+        foreach ($batchItems as $batchItem) {
+            $batchId = (int)$batchItem['batch_id'];
+            $batch = $batchMap[$batchId];
+            $quantity = (int)($batchItem['quantity'] ?? 0);
+            $standbyQuantity = (int)($batchItem['standby_quantity'] ?? 0);
             $newStock = (int)$batch['stock'] + $quantity + $standbyQuantity;
+            if ($quantity == 0 && $standbyQuantity == 0) {
+                continue;
+            }
             if ($newStock + (int)$batch['frozen_stock'] > (int)$batch['capacity']) {
                 return $this->lang("VChannelReplenishment.exceed_capacity_limit");
             }
@@ -542,7 +634,6 @@ trait MachineChannelReplenishmentTrait
             'manufacture_time' => $headBatch['manufacture_time'] ?? 0,
             'expire_time' => $headBatch['expire_time'] ?? 0,
             'sell_by_date' => $headBatch['sell_by_date'] ?? ($goods['sell_by_date'] ?? 0),
-            'status' => (int)($headBatch['stock'] ?? 0) > 0 ? 1 : 3,
             'is_multi_goods' => 1,
         ]);
     }
