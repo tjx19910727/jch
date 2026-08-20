@@ -180,6 +180,9 @@ class ReceiveBaseClient extends MachineBaseClient
                 if (!$signKey) {
                     $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
                     $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
+                } else {
+                    // 复用已有Key时也刷新过期时间，避免旧Key在长时间未认证后被判超时
+                    $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKeyTime' => time()]);
                 }
 
                 if ($signKey) {
