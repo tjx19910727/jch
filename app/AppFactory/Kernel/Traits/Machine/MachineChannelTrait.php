@@ -331,6 +331,21 @@ trait MachineChannelTrait
                                 $value['retail_price']  = $headBatch['retail_price'];
                                 $value['gift_points']   = $headBatch['gift_points'];
                                 $value['is_multi_goods'] = 1;
+
+                                // 设备补货后上报新队首时，队首商品快照以后台商品主数据为准。
+                                $gField = 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price';
+                                $headGoods = $this->getGoodsFind(['g_id' => $headBatch['g_id']], $gField);
+                                if ($headGoods) {
+                                    $headGoods = obj2arr($headGoods);
+                                    $headGoods['pic'] = str_replace($this->host, '', $headGoods['pic'] ?? '');
+                                    $headGoods['mg_id'] = ($this->getMachineGoodsValue([
+                                        'g_id' => $headBatch['g_id'],
+                                        'm_id' => $this->machine['m_id'],
+                                    ], 'mg_id') ?? 0);
+                                    $value = array_merge($value, $headGoods);
+                                    $mc = array_merge($mc, $headGoods);
+                                }
+
                                 $mc = array_merge($mc, [
                                     'g_id'          => $headBatch['g_id'],
                                     'stock'         => $headBatch['stock'],
@@ -669,15 +684,12 @@ trait MachineChannelTrait
             ->find();
 
         if (!$nextBatch) {
-            // 最后一批售罄后仍保留为当前队首，避免接口将其再次放入 batch_arr。
+            // 最后一批售罄后仍保留为当前队首；无库存不属于设备故障，货道状态保持不变。
             Db::name('channel_goods_batch')
                 ->where('mc_id', $mc_id)
                 ->where('status', 1)
                 ->update(['stock' => 0]);
-            $this->updateMachineChannel([
-                'stock' => 0,
-                'status' => 3,
-            ], ['mc_id' => $mc_id]);
+            $this->updateMachineChannel(['stock' => 0], ['mc_id' => $mc_id]);
             return;
         }
 
