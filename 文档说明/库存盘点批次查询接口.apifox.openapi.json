@@ -1,0 +1,230 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "库存盘点批次查询接口",
+    "version": "1.0.0",
+    "description": "库存盘点总览按每次盘点批次汇总，明细接口支持使用 check_batch_no 精确查询一次盘点的全部明细。数据库需先执行《库存盘点按批次汇总数据库变更.sql》。"
+  },
+  "paths": {
+    "/management/machine.machine_check_stock_count/getList": {
+      "post": {
+        "summary": "分页查询盘点批次汇总",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "description": "后台登录令牌",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{token}}"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockCheckCountRequest"
+              },
+              "examples": {
+                "page": {
+                  "summary": "分页查询",
+                  "value": {
+                    "page": 1,
+                    "pageNum": 20,
+                    "machine_id": "JCHM"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "state": 200,
+                  "msg": "查询成功",
+                  "data": {
+                    "data": [
+                      {
+                        "m_id": 123,
+                        "machine_id": "JCHM-H2D-0362",
+                        "machine_name": "示例设备",
+                        "check_batch_no": "CS20260731143012-123-a1b2c3d4",
+                        "type": 1,
+                        "check_stock": 20,
+                        "system_stock": 18,
+                        "stock_reserve": 0,
+                        "create_date": 1785427200,
+                        "create_time": 1785479412,
+                        "creator": 219,
+                        "creator_nickname": "盘点员",
+                        "ao_id": 17
+                      }
+                    ],
+                    "total": 1,
+                    "per_page": 20,
+                    "current_page": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_check_stock/getList": {
+      "post": {
+        "summary": "分页查询盘点明细",
+        "description": "传入 check_batch_no 时进行精确匹配，返回该次盘点的全部商品或货道明细。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "description": "后台登录令牌",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{token}}"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StockCheckDetailRequest"
+              },
+              "examples": {
+                "batch": {
+                  "summary": "查询指定盘点批次",
+                  "value": {
+                    "page": 1,
+                    "pageNum": 20,
+                    "check_batch_no": "CS20260731143012-123-a1b2c3d4"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "example": {
+                  "state": 200,
+                  "msg": "查询成功",
+                  "data": {
+                    "data": [
+                      {
+                        "id": 1001,
+                        "m_id": 123,
+                        "check_batch_no": "CS20260731143012-123-a1b2c3d4",
+                        "machine_id": "JCHM-H2D-0362",
+                        "machine_name": "示例设备",
+                        "channel_code": "A01",
+                        "g_name": "示例商品",
+                        "sku": "SKU001",
+                        "gc_name": "饮料",
+                        "system_stock": 2,
+                        "check_stock": 3,
+                        "creator": 219,
+                        "status": 2,
+                        "create_date": 1785427200,
+                        "create_time": 1785479412
+                      }
+                    ],
+                    "total": 1,
+                    "per_page": 20,
+                    "current_page": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "StockCheckCountRequest": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "当前页码",
+            "example": 1
+          },
+          "pageNum": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "每页条数；不传或为0时不分页",
+            "example": 20
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号，模糊匹配",
+            "example": "JCHM"
+          },
+          "creator_nickname": {
+            "type": "string",
+            "description": "盘点人昵称，模糊匹配",
+            "example": "盘点员"
+          },
+          "create_time": {
+            "type": "string",
+            "description": "盘点时间范围，格式：开始时间~结束时间",
+            "example": "2026-07-31 00:00:00~2026-07-31 23:59:59"
+          }
+        }
+      },
+      "StockCheckDetailRequest": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "当前页码",
+            "example": 1
+          },
+          "pageNum": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "每页条数；不传或为0时不分页",
+            "example": 20
+          },
+          "check_batch_no": {
+            "type": "string",
+            "description": "盘点批次号，精确匹配；来自盘点汇总接口",
+            "example": "CS20260731143012-123-a1b2c3d4"
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号，模糊匹配",
+            "example": "JCHM"
+          },
+          "sku": {
+            "type": "string",
+            "description": "商品SKU，模糊匹配",
+            "example": "SKU001"
+          },
+          "create_time": {
+            "type": "string",
+            "description": "明细创建时间范围，格式：开始时间~结束时间",
+            "example": "2026-07-31 00:00:00~2026-07-31 23:59:59"
+          }
+        }
+      }
+    }
+  }
+}
