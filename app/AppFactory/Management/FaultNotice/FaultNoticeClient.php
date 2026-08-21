@@ -260,10 +260,10 @@ class FaultNoticeClient extends ManagementClient
         }, 'faultCatalogCategoryList');
     }
 
-    public function getCatalogFaultCodeList($params = [])
+    public function getCatalogFaultCodeList($params = [], $pageNum = 20)
     {
-        return $this->runFaultCatalogAction(function () use ($params) {
-            return $this->r(200, '查询成功', $this->getFaultCatalogCodeListData($params));
+        return $this->runFaultCatalogAction(function () use ($params, $pageNum) {
+            return $this->r(200, '查询成功', $this->getFaultCatalogCodeListData($params, $pageNum));
         }, 'faultCatalogCodeList');
     }
 
