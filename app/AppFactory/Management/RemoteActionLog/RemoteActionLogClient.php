@@ -129,7 +129,7 @@ class RemoteActionLogClient extends ManagementClient
     {
         return 'ral.id,ral.machine_id,m.m_id,m.machine_name,ral.type,ral.msgType,
             ral.order_id,so.trade_no,ral.sod_id,ral.goods_id,ral.channel_code,
-            ral.status,ral.operator_at,ral.manager_id,ral.field,
+            ral.status,ral.operator_at,ral.manager_id,
             ral.video_total,ral.video_count,ral.video_status,ral.transaction_video,
             IFNULL(NULLIF(am.nickname, \'\'), am.account) manager_name,ral.field';
     }
