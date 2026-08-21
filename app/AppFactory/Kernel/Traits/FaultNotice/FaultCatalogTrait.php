@@ -42,10 +42,15 @@ trait FaultCatalogTrait
     }
 
     /**
-     * 故障码默认返回全部，不分页；停用故障码也返回，便于重新启用。
+     * 故障码分页返回；停用故障码也返回，便于重新启用。
+     *
+     * @param array $params
+     * @param int $pageNum 每页条数，沿用后台现有pageNum语义
+     * @return mixed
      */
-    public function getFaultCatalogCodeListData($params)
+    public function getFaultCatalogCodeListData($params, $pageNum = 20)
     {
+        $pageNum = max(1, min(intval($pageNum), 100));
         $aoId = $this->getFaultCatalogAoId();
         $query = Db::name('machine_error_code_notice_rule')
             ->alias('mecnr')
@@ -103,15 +108,13 @@ trait FaultCatalogTrait
             });
         }
 
-        $rows = $query
+        $paginator = $query
             ->order('mfc.sort asc,mecnr.category_id asc,mecnr.error_code asc')
-            ->select()
-            ->toArray();
-        $items = array_map(function ($row) {
-            return $this->formatFaultCatalogCode($row);
-        }, $rows);
+            ->paginate($pageNum, false, ['query' => request()->param()]);
 
-        return ['total' => count($items), 'items' => $items];
+        return $paginator->each(function ($row) {
+            return $this->formatFaultCatalogCode($row);
+        });
     }
 
     public function getFaultCatalogFormOptionsData()
