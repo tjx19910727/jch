@@ -164,9 +164,10 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        if ($priceChanged && ($selectedMgIds || $selectedMcIds)) {
-            $this->pushGoodsUpdateV2($gId, $selectedMgIds, $selectedMcIds);
-        }
+        $this->pushGoodsUpdate($gId);
+        // if ($priceChanged && ($selectedMgIds || $selectedMcIds)) {
+        //     $this->pushGoodsUpdateV2($gId, $selectedMgIds, $selectedMcIds);
+        // }
 
         return $this->r(200, 'success', $result);
     }
@@ -310,6 +311,44 @@ class GoodsClient extends ManagementClient
                     $redis->close();
                 } catch (\Throwable $e) {
                     actionException($e, 1, 'pushGoodsUpdateV2Close');
+                }
+            }
+        }
+    }
+
+    /**
+     * 商品信息修改后，将商品ID放入同步队列。
+     *
+     * @param int $gId
+     * @return bool
+     */
+    protected function pushGoodsUpdate($gId)
+    {
+        $redis = null;
+        try {
+            $redis = new \Redis();
+            $config = config('redis');
+            $redis->connect($config['host'], $config['port'], $config['timeout'], $config['reserved'], $config['retry_interval']);
+            if (isset($config['password']) && $config['password']) {
+                $redis->auth($config['password']);
+            }
+            $result = $redis->lPush('updateGoods', (int)$gId);
+            if ($result === false) {
+                throw new \RuntimeException('Failed to push goods update task');
+            }
+            $redis->expire('updateGoods', 300);
+            actionLog($gId, '修改的商品ID', 'pushGoodsUpdate');
+            actionLog($redis->lRange('updateGoods', 0, -1), '放入Redis数据', 'pushGoodsUpdate');
+            return true;
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'pushGoodsUpdate');
+            return false;
+        } finally {
+            if ($redis) {
+                try {
+                    $redis->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'pushGoodsUpdateClose');
                 }
             }
         }
