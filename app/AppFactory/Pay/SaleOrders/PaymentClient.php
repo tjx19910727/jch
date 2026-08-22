@@ -152,8 +152,8 @@ class PaymentClient extends PayBaseClient
                 if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
                 if (in_array($this->order['pay_type'], [1, 2, 11, 12, 21, 22], true)) {
                     $expectPayType = $this->order['pay_type'];
-                    if (in_array($expectPayType, [11, 12], true)) $expectPayType = 1;
-                    if (in_array($expectPayType, [21, 22], true)) $expectPayType = 2;
+                    if (in_array($expectPayType, [1, 11, 12], true)) $expectPayType = 1;
+                    if (in_array($expectPayType, [2, 21, 22], true)) $expectPayType = 2;
                     if ($paymentType != $expectPayType) {
                         return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
                     }
