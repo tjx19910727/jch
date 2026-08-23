@@ -19,7 +19,7 @@ trait FaultReceiverTrait
         $query = Db::name('machine_fault_receiver')
             ->alias('mfr')
             ->leftJoin('auth_manager am', 'am.manager_id = mfr.manager_id')
-            ->leftJoin('auth_organization ao', 'ao.ao_id = mfr.ao_id')
+            ->leftJoin('auth_organization ao', 'ao.ao_id = am.ao_id')
             ->leftJoin('user u', 'u.user_id = am.user_id')
             ->leftJoin('wx_official wo', 'wo.id = am.wx_id')
             ->where('mfr.ao_id', $this->getFaultReceiverAoId())
@@ -81,9 +81,6 @@ trait FaultReceiverTrait
     {
         $managerId = intval($params['manager_id'] ?? 0);
         $manager = $this->getAvailableFaultReceiverManager($managerId);
-        if (!$manager) {
-            throw new \InvalidArgumentException('后台账号不存在、已停用或不属于当前组织');
-        }
         if (Db::name('machine_fault_receiver')->where([
             'ao_id' => $this->getFaultReceiverAoId(),
             'manager_id' => $managerId,
@@ -123,9 +120,6 @@ trait FaultReceiverTrait
             throw new \InvalidArgumentException('通知接收人不存在');
         }
         $manager = $this->getAvailableFaultReceiverManager(intval($receiver['manager_id']));
-        if (!$manager) {
-            throw new \InvalidArgumentException('关联后台账号不存在、已停用或不属于当前组织');
-        }
         if (isset($params['manager_id'])
             && intval($params['manager_id']) !== intval($receiver['manager_id'])) {
             throw new \InvalidArgumentException('通知接收人的后台账号不允许修改');
@@ -311,13 +305,29 @@ trait FaultReceiverTrait
     {
         $managerId = intval($managerId);
         if ($managerId <= 0) {
-            return [];
+            throw new \InvalidArgumentException('请选择后台账号');
         }
-        return (array)Db::name('auth_manager')->where([
-            'manager_id' => $managerId,
-            'ao_id' => $this->getFaultReceiverAoId(),
-            'status' => 1,
-        ])->field('manager_id,ao_id,pid,account,nickname,openid,wx_id,status')->find();
+        $manager = (array)Db::name('auth_manager')
+            ->where('manager_id', $managerId)
+            ->field('manager_id,ao_id,pid,account,nickname,openid,wx_id,status')
+            ->find();
+        if (!$manager) {
+            throw new \InvalidArgumentException('后台账号不存在');
+        }
+        if (intval($manager['status'] ?? 0) !== 1) {
+            throw new \InvalidArgumentException('后台账号已停用');
+        }
+        $parentAoIds = $this->app->authOrganization->getParentIds(
+            intval($manager['ao_id'] ?? 0)
+        );
+        if (!in_array(
+            $this->getFaultReceiverAoId(),
+            array_map('intval', $parentAoIds),
+            true
+        )) {
+            throw new \InvalidArgumentException('后台账号不属于当前组织或下级组织');
+        }
+        return $manager;
     }
 
     protected function validateFaultReceiverWechat($manager)
@@ -385,7 +395,7 @@ trait FaultReceiverTrait
         $row = Db::name('machine_fault_receiver')
             ->alias('mfr')
             ->leftJoin('auth_manager am', 'am.manager_id = mfr.manager_id')
-            ->leftJoin('auth_organization ao', 'ao.ao_id = mfr.ao_id')
+            ->leftJoin('auth_organization ao', 'ao.ao_id = am.ao_id')
             ->leftJoin('user u', 'u.user_id = am.user_id')
             ->leftJoin('wx_official wo', 'wo.id = am.wx_id')
             ->where('mfr.ao_id', $this->getFaultReceiverAoId())

@@ -5,6 +5,7 @@ namespace app\AppFactory\Kernel\Service\FaultNotice;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use think\facade\Db;
 
 /**
@@ -15,6 +16,8 @@ use think\facade\Db;
  */
 class FaultReportService
 {
+    use AuthOrganizationTrait;
+
     const OFFLINE_ERROR_CODE = '11103021';
 
     /**
@@ -268,14 +271,13 @@ class FaultReportService
             ->innerJoin('wx_official wo', 'wo.id = am.wx_id')
             ->where('mfr.ao_id', intval($aoId))
             ->where('mfr.status', 1)
-            ->where('am.ao_id', intval($aoId))
             ->where('am.status', 1)
             ->where('wo.status', 1)
             ->whereNotNull('am.openid')
             ->where('am.openid', '<>', '')
             ->field(
                 'mfr.receiver_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope,' .
-                'am.pid,am.nickname,am.account,am.openid,am.wx_id,' .
+                'am.ao_id manager_ao_id,am.pid,am.nickname,am.account,am.openid,am.wx_id,' .
                 'wo.gh_id,wo.wx_name,wo.app_id,wo.secret,wo.token,wo.aes_key,wo.ao_id,wo.creator'
             )
             ->order('mfr.receiver_id asc')
@@ -283,6 +285,10 @@ class FaultReportService
             ->toArray();
         $matched = [];
         foreach ($rows as $row) {
+            $parentAoIds = $this->getParentIds(intval($row['manager_ao_id'] ?? 0));
+            if (!in_array(intval($aoId), array_map('intval', $parentAoIds), true)) {
+                continue;
+            }
             $receiverId = intval($row['receiver_id']);
             if (intval($row['machine_scope']) === 2
                 && !$this->receiverHasScope($receiverId, 1, strval($mId))) {
