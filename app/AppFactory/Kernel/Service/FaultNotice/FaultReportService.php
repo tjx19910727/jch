@@ -90,7 +90,6 @@ class FaultReportService
             'notice_reason' => '',
             'notice_time' => 0,
             'create_time' => $now,
-            'update_time' => $now,
         ];
         if (in_array($errorCode, ['1200010', '1200020'], true)
             && !empty($message['creator_id'])) {
@@ -363,7 +362,6 @@ class FaultReportService
             'notice_status' => intval($status),
             'notice_reason' => strval($reason),
             'notice_time' => intval($noticeTime),
-            'update_time' => time(),
         ]);
         return true;
     }
