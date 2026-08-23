@@ -81,6 +81,8 @@ class ActivityCouponUsedClient extends ManagementClient
         $list = $this->getActivityCouponUsedList(['c_id' => $postData['c_id']], 0,
             'pay_limit,machine_id,machine_name,
                 reduction,original_price,discount_price,retail_price,code,trade_no,
+                IFNULL((SELECT GROUP_CONCAT(t.g_name SEPARATOR ",") FROM (SELECT MAX(sod.g_name) g_name FROM sale_orders_details sod WHERE sod.order_id = a.order_id GROUP BY sod.sku) t), "") g_name,
+                IFNULL((SELECT GROUP_CONCAT(DISTINCT sod.sku SEPARATOR ",") FROM sale_orders_details sod WHERE sod.order_id = a.order_id), "") sku,
                 (CASE c_type WHEN 1 THEN "立减金额" WHEN 2 THEN "优惠折扣" END) c_type,
                 (CASE status WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" END ) status, 
                 FROM_UNIXTIME(used_time,"%Y-%m-%d %H:%i:%s") used_time');
@@ -97,6 +99,8 @@ class ActivityCouponUsedClient extends ManagementClient
 //                "pay_limit" => "订单最低消费金额",
 //                "machine_name" => "设备名称",
                 "code" => "优惠码",
+                "g_name" => "商品名称",
+                "sku" => "SKU",
                 "trade_no" => "订单编号",
                 "machine_id" => "设备编号",
                 "c_type" => "优惠券类型",

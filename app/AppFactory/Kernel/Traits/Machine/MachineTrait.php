@@ -710,8 +710,11 @@ trait MachineTrait
         ], $logData);
         $logId = $this->addRALog($logData);
 
+        $isWithoutOrder = intval($payload['sod_id']) <= 0;
+        $videoKey = $isWithoutOrder ? ('remote_out_goods_log_' . $logId) : '';
+
         $content = [
-            'trade_no' => $payload['trade_no'] ?: ('remote_out_goods_' . $logId),
+            'trade_no' => $payload['trade_no'] ?: ($videoKey ?: ('remote_out_goods_' . $logId)),
             'sod_id' => $payload['sod_id'],
             'main' => $payload['main'],
             'outGoods' => $payload['outGoods'],
@@ -720,6 +723,11 @@ trait MachineTrait
             'log_id' => $logId,
             'manager_id' => $this->manager['manager_id'] ?? 0,
         ];
+        if ($videoKey !== '') {
+            // 无订单远程出货视频按动作日志唯一归属，旧设备会忽略新字段。
+            $content['video_scene'] = 'remote_action_log';
+            $content['video_key'] = $videoKey;
+        }
         $result = $this->sendToMachine(['machine_id' => $machineId], 'remoteOutGoods', $content);
         if (!is_object($result)) {
             $this->updateRALog(
@@ -1712,7 +1720,7 @@ trait MachineTrait
         try {
             $now = time();
             $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
-            $checkCoolDown = 180;
+            $checkCoolDown = 300;
 
             // 心跳兜底时限频检查，避免每次心跳都查数据库。偶发文件缓存读取失败导致的漏发问题
             $lastCheckTime = cache($checkKey);
@@ -1720,13 +1728,13 @@ trait MachineTrait
                  return;
             }
              cache($checkKey, $now, $checkCoolDown);
-            //create_time大于此功能上线的时间，避免历史数据上线时被补发。2026-04-15
+            //create_time大于最近3天，避免历史数据上线时被补发。
             $plan = Db::name('machine_version_plan')->where([
                 'machine_id' => $this->machine['machine_id'],
                 'download_progress' => 0,
                 'status' => 1,
             ])->where('publish_time', '<=', $now)
-            ->where('create_time', '>', 1776219898)
+            ->where('create_time', '>', $now - 259200)
             ->field('mvp_id,machine_id,mv_id,version_no,publish_time')
             ->order('publish_time asc,mvp_id asc')
             ->find();

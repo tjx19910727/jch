@@ -51,12 +51,15 @@ class CheckClient extends MobileBase
             if (!$machine) return $this->r(100, $this->lang("MachineCheck.machine_no_data"));
             $machine = $machine->toArray();
             $checkList = json2arr($postData['checkList']);
+            // 同一次盘点请求的所有明细共用一个批次号，供后台按次汇总。
+            $checkBatchNo = 'CS' . date('YmdHis') . '-' . $machine['m_id'] . '-' . bin2hex(random_bytes(4));
             // 库存盘点基础数据
             $insert = [
                 "m_id" => $machine['m_id'],
                 "machine_id" => $machine['machine_id'],
                 "machine_name" => $machine['machine_name'],
                 "type" => $postData['type'],
+                "check_batch_no" => $checkBatchNo,
                 "ao_id" => $machine['ao_id'],
                 "create_date" => strtotime(date("Y-m-d")),
                 "creator" => $this->tokenArr['manager_id'],
