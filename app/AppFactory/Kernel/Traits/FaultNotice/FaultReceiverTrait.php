@@ -283,9 +283,10 @@ trait FaultReceiverTrait
         $errorCodes = array_values(array_unique(array_map('strval', $errorCodes)));
         $rows = Db::name('machine_error_code_notice_rule')
             ->alias('mecnr')
-            ->innerJoin(
+            ->join(
                 'machine_fault_category mfc',
-                'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id'
+                'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id',
+                'INNER'
             )
             ->where('mecnr.ao_id', $this->getFaultReceiverAoId())
             ->where('mecnr.status', 1)

@@ -267,8 +267,8 @@ class FaultReportService
     {
         $rows = Db::name('machine_fault_receiver')
             ->alias('mfr')
-            ->innerJoin('auth_manager am', 'am.manager_id = mfr.manager_id')
-            ->innerJoin('wx_official wo', 'wo.id = am.wx_id')
+            ->join('auth_manager am', 'am.manager_id = mfr.manager_id', 'INNER')
+            ->join('wx_official wo', 'wo.id = am.wx_id', 'INNER')
             ->where('mfr.ao_id', intval($aoId))
             ->where('mfr.status', 1)
             ->where('am.status', 1)
