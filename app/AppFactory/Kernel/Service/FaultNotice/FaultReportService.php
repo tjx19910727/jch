@@ -4,6 +4,7 @@ namespace app\AppFactory\Kernel\Service\FaultNotice;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
+use app\AppFactory\Kernel\Support\FaultNotice\FaultNoticeConfig;
 use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use think\facade\Db;
@@ -138,11 +139,16 @@ class FaultReportService
             return $this->updateEventNotice($meId, 4, 'template_invalid');
         }
         $templateId = FaultWechatTemplate::getTemplateId($templateType);
+        $official = $this->getNoticeOfficial($aoId);
+        if (!$official) {
+            return $this->updateEventNotice($meId, 4, 'wechat_official_unconfigured');
+        }
         $receivers = $this->getMatchedReceivers(
             $aoId,
             intval($machine['m_id']),
             intval($rule['category_id']),
-            $errorCode
+            $errorCode,
+            intval($official['id'])
         );
         if (!$receivers) {
             return $this->updateEventNotice($meId, 4, 'no_receiver');
@@ -152,7 +158,7 @@ class FaultReportService
         foreach ($receivers as $receiver) {
             $template = [
                 'wt_id' => 0,
-                'wx_id' => intval($receiver['wx_id']),
+                'wx_id' => intval($official['id']),
                 'template_name' => strval($templateConfig['template_name']),
                 'template_type' => $templateType,
                 'template_id' => $templateId,
@@ -168,7 +174,7 @@ class FaultReportService
                 'error_code' => $errorCode,
                 'sendType' => 1,
                 'templateType' => $templateType,
-                'config' => $this->buildOfficialConfig($receiver),
+                'config' => $this->buildOfficialConfig($official),
                 'template' => $template,
                 'receiver' => [[
                     'manager_id' => intval($receiver['manager_id']),
@@ -201,7 +207,7 @@ class FaultReportService
 
     protected function getLevelStrategy($aoId, $level)
     {
-        $defaults = config('fault_notice.level_strategy_defaults');
+        $defaults = FaultNoticeConfig::levelStrategyDefaults();
         $defaults = is_array($defaults) ? $defaults : [];
         $strategy = $defaults[$level] ?? [
             'level' => $level,
@@ -262,22 +268,20 @@ class FaultReportService
         return true;
     }
 
-    protected function getMatchedReceivers($aoId, $mId, $categoryId, $errorCode)
+    protected function getMatchedReceivers($aoId, $mId, $categoryId, $errorCode, $wxId)
     {
         $rows = Db::name('machine_fault_receiver')
             ->alias('mfr')
             ->join('auth_manager am', 'am.manager_id = mfr.manager_id', 'INNER')
-            ->join('wx_official wo', 'wo.id = am.wx_id', 'INNER')
             ->where('mfr.ao_id', intval($aoId))
             ->where('mfr.status', 1)
             ->where('am.status', 1)
-            ->where('wo.status', 1)
+            ->where('am.wx_id', intval($wxId))
             ->whereNotNull('am.openid')
             ->where('am.openid', '<>', '')
             ->field(
                 'mfr.receiver_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope,' .
-                'am.ao_id manager_ao_id,am.pid,am.nickname,am.account,am.openid,am.wx_id,' .
-                'wo.gh_id,wo.wx_name,wo.app_id,wo.secret,wo.token,wo.aes_key,wo.ao_id,wo.creator'
+                'am.ao_id manager_ao_id,am.pid,am.nickname,am.account,am.openid,am.wx_id'
             )
             ->order('mfr.receiver_id asc')
             ->select()
@@ -314,6 +318,42 @@ class FaultReportService
         return $matched;
     }
 
+    /**
+     * 优先使用设备所属组织的有效公众号；未配置时兜底使用系统中最早创建的有效公众号。
+     */
+    protected function getNoticeOfficial($aoId)
+    {
+        $field = 'id,gh_id,wx_name,app_id,secret,token,aes_key,ao_id,creator';
+        $query = Db::name('wx_official')
+            ->where('status', 1)
+            ->whereNotNull('app_id')
+            ->where('app_id', '<>', '')
+            ->whereNotNull('secret')
+            ->where('secret', '<>', '');
+
+        $official = (clone $query)
+            ->where('ao_id', intval($aoId))
+            ->field($field)
+            ->order('create_time asc,id asc')
+            ->find();
+        if ($official) {
+            return (array)$official;
+        }
+
+        $official = $query
+            ->field($field)
+            ->order('create_time asc,id asc')
+            ->find();
+        if ($official) {
+            actionLog([
+                'device_ao_id' => intval($aoId),
+                'fallback_wx_id' => intval($official['id']),
+                'fallback_wx_ao_id' => intval($official['ao_id']),
+            ], '故障通知使用兜底微信公众号', 'faultWechatOfficialFallback');
+        }
+        return $official ? (array)$official : [];
+    }
+
     protected function receiverHasScope($receiverId, $scopeType, $targetValue)
     {
         return (bool)Db::name('machine_fault_receiver_scope')->where([
@@ -323,18 +363,18 @@ class FaultReportService
         ])->find();
     }
 
-    protected function buildOfficialConfig($receiver)
+    protected function buildOfficialConfig($official)
     {
         return [
-            'id' => intval($receiver['wx_id']),
-            'gh_id' => strval($receiver['gh_id'] ?? ''),
-            'wx_name' => strval($receiver['wx_name'] ?? ''),
-            'app_id' => strval($receiver['app_id'] ?? ''),
-            'secret' => strval($receiver['secret'] ?? ''),
-            'token' => strval($receiver['token'] ?? ''),
-            'aes_key' => strval($receiver['aes_key'] ?? ''),
-            'ao_id' => intval($receiver['ao_id'] ?? 0),
-            'creator' => intval($receiver['creator'] ?? 0),
+            'id' => intval($official['id']),
+            'gh_id' => strval($official['gh_id'] ?? ''),
+            'wx_name' => strval($official['wx_name'] ?? ''),
+            'app_id' => strval($official['app_id'] ?? ''),
+            'secret' => strval($official['secret'] ?? ''),
+            'token' => strval($official['token'] ?? ''),
+            'aes_key' => strval($official['aes_key'] ?? ''),
+            'ao_id' => intval($official['ao_id'] ?? 0),
+            'creator' => intval($official['creator'] ?? 0),
         ];
     }
 

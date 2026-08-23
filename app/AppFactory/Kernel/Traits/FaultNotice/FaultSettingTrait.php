@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\FaultNotice;
 
+use app\AppFactory\Kernel\Support\FaultNotice\FaultNoticeConfig;
 use think\facade\Db;
 
 /**
@@ -303,36 +304,7 @@ trait FaultSettingTrait
 
     protected function getFaultLevelStrategyDefaults()
     {
-        $configured = config('fault_notice.level_strategy_defaults');
-        if (is_array($configured) && isset($configured[1], $configured[2], $configured[3])) {
-            return $configured;
-        }
-        return [
-            1 => [
-                'level' => 1,
-                'quiet_enabled' => 2,
-                'quiet_start' => null,
-                'quiet_end' => null,
-                'interval_minutes' => 30,
-                'day_limit' => 6,
-            ],
-            2 => [
-                'level' => 2,
-                'quiet_enabled' => 1,
-                'quiet_start' => '22:00:00',
-                'quiet_end' => '07:00:00',
-                'interval_minutes' => 120,
-                'day_limit' => 3,
-            ],
-            3 => [
-                'level' => 3,
-                'quiet_enabled' => 1,
-                'quiet_start' => '22:00:00',
-                'quiet_end' => '07:00:00',
-                'interval_minutes' => 1440,
-                'day_limit' => 1,
-            ],
-        ];
+        return FaultNoticeConfig::levelStrategyDefaults();
     }
 
     protected function normalizeFaultLevelStrategy($params, $level)
