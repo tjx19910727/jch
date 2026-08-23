@@ -752,6 +752,7 @@ class ApiClient extends ReceiveBaseClient
                 "msg" => $this->data['msg'] ?? "",
                 "error_position" => $this->data['error_position'] ?? "",
                 "creator_id" => $this->data['creator_id'] ?? 0,
+                "trade_no" => $this->data['trade_no'] ?? ($this->data['order_no'] ?? ""),
             ];
 //            $this->errorCode();
             $this->reportFaultCode();

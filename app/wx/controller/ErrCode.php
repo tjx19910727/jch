@@ -2,7 +2,10 @@
 
 namespace app\wx\controller;
 
+use app\AppFactory\Kernel\Service\FaultNotice\FaultOrderVideoService;
+use app\AppFactory\Kernel\Service\FaultNotice\FaultShutdownService;
 use EasyWeChat\Factory;
+use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Session;
 use think\facade\View;
@@ -16,7 +19,10 @@ use think\facade\View;
 class ErrCode
 {
     const CONFIRM_VALID_SECONDS = 86400;
+    const ACTION_TOKEN_SECONDS = 600;
     const SESSION_PREFIX = 'wx_fault_detail_authorized_';
+    const ACTION_TOKEN_SESSION_PREFIX = 'wx_fault_action_token_';
+    const ACTION_TOKEN_CACHE_PREFIX = 'wx_fault_action_token:';
 
     /**
      * 故障详情链接入口，发起 snsapi_base 静默授权。
@@ -83,10 +89,13 @@ class ErrCode
             $receiverOpenid = trim(strval($log['openid'] ?? ''));
             if ($openid === '' || $receiverOpenid === '' || !hash_equals($receiverOpenid, $openid)) {
                 Session::delete($this->getSessionKey(intval($log['wtl_id'])));
+                Session::delete(self::ACTION_TOKEN_SESSION_PREFIX . intval($log['wtl_id']));
+                Cache::delete($this->getActionTokenCacheKey($log));
                 return $this->renderError('无权限查看该故障详情');
             }
 
             Session::set($this->getSessionKey(intval($log['wtl_id'])), $openid);
+            $this->issueActionToken($log, $openid);
             $this->confirmWithinValidTime($log);
             return redirect($this->buildPageUrl($log, strval($params['sign'] ?? '')));
         } catch (\Throwable $e) {
@@ -110,6 +119,10 @@ class ErrCode
         if (!$this->hasAuthorizedSession($log)) {
             return redirect($this->buildAuthorizeUrl($log, strval($params['sign'] ?? '')));
         }
+        $actionToken = $this->getValidActionToken($log);
+        if ($actionToken === '') {
+            return redirect($this->buildAuthorizeUrl($log, strval($params['sign'] ?? '')));
+        }
 
         $this->confirmWithinValidTime($log);
         $event = $this->getFaultEvent($log);
@@ -125,18 +138,39 @@ class ErrCode
             ->select()
             ->toArray();
 
-        $level = intval($event['level'] ?? 0);
-        $levelClassMap = [1 => 'urgent', 2 => 'normal', 3 => 'notice'];
+        $showShipmentInfo = strval($log['template_type'] ?? '') === 'mShipmentFailed';
+        $videoService = new FaultOrderVideoService();
+        $orderInfo = $showShipmentInfo ? $videoService->getOrderInfo($event) : [];
+        $videoState = $showShipmentInfo
+            ? $videoService->getStatus($event)
+            : ['success' => false, 'status' => 'hidden', 'message' => '', 'videos' => []];
+        $showShutdownAction = $errorCode === FaultShutdownService::ERROR_CODE;
+        $shutdownState = $showShutdownAction
+            ? (new FaultShutdownService())->getState($log, $event)
+            : ['enabled' => false, 'status' => 'hidden', 'message' => '', 'shutdown_time' => ''];
+
         View::assign([
             'pageSuccess' => true,
             'pageMessage' => '',
             'machineName' => strval($event['machine_name'] ?? '') ?: '--',
             'machineId' => strval($event['machine_id'] ?? '') ?: '--',
+            'showShipmentInfo' => $showShipmentInfo,
+            'tradeNo' => trim(strval($event['trade_no'] ?? '')) ?: '--',
+            'channelCode' => trim(strval($orderInfo['channel_code'] ?? '')) ?: '--',
+            'videoStatus' => strval($videoState['status'] ?? 'idle'),
+            'videoMessage' => strval($videoState['message'] ?? ''),
+            'orderVideos' => is_array($videoState['videos'] ?? null) ? $videoState['videos'] : [],
+            'showShutdownAction' => $showShutdownAction,
+            'shutdownEnabled' => !empty($shutdownState['enabled']),
+            'shutdownStatus' => strval($shutdownState['status'] ?? ''),
+            'shutdownMessage' => strval($shutdownState['message'] ?? ''),
+            'shutdownTime' => strval($shutdownState['shutdown_time'] ?? ''),
+            'wtlId' => intval($log['wtl_id']),
+            'linkSign' => strval($params['sign'] ?? ''),
+            'actionToken' => $actionToken,
             'address' => strval($event['address'] ?? '') ?: '--',
             'categoryName' => strval($event['category_name'] ?? '') ?: '设备故障',
             'errorCode' => $errorCode ?: '--',
-            'levelName' => strval($event['level_name'] ?? '') ?: $this->getDefaultLevelName($level),
-            'levelClass' => $levelClassMap[$level] ?? 'normal',
             'occurTime' => intval($event['create_time'] ?? 0) > 0
                 ? date('Y-m-d H:i:s', intval($event['create_time']))
                 : '--',
@@ -145,6 +179,89 @@ class ErrCode
             'solutions' => $solutions,
         ]);
         return View::fetch('err_code/index');
+    }
+
+    /**
+     * 向故障设备请求订单视频。
+     */
+    public function requestOrderVideo()
+    {
+        if (!request()->isPost()) {
+            return $this->jsonResult(false, '请求方式错误');
+        }
+        $check = $this->validateAuthorizedAction(input());
+        if (!$check['success']) {
+            return $this->jsonResult(false, $check['message']);
+        }
+        if (strval($check['log']['template_type'] ?? '') !== 'mShipmentFailed') {
+            return $this->jsonResult(false, '该故障通知不支持获取订单视频');
+        }
+        $result = (new FaultOrderVideoService())->requestVideo($check['event']);
+        return $this->jsonResult(!empty($result['success']), strval($result['message'] ?? ''), $result);
+    }
+
+    /**
+     * 查询订单视频上传状态及视频列表。
+     */
+    public function getOrderVideoStatus()
+    {
+        if (!request()->isPost()) {
+            return $this->jsonResult(false, '请求方式错误');
+        }
+        $check = $this->validateAuthorizedAction(input());
+        if (!$check['success']) {
+            return $this->jsonResult(false, $check['message']);
+        }
+        if (strval($check['log']['template_type'] ?? '') !== 'mShipmentFailed') {
+            return $this->jsonResult(false, '该故障通知不支持获取订单视频');
+        }
+        $result = (new FaultOrderVideoService())->getStatus($check['event']);
+        return $this->jsonResult(!empty($result['success']), strval($result['message'] ?? ''), $result);
+    }
+
+    /**
+     * 设备未关机故障的远程关机操作。
+     */
+    public function shutdownMachine()
+    {
+        if (!request()->isPost()) {
+            return $this->jsonResult(false, '请求方式错误');
+        }
+        $check = $this->validateAuthorizedAction(input());
+        if (!$check['success']) {
+            return $this->jsonResult(false, $check['message']);
+        }
+        $result = (new FaultShutdownService())->shutdown($check['log'], $check['event']);
+        return $this->jsonResult(!empty($result['success']), strval($result['message'] ?? ''), $result);
+    }
+
+    protected function validateAuthorizedAction($params)
+    {
+        $check = $this->validateLink($params);
+        if (!$check['success']) {
+            return $check;
+        }
+        if (!$this->validateActionToken($check['log'], strval($params['action_token'] ?? ''))) {
+            return ['success' => false, 'message' => '操作授权已过期，请刷新页面重新授权'];
+        }
+        if (!$this->hasAuthorizedSession($check['log'])) {
+            return ['success' => false, 'message' => '微信授权已失效，请刷新故障详情页后重试'];
+        }
+        $event = $this->getFaultEvent($check['log']);
+        if (!$event) {
+            return ['success' => false, 'message' => '故障事件不存在'];
+        }
+        $check['event'] = $event;
+        return $check;
+    }
+
+    protected function jsonResult($success, $message, $data = [])
+    {
+        return json([
+            'state' => $success ? 200 : 100,
+            'msg' => strval($message),
+            'data' => is_array($data) ? $data : [],
+        ]);
     }
 
     protected function validateLink($params)
@@ -195,16 +312,16 @@ class ErrCode
                 'machine_fault_category mfc',
                 'mfc.ao_id = mec.ao_id AND mfc.category_id = mec.category_id'
             )
-            ->leftJoin('machine_fault_level mfl', 'mfl.level = mec.level')
             ->where('mec.me_id', $meId)
             ->where('mec.m_id', intval($log['m_id'] ?? 0))
             ->where('mec.ao_id', intval($log['ao_id'] ?? 0))
             ->where('mec.errorCode', strval($log['error_code'] ?? ''))
             ->field(
-                'mec.me_id,mec.machine_id,mec.machine_name,mec.address,mec.errorCode AS error_code,' .
-                'mec.level,mec.remark,mec.msg,mec.create_time,' .
+                'mec.me_id,mec.m_id,mec.ao_id,mec.machine_id,mec.machine_name,mec.address,' .
+                'mec.errorCode AS error_code,mec.trade_no,' .
+                'mec.remark,mec.msg,mec.create_time,' .
                 "COALESCE(NULLIF(mecnr.error_name,''),NULLIF(mec.remark,''),mec.errorCode) AS error_name," .
-                'mfc.category_name,mfl.level_name'
+                'mfc.category_name'
             )
             ->find();
     }
@@ -254,6 +371,64 @@ class ErrCode
         return self::SESSION_PREFIX . intval($wtlId);
     }
 
+    protected function issueActionToken($log, $openid)
+    {
+        try {
+            $token = bin2hex(random_bytes(32));
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('操作授权Token生成失败', 0, $e);
+        }
+        $wtlId = intval($log['wtl_id'] ?? 0);
+        $cached = Cache::set($this->getActionTokenCacheKey($log), [
+            'token_hash' => hash('sha256', $token),
+            'wtl_id' => $wtlId,
+            'wx_id' => intval($log['wx_id'] ?? 0),
+            'openid' => strval($openid),
+        ], self::ACTION_TOKEN_SECONDS);
+        if (!$cached) {
+            throw new \RuntimeException('操作授权Token写入缓存失败');
+        }
+        Session::set(self::ACTION_TOKEN_SESSION_PREFIX . $wtlId, $token);
+        return $token;
+    }
+
+    protected function getValidActionToken($log)
+    {
+        $token = trim(strval(Session::get(
+            self::ACTION_TOKEN_SESSION_PREFIX . intval($log['wtl_id'] ?? 0),
+            ''
+        )));
+        return $this->validateActionToken($log, $token) ? $token : '';
+    }
+
+    protected function validateActionToken($log, $token)
+    {
+        $token = trim(strval($token));
+        if ($token === '') {
+            return false;
+        }
+        $cached = Cache::get($this->getActionTokenCacheKey($log));
+        if (!is_array($cached)) {
+            return false;
+        }
+
+        $receiverOpenid = trim(strval($log['openid'] ?? ''));
+        $cachedOpenid = trim(strval($cached['openid'] ?? ''));
+        return intval($cached['wtl_id'] ?? 0) === intval($log['wtl_id'] ?? 0)
+            && intval($cached['wx_id'] ?? 0) === intval($log['wx_id'] ?? 0)
+            && $receiverOpenid !== ''
+            && $cachedOpenid !== ''
+            && hash_equals($receiverOpenid, $cachedOpenid)
+            && hash_equals(strval($cached['token_hash'] ?? ''), hash('sha256', $token));
+    }
+
+    protected function getActionTokenCacheKey($log)
+    {
+        return self::ACTION_TOKEN_CACHE_PREFIX
+            . intval($log['wtl_id'] ?? 0) . ':'
+            . sha1(strval($log['openid'] ?? ''));
+    }
+
     protected function makeSign($wtlId, $wxId)
     {
         $secret = config('app.salt') ?: 'fault_detail_secret';
@@ -279,11 +454,6 @@ class ErrCode
     protected function getHost()
     {
         return rtrim(strval(config('app.app_host') ?: env('app.host', '')), '/');
-    }
-
-    protected function getDefaultLevelName($level)
-    {
-        return [1 => '紧急', 2 => '一般', 3 => '提示'][$level] ?? '--';
     }
 
     protected function renderError($message)

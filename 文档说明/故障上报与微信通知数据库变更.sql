@@ -81,7 +81,7 @@ ON DUPLICATE KEY UPDATE
 -- ------------------------------------------------------------
 -- 4. 故障分类
 -- 新增/编辑分类时，只保存代码白名单中的template_type。
--- 微信template_id和body固定配置在config/fault_notice.php，不再关联wx_template.wt_id。
+-- 微信template_id和body固定配置在app/AppFactory/Kernel/Support/FaultNotice/FaultNoticeConfig.php，不再关联wx_template.wt_id。
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `machine_fault_category` (
   `category_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '故障分类ID',

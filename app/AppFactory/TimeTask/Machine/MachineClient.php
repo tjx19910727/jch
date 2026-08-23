@@ -11,6 +11,7 @@ namespace app\AppFactory\TimeTask\Machine;
 
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
@@ -41,6 +42,7 @@ class MachineClient extends TimeTaskBase
     use ActivityCouponUsedTrait;
     use SimCardInfoTrait;
     use ToManagerTrait;
+    use FaultReportTrait;
 
     public $machine = [];
     public $message = [];
@@ -1131,7 +1133,8 @@ class MachineClient extends TimeTaskBase
                     'msg' => '设备超过计划关机时间30分钟仍在线',
                     'error_position' => 3,
                 ];
-                $flag[] = $this->errorCode();
+//                $flag[] = $this->errorCode();
+                $flag[] = $this->reportFaultCode();
                 Cache::set($sentCacheKey, 1, $ttl > 0 ? $ttl : 60);
                 actionLog([
                     'm_id' => $item['m_id'],

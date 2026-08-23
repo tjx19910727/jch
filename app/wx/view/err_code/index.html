@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
     <meta name="format-detection" content="telephone=no">
+    <meta name="referrer" content="no-referrer">
     <title>故障详情</title>
     <style>
         :root{color-scheme:light;--danger:#f04444;--warning:#fa8c16;--primary:#1677ff;--text:#252a34;--muted:#68707f;--line:#edf0f4;--page:#f5f6f8}
@@ -16,8 +17,8 @@
         .hero-icon{display:grid;flex:0 0 58px;width:58px;height:58px;place-items:center;border-radius:50%;background:linear-gradient(145deg,#f35a5a,#e63131);box-shadow:0 8px 18px rgba(230,49,49,.19);color:#fff;font-size:38px;font-weight:800;line-height:1}
         .hero-copy{min-width:0}.hero-title{margin:0;color:#161a22;font-size:25px;font-weight:800;line-height:1.28}.hero-subtitle{margin:7px 0 0;color:#737a88;font-size:17px;line-height:1.45}
         .details{padding-top:10px}.detail-row{display:grid;grid-template-columns:105px minmax(0,1fr);gap:18px;padding:13px 0;font-size:17px;line-height:1.65}.detail-label{color:var(--muted);white-space:nowrap}.detail-value{min-width:0;color:#242832;text-align:right;word-break:break-word}.detail-value.error-code{color:var(--danger);font-weight:700}.detail-row.description{align-items:start}.detail-row.description .detail-value{text-align:left;white-space:pre-wrap}
-        .level-badge{display:inline-block;padding:2px 13px;border-radius:5px;font-size:15px;font-weight:700;line-height:1.6}.level-badge.urgent{color:#ed2633;background:#fff0f1}.level-badge.normal{color:#d97706;background:#fff6e6}.level-badge.notice{color:#1677ff;background:#edf5ff}
         .solution-title{display:flex;align-items:center;gap:9px;margin:0 0 20px;color:#1d222b;font-size:22px;font-weight:800}.solution-icon{color:#ff9a1f;font-size:26px;line-height:1}.solution-item{margin-top:14px;padding:17px 16px;border:1px solid #ffd79b;border-radius:9px;background:linear-gradient(145deg,#fffdf8,#fff9ee)}.solution-item:first-of-type{margin-top:0}.solution-name{margin:0 0 12px;color:#8a5200;font-size:17px;font-weight:700;line-height:1.5}.solution-content{color:#3e4653;font-size:16px;line-height:1.85;word-break:break-word}.solution-content>:first-child{margin-top:0}.solution-content>:last-child{margin-bottom:0}.solution-content p{margin:8px 0}.solution-content ol,.solution-content ul{margin:8px 0;padding-left:24px}.solution-content img{display:block;max-width:100%!important;height:auto!important;margin:10px auto;border-radius:6px}.solution-content table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse;-webkit-overflow-scrolling:touch}.solution-content td,.solution-content th{padding:7px;border:1px solid #e1e4e9;white-space:nowrap}
+        .action-title{display:flex;align-items:center;gap:9px;margin:0;color:#1d222b;font-size:22px;font-weight:800}.action-desc{margin:12px 0 0;color:#697181;font-size:15px;line-height:1.7}.action-button{width:100%;margin-top:18px;padding:14px 18px;border:0;border-radius:9px;background:var(--primary);color:#fff;font-size:17px;font-weight:700;cursor:pointer}.action-button.danger{background:#dc2626}.action-button:disabled{cursor:not-allowed;background:#c7ccd4;color:#f7f8fa}.video-list{margin-top:18px}.video-item{margin-top:14px}.video-item:first-child{margin-top:0}.video-name{margin:0 0 8px;color:#535c6b;font-size:14px;word-break:break-all}.video-player{display:block;width:100%;max-height:420px;border-radius:8px;background:#111}.action-message.success{color:#079455}.action-message.error{color:#d92d20}
         .error-card{margin-top:18vh;text-align:center}.error-icon{display:grid;width:64px;height:64px;margin:0 auto 18px;place-items:center;border-radius:50%;background:#fff0f1;color:var(--danger);font-size:38px;font-weight:800}.error-title{margin:0;color:#20242d;font-size:23px;font-weight:800}.error-message{margin:14px 0 0;color:#747c8a;font-size:16px;line-height:1.8;word-break:break-word}
         @media(max-width:420px){body{padding-top:0}.card{margin-bottom:12px;padding:22px 18px;border-radius:0}.hero{gap:14px}.hero-icon{flex-basis:54px;width:54px;height:54px;font-size:34px}.hero-title{font-size:22px}.hero-subtitle{font-size:15px}.detail-row{grid-template-columns:88px minmax(0,1fr);gap:12px;padding:12px 0;font-size:16px}.solution-title{font-size:20px}.solution-content{font-size:15px}.error-card{margin-top:14vh;border-radius:12px}}
     </style>
@@ -33,14 +34,45 @@
         <div class="details">
             <div class="detail-row"><span class="detail-label">设备名称</span><span class="detail-value">{$machineName|htmlspecialchars}</span></div>
             <div class="detail-row"><span class="detail-label">设备编号</span><span class="detail-value">{$machineId|htmlspecialchars}</span></div>
+            {if $showShipmentInfo}
+            <div class="detail-row"><span class="detail-label">订单编号</span><span class="detail-value">{$tradeNo|htmlspecialchars}</span></div>
+            <div class="detail-row"><span class="detail-label">货道号</span><span class="detail-value">{$channelCode|htmlspecialchars}</span></div>
+            {/if}
             <div class="detail-row"><span class="detail-label">设备地址</span><span class="detail-value">{$address|htmlspecialchars}</span></div>
             <div class="detail-row"><span class="detail-label">故障类型</span><span class="detail-value">{$categoryName|htmlspecialchars}</span></div>
             <div class="detail-row"><span class="detail-label">错误码</span><span class="detail-value error-code">{$errorCode|htmlspecialchars}</span></div>
-            <div class="detail-row"><span class="detail-label">故障等级</span><span class="detail-value"><span class="level-badge {$levelClass}">{$levelName|htmlspecialchars}</span></span></div>
             <div class="detail-row"><span class="detail-label">发生时间</span><span class="detail-value">{$occurTime|htmlspecialchars}</span></div>
             <div class="detail-row description"><span class="detail-label">故障描述</span><span class="detail-value">{$description|htmlspecialchars}</span></div>
         </div>
     </section>
+
+    {if $showShipmentInfo}
+    <section class="card" id="videoSection" data-status="{$videoStatus|htmlspecialchars}">
+        <h2 class="action-title"><span aria-hidden="true">▶</span><span>订单视频</span></h2>
+        <p class="action-desc action-message" id="videoMessage">{$videoMessage|htmlspecialchars}</p>
+        <button class="action-button" id="videoRequestButton" type="button"
+                {if $videoStatus == 'uploading' || $videoStatus == 'requested' || $videoStatus == 'unavailable'}disabled{/if}>
+            {if $videoStatus == 'ready'}刷新订单视频{elseif $videoStatus == 'uploading' || $videoStatus == 'requested'}视频获取中{else}获取订单视频{/if}
+        </button>
+        <div class="video-list" id="videoList">
+            {volist name="orderVideos" id="video"}
+            <article class="video-item">
+                <p class="video-name">{$video.video_name|htmlspecialchars}</p>
+                <video class="video-player" controls playsinline preload="metadata" src="{$video.video_url|htmlspecialchars}"></video>
+            </article>
+            {/volist}
+        </div>
+    </section>
+    {/if}
+
+    {if $showShutdownAction}
+    <section class="card" id="shutdownSection" data-status="{$shutdownStatus|htmlspecialchars}">
+        <h2 class="action-title"><span aria-hidden="true">⏻</span><span>设备关机</span></h2>
+        {if $shutdownTime}<p class="action-desc">计划关机时间：{$shutdownTime|htmlspecialchars}</p>{/if}
+        <p class="action-desc action-message" id="shutdownMessage">{$shutdownMessage|htmlspecialchars}</p>
+        <button class="action-button danger" id="shutdownButton" type="button" {if !$shutdownEnabled}disabled{/if}>立即关机</button>
+    </section>
+    {/if}
 
     {if $solutions}
     <section class="card">
@@ -61,5 +93,151 @@
     </section>
     {/if}
 </main>
+{if $pageSuccess}
+<input id="faultActionToken" type="hidden" value="{$actionToken|htmlspecialchars}">
+<script>
+(function () {
+    var requestData = {
+        wtl_id: '{$wtlId}',
+        sign: '{$linkSign|htmlspecialchars}',
+        action_token: document.getElementById('faultActionToken').value
+    };
+    var formBody = function () {
+        return new URLSearchParams(requestData).toString();
+    };
+    var parseResponse = function (response) {
+        return response.json().catch(function () {
+            throw new Error('服务器返回格式错误');
+        });
+    };
+
+    var videoSection = document.getElementById('videoSection');
+    var videoButton = document.getElementById('videoRequestButton');
+    var videoMessage = document.getElementById('videoMessage');
+    var videoList = document.getElementById('videoList');
+    var videoTimer = null;
+    var videoPollCount = 0;
+
+    var renderVideos = function (videos) {
+        if (!videoList || !Array.isArray(videos)) return;
+        videoList.innerHTML = '';
+        videos.forEach(function (video) {
+            var item = document.createElement('article');
+            item.className = 'video-item';
+            var name = document.createElement('p');
+            name.className = 'video-name';
+            name.textContent = video.video_name || '订单视频';
+            var player = document.createElement('video');
+            player.className = 'video-player';
+            player.controls = true;
+            player.playsInline = true;
+            player.preload = 'metadata';
+            player.src = video.video_url || '';
+            item.appendChild(name);
+            item.appendChild(player);
+            videoList.appendChild(item);
+        });
+    };
+
+    var scheduleVideoPoll = function () {
+        if (!videoSection || videoPollCount >= 30) return;
+        clearTimeout(videoTimer);
+        videoTimer = setTimeout(loadVideoStatus, 3000);
+    };
+
+    var applyVideoState = function (payload) {
+        var data = payload && payload.data ? payload.data : {};
+        var status = data.status || 'failed';
+        if (videoSection) videoSection.dataset.status = status;
+        if (videoMessage) {
+            videoMessage.textContent = data.message || (payload ? payload.msg : '视频状态查询失败');
+            videoMessage.className = 'action-desc action-message' + (payload && payload.state === 200 ? '' : ' error');
+        }
+        renderVideos(data.videos || []);
+        if (!videoButton) return;
+        if (status === 'ready') {
+            videoButton.disabled = false;
+            videoButton.textContent = '刷新订单视频';
+            return;
+        }
+        if (status === 'requested' || status === 'uploading') {
+            videoButton.disabled = true;
+            videoButton.textContent = '视频获取中';
+            scheduleVideoPoll();
+            return;
+        }
+        videoButton.disabled = status === 'unavailable';
+        videoButton.textContent = '重新获取订单视频';
+    };
+
+    function loadVideoStatus() {
+        videoPollCount++;
+        fetch('/wx/err_code/getOrderVideoStatus', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formBody()
+        }).then(parseResponse).then(applyVideoState).catch(function (error) {
+            applyVideoState({state: 100, msg: error.message, data: {status: 'failed', message: error.message}});
+        });
+    }
+
+    if (videoButton) {
+        videoButton.addEventListener('click', function () {
+            videoButton.disabled = true;
+            videoButton.textContent = '正在请求设备';
+            videoPollCount = 0;
+            fetch('/wx/err_code/requestOrderVideo', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formBody()
+            }).then(parseResponse).then(applyVideoState).catch(function (error) {
+                applyVideoState({state: 100, msg: error.message, data: {status: 'failed', message: error.message}});
+            });
+        });
+        if (videoSection && (videoSection.dataset.status === 'requested' || videoSection.dataset.status === 'uploading')) {
+            scheduleVideoPoll();
+        }
+    }
+
+    var shutdownButton = document.getElementById('shutdownButton');
+    var shutdownMessage = document.getElementById('shutdownMessage');
+    if (shutdownButton) {
+        shutdownButton.addEventListener('click', function () {
+            if (!window.confirm('确认向该设备发送关机指令吗？此操作不可重复。')) return;
+            shutdownButton.disabled = true;
+            shutdownButton.textContent = '正在下发关机指令';
+            fetch('/wx/err_code/shutdownMachine', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formBody()
+            }).then(parseResponse).then(function (payload) {
+                var data = payload.data || {};
+                shutdownMessage.textContent = data.message || payload.msg || '关机操作失败';
+                shutdownMessage.className = 'action-desc action-message ' + (payload.state === 200 ? 'success' : 'error');
+                shutdownButton.textContent = payload.state === 200 ? '关机指令已下发' : '重新发送关机指令';
+                shutdownButton.disabled = payload.state === 200 || data.status === 'processing' || data.status === 'already_success';
+            }).catch(function (error) {
+                shutdownMessage.textContent = error.message;
+                shutdownMessage.className = 'action-desc action-message error';
+                shutdownButton.textContent = '重新发送关机指令';
+                shutdownButton.disabled = false;
+            });
+        });
+    }
+})();
+</script>
+{/if}
 </body>
 </html>
