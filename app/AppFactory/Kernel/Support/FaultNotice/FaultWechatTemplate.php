@@ -9,7 +9,7 @@ class FaultWechatTemplate
 {
     public static function all()
     {
-        $templates = config('fault_notice.wechat_templates');
+        $templates = FaultNoticeConfig::wechatTemplates();
         return is_array($templates) ? $templates : [];
     }
 
