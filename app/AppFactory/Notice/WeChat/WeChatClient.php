@@ -110,9 +110,9 @@ class WeChatClient extends NoticeBaseClient
                         $wtlId = $this->addTemplateLogV2($value, $data);
                         $templateType = strval($this->config['templateType'] ?? '');
                         if ($wtlId > 0 && in_array($templateType, FaultWechatTemplate::types(), true)) {
-                            $confirmUrl = $this->buildConfirmUrl($wtlId);
-                            if ($confirmUrl) {
-                                $data['url'] = $confirmUrl;
+                            $detailUrl = $this->buildFaultDetailUrl($wtlId);
+                            if ($detailUrl) {
+                                $data['url'] = $detailUrl;
                             }
                         }
 
@@ -233,5 +233,31 @@ class WeChatClient extends NoticeBaseClient
             ? '/wx/official/shutdownNotice'
             : '/wx/official/confirmStartupNotice';
         return $host . $path . '?' . $query;
+    }
+
+    /**
+     * 新故障通知详情链接：链接不设过期时间，访问权限由微信静默授权 OpenID 校验。
+     * 旧 send() 继续使用 buildConfirmUrl()，不改变旧故障上报和回滚流程。
+     */
+    private function buildFaultDetailUrl($wtlId)
+    {
+        $host = rtrim(config('app.app_host') ?: env('app.host', ''), '/');
+        if (!$host) {
+            actionLog(['wtl_id' => $wtlId], '未配置app_host，无法生成故障详情链接', 'noticeSendV2');
+            return '';
+        }
+
+        $wxId = intval($this->config['template']['wx_id'] ?? 0);
+        if ($wxId <= 0) {
+            actionLog(['wtl_id' => $wtlId], '故障通知缺少微信公众号ID', 'noticeSendV2');
+            return '';
+        }
+
+        $secret = config('app.salt') ?: 'fault_detail_secret';
+        $sign = hash('sha256', intval($wtlId) . '|' . $wxId . '|' . $secret);
+        return $host . '/wx/err_code/authorize?' . http_build_query([
+            'wtl_id' => intval($wtlId),
+            'sign' => $sign,
+        ]);
     }
 }

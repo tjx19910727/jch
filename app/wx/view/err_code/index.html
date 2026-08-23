@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    <title>故障详情</title>
+    <style>
+        :root{color-scheme:light;--danger:#f04444;--warning:#fa8c16;--primary:#1677ff;--text:#252a34;--muted:#68707f;--line:#edf0f4;--page:#f5f6f8}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        html,body{margin:0;min-height:100%;background:var(--page);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;color:var(--text)}
+        body{padding:12px 0 max(24px,env(safe-area-inset-bottom))}
+        .page{width:min(100%,680px);margin:0 auto}
+        .card{margin:0 0 14px;padding:26px 22px;background:#fff;border:1px solid rgba(18,30,52,.04);border-radius:12px;box-shadow:0 3px 18px rgba(20,34,56,.045)}
+        .hero{display:flex;align-items:center;gap:17px;padding-bottom:23px;border-bottom:1px solid var(--line)}
+        .hero-icon{display:grid;flex:0 0 58px;width:58px;height:58px;place-items:center;border-radius:50%;background:linear-gradient(145deg,#f35a5a,#e63131);box-shadow:0 8px 18px rgba(230,49,49,.19);color:#fff;font-size:38px;font-weight:800;line-height:1}
+        .hero-copy{min-width:0}.hero-title{margin:0;color:#161a22;font-size:25px;font-weight:800;line-height:1.28}.hero-subtitle{margin:7px 0 0;color:#737a88;font-size:17px;line-height:1.45}
+        .details{padding-top:10px}.detail-row{display:grid;grid-template-columns:105px minmax(0,1fr);gap:18px;padding:13px 0;font-size:17px;line-height:1.65}.detail-label{color:var(--muted);white-space:nowrap}.detail-value{min-width:0;color:#242832;text-align:right;word-break:break-word}.detail-value.error-code{color:var(--danger);font-weight:700}.detail-row.description{align-items:start}.detail-row.description .detail-value{text-align:left;white-space:pre-wrap}
+        .level-badge{display:inline-block;padding:2px 13px;border-radius:5px;font-size:15px;font-weight:700;line-height:1.6}.level-badge.urgent{color:#ed2633;background:#fff0f1}.level-badge.normal{color:#d97706;background:#fff6e6}.level-badge.notice{color:#1677ff;background:#edf5ff}
+        .solution-title{display:flex;align-items:center;gap:9px;margin:0 0 20px;color:#1d222b;font-size:22px;font-weight:800}.solution-icon{color:#ff9a1f;font-size:26px;line-height:1}.solution-item{margin-top:14px;padding:17px 16px;border:1px solid #ffd79b;border-radius:9px;background:linear-gradient(145deg,#fffdf8,#fff9ee)}.solution-item:first-of-type{margin-top:0}.solution-name{margin:0 0 12px;color:#8a5200;font-size:17px;font-weight:700;line-height:1.5}.solution-content{color:#3e4653;font-size:16px;line-height:1.85;word-break:break-word}.solution-content>:first-child{margin-top:0}.solution-content>:last-child{margin-bottom:0}.solution-content p{margin:8px 0}.solution-content ol,.solution-content ul{margin:8px 0;padding-left:24px}.solution-content img{display:block;max-width:100%!important;height:auto!important;margin:10px auto;border-radius:6px}.solution-content table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse;-webkit-overflow-scrolling:touch}.solution-content td,.solution-content th{padding:7px;border:1px solid #e1e4e9;white-space:nowrap}
+        .error-card{margin-top:18vh;text-align:center}.error-icon{display:grid;width:64px;height:64px;margin:0 auto 18px;place-items:center;border-radius:50%;background:#fff0f1;color:var(--danger);font-size:38px;font-weight:800}.error-title{margin:0;color:#20242d;font-size:23px;font-weight:800}.error-message{margin:14px 0 0;color:#747c8a;font-size:16px;line-height:1.8;word-break:break-word}
+        @media(max-width:420px){body{padding-top:0}.card{margin-bottom:12px;padding:22px 18px;border-radius:0}.hero{gap:14px}.hero-icon{flex-basis:54px;width:54px;height:54px;font-size:34px}.hero-title{font-size:22px}.hero-subtitle{font-size:15px}.detail-row{grid-template-columns:88px minmax(0,1fr);gap:12px;padding:12px 0;font-size:16px}.solution-title{font-size:20px}.solution-content{font-size:15px}.error-card{margin-top:14vh;border-radius:12px}}
+    </style>
+</head>
+<body>
+<main class="page">
+    {if $pageSuccess}
+    <section class="card">
+        <header class="hero">
+            <div class="hero-icon" aria-hidden="true">!</div>
+            <div class="hero-copy"><h1 class="hero-title">设备发生故障</h1><p class="hero-subtitle">设备异常，请及时处理</p></div>
+        </header>
+        <div class="details">
+            <div class="detail-row"><span class="detail-label">设备名称</span><span class="detail-value">{$machineName|htmlspecialchars}</span></div>
+            <div class="detail-row"><span class="detail-label">设备编号</span><span class="detail-value">{$machineId|htmlspecialchars}</span></div>
+            <div class="detail-row"><span class="detail-label">设备地址</span><span class="detail-value">{$address|htmlspecialchars}</span></div>
+            <div class="detail-row"><span class="detail-label">故障类型</span><span class="detail-value">{$categoryName|htmlspecialchars}</span></div>
+            <div class="detail-row"><span class="detail-label">错误码</span><span class="detail-value error-code">{$errorCode|htmlspecialchars}</span></div>
+            <div class="detail-row"><span class="detail-label">故障等级</span><span class="detail-value"><span class="level-badge {$levelClass}">{$levelName|htmlspecialchars}</span></span></div>
+            <div class="detail-row"><span class="detail-label">发生时间</span><span class="detail-value">{$occurTime|htmlspecialchars}</span></div>
+            <div class="detail-row description"><span class="detail-label">故障描述</span><span class="detail-value">{$description|htmlspecialchars}</span></div>
+        </div>
+    </section>
+
+    {if $solutions}
+    <section class="card">
+        <h2 class="solution-title"><span class="solution-icon" aria-hidden="true">☼</span><span>解决方案</span></h2>
+        {volist name="solutions" id="solution"}
+        <article class="solution-item">
+            {if $solution.title}<h3 class="solution-name">{$solution.title|htmlspecialchars}</h3>{/if}
+            <div class="solution-content">{$solution.content|raw}</div>
+        </article>
+        {/volist}
+    </section>
+    {/if}
+    {else /}
+    <section class="card error-card">
+        <div class="error-icon" aria-hidden="true">!</div>
+        <h1 class="error-title">故障详情</h1>
+        <p class="error-message">{$pageMessage|htmlspecialchars}</p>
+    </section>
+    {/if}
+</main>
+</body>
+</html>
