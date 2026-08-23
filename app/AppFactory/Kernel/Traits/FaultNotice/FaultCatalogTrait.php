@@ -293,7 +293,11 @@ trait FaultCatalogTrait
         }
         $referenced = Db::name('machine_fault_receiver_scope')
             ->alias('mfrs')
-            ->innerJoin('machine_fault_receiver mfr', 'mfr.receiver_id = mfrs.receiver_id')
+            ->join(
+                'machine_fault_receiver mfr',
+                'mfr.receiver_id = mfrs.receiver_id',
+                'INNER'
+            )
             ->where('mfr.ao_id', $this->getFaultCatalogAoId())
             ->where('mfrs.scope_type', 3)
             ->where('mfrs.target_value', $errorCode)
