@@ -86,6 +86,7 @@ class FaultReportService
             'level' => intval($rule['level'] ?? 2) ?: 2,
             'remark' => $remark,
             'msg' => strval($message['msg'] ?? ''),
+            'trade_no' => $this->getTradeNo($message),
             'ao_id' => intval($machine['ao_id']),
             'notice_status' => 0,
             'notice_reason' => '',
@@ -380,6 +381,10 @@ class FaultReportService
 
     protected function buildReplaceData($machine, $message, $rule, $errorCode, $now)
     {
+        $tradeNo = $this->getTradeNo($message);
+        $channelCode = strval($rule['template_type'] ?? '') === 'mShipmentFailed'
+            ? $this->getFailedChannelCode($machine, $tradeNo)
+            : '';
         $lastOnline = $message['last_online_time'] ?? ($machine['last_online_time'] ?? 0);
         if (is_numeric($lastOnline)) {
             $lastOnline = intval($lastOnline) > 0 ? date('Y-m-d H:i:s', intval($lastOnline)) : '-';
@@ -389,11 +394,39 @@ class FaultReportService
             'machine_name' => mb_substr(strval($machine['machine_name'] ?? ''), 0, 20, 'UTF-8'),
             'error_time' => date('Y-m-d H:i:s', $now),
             'error_info' => $errorCode,
+            'trade_no' => $tradeNo ?: '-',
             // 通用模板的“设备地址”以及出货模板的“商品名称”均显示该短名称。
             'error_code' => strval($rule['wechat_text'] ?? ''),
             'last_online_time' => strval($lastOnline ?: '-'),
-            'channel_code' => '-',
+            'channel_code' => $channelCode ?: '-',
         ];
+    }
+
+    protected function getTradeNo($message)
+    {
+        return trim(strval($message['trade_no'] ?? ($message['order_no'] ?? '')));
+    }
+
+    /**
+     * 出货失败模板只取订单中第一条失败明细的货道号，不写入故障事件表。
+     */
+    protected function getFailedChannelCode($machine, $tradeNo)
+    {
+        $tradeNo = trim(strval($tradeNo));
+        if ($tradeNo === '') {
+            return '';
+        }
+
+        return trim(strval(Db::name('sale_orders')
+            ->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'inner')
+            ->where('so.trade_no', $tradeNo)
+            ->where('so.m_id', intval($machine['m_id'] ?? 0))
+            ->where('so.machine_id', strval($machine['machine_id'] ?? ''))
+            ->where('so.ao_id', intval($machine['ao_id'] ?? 0))
+            ->where('sod.fail_quantity', '>', 0)
+            ->order('sod.sod_id asc')
+            ->value('sod.channel_code')));
     }
 
     protected function updateEventNotice($meId, $status, $reason = '', $noticeTime = 0)

@@ -50,12 +50,11 @@ class FaultNoticeConfig
                 'test_template_id' => 'cw1oToF1jjkExKdSL1UpzPB8kjDBaofElVx1dC3T788',
                 'body' => [
                     ['设备编号' => ['value' => '{{machine_id}}', 'field' => 'character_string1']],
-                    // 设备只上报故障码，订单编号字段复用为原始故障码。
-                    ['订单编号' => ['value' => '{{error_info}}', 'field' => 'character_string2']],
+                    ['订单编号' => ['value' => '{{trade_no}}', 'field' => 'character_string2']],
                     // 商品名称字段复用为故障短名称。
                     ['商品名称' => ['value' => '{{error_code}}', 'field' => 'thing3']],
                     ['出货时间' => ['value' => '{{error_time}}', 'field' => 'time4']],
-                    // 故障上报不携带货道号，固定显示“-”。
+                    // 货道号按订单从sale_orders_details中取fail_quantity>0的第一条明细。
                     ['货道号' => ['value' => '{{channel_code}}', 'field' => 'character_string5']],
                 ],
             ],
