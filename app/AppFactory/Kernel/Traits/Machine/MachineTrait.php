@@ -526,6 +526,9 @@ trait MachineTrait
 
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         if (!$detail) return $this->r(100,"找不到订单记录");
+        if (intval($detail['refund_quantity'] ?? 0) > 0) {
+            return $this->r(100, $this->lang("VMachine.refunded_sod_remote_out_forbidden"));
+        }
         $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
         // 先不做判断
         // if (!$channel_code){
