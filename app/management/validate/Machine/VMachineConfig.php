@@ -23,6 +23,7 @@ class VMachineConfig extends VCommon
         "run_mode" => "in:1,2",
         "is_multi_goods" => "in:1,2",
         "subcar_mix" => "in:1,2",
+        "goods_no_stock_jump_to_mini_program" => "in:1,2",
         "subcar_offline_sp_ids" => "checkPayeeIds",
         "subcar_online_sp_ids" => "checkPayeeIds",
     ];
@@ -37,21 +38,34 @@ class VMachineConfig extends VCommon
         "run_mode.in" => "VMachineConfig.run_mode_in",
         "is_multi_goods.in" => "单货道多商品开关参数错误",
         "subcar_mix.in" => "VMachineConfig.subcar_mix_in",
+        "goods_no_stock_jump_to_mini_program.in" => "VMachineConfig.goods_no_stock_jump_to_mini_program_in",
         "subcar_offline_sp_ids.checkPayeeIds" => "VMachineConfig.subcar_offline_sp_ids_invalid",
         "subcar_online_sp_ids.checkPayeeIds" => "VMachineConfig.subcar_online_sp_ids_invalid",
     ];
 
     protected $scene = [
+<<<<<<< HEAD
         "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode", "subcar_mix", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
         "update" => ["mc_id", "online_pay_success_tip", "run_mode", "is_multi_goods", "subcar_mix", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
         "mcList" => ["m_id", "online_pay_success_tip", "run_mode", "is_multi_goods", "subcar_mix", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+=======
+        "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+        "update" => ["mc_id", "online_pay_success_tip", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+        "del" => ["mc_id"],
+        "updateMoreMc" => ["mcList"],
+        "mcList" => ["m_id", "online_pay_success_tip", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+>>>>>>> main_wc
     ];
 
     public function sceneMcList()
     {
+<<<<<<< HEAD
         return $this->only(['m_id', 'online_pay_success_tip', 'run_mode', 'is_multi_goods', 'subcar_mix', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])
+=======
+        return $this->only(['m_id', 'online_pay_success_tip', 'run_mode', 'subcar_mix', 'goods_no_stock_jump_to_mini_program', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])
+>>>>>>> main_wc
             ->remove("m_id",'unique');
     }
 
