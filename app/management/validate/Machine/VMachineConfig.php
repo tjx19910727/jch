@@ -44,28 +44,16 @@ class VMachineConfig extends VCommon
     ];
 
     protected $scene = [
-<<<<<<< HEAD
-        "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode", "subcar_mix", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
-        "update" => ["mc_id", "online_pay_success_tip", "run_mode", "is_multi_goods", "subcar_mix", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
-        "del" => ["mc_id"],
-        "updateMoreMc" => ["mcList"],
-        "mcList" => ["m_id", "online_pay_success_tip", "run_mode", "is_multi_goods", "subcar_mix", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
-=======
         "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
         "update" => ["mc_id", "online_pay_success_tip", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
         "mcList" => ["m_id", "online_pay_success_tip", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
->>>>>>> main_wc
     ];
 
     public function sceneMcList()
     {
-<<<<<<< HEAD
-        return $this->only(['m_id', 'online_pay_success_tip', 'run_mode', 'is_multi_goods', 'subcar_mix', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])
-=======
         return $this->only(['m_id', 'online_pay_success_tip', 'run_mode', 'subcar_mix', 'goods_no_stock_jump_to_mini_program', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])
->>>>>>> main_wc
             ->remove("m_id",'unique');
     }
 
