@@ -673,7 +673,25 @@ class ApiClient extends ReceiveBaseClient
         $mcList = $this->getMachineChannelList($where, 0, $channelField, 'channel_code asc');
         if ($mcList) {
             $mcList = $mcList->toArray();
+            $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
+            $availableStockMap = $jumpEnabled
+                ? $this->getMachineGoodsAvailableStockMap(array_column($mcList, 'g_id'))
+                : [];
             foreach ($mcList as $key => $mc) {
+                $mc['jump_to_mini_program'] = 0;
+                if ($jumpEnabled && $this->hasInsufficientPhysicalGoodsStock([$mc['g_id']], $availableStockMap)) {
+                    $mc['jump_to_mini_program'] = 1;
+                }
+                $goodsQrcode = '';
+                if (!empty($mc['g_id'])) {
+                    $goodsInfo = $this->getGoodsFind(['g_id' => $mc['g_id']], 'goods_qrcode');
+                    if ($goodsInfo && !is_string($goodsInfo)) {
+                        $goodsInfo = $goodsInfo->toArray();
+                        $goodsQrcode = $goodsInfo['goods_qrcode'] ?? '';
+                    }
+                }
+                $mc['goods_qrcode'] = $goodsQrcode;
+
                 $where = [];
                 $where[] = ['gc.start_time', "<=", time()];
                 $where['ag.g_id'] = $mc['g_id'];
@@ -702,6 +720,69 @@ class ApiClient extends ReceiveBaseClient
         }
         actionLog($mcList, '返回的货道数据');
         return $this->r(200, "SUCCESS", $mcList);
+    }
+
+    /**
+     * 当前设备是否启用无库存跳转小程序。
+     * @return bool
+     */
+    protected function isGoodsNoStockJumpToMiniProgramEnabled()
+    {
+        $config = $this->getMachineConfigFind(
+            ['m_id' => $this->machine['m_id']],
+            'goods_no_stock_jump_to_mini_program'
+        );
+        return $config && intval($config['goods_no_stock_jump_to_mini_program'] ?? 2) === 1;
+    }
+
+    /**
+     * 批量获取当前设备的商品可用库存，避免逐商品查询。
+     * @param array $gIds
+     * @return array
+     */
+    protected function getMachineGoodsAvailableStockMap($gIds)
+    {
+        $gIds = array_values(array_unique(array_filter(array_map('intval', (array)$gIds), function ($gId) {
+            return $gId > 0 && $gId !== 9999;
+        })));
+        if (!$gIds) return [];
+
+        $where = ['m_id' => $this->machine['m_id']];
+        $where[] = ['g_id', 'in', $gIds];
+        $rows = $this->getMachineGoodsList(
+            $where,
+            0,
+            'g_id,SUM(available_stock) available_stock',
+            '',
+            '',
+            'g_id'
+        );
+        if ($rows && is_object($rows)) $rows = $rows->toArray();
+
+        $stockMap = [];
+        foreach ((array)$rows as $row) {
+            $stockMap[intval($row['g_id'])] = floatval($row['available_stock']);
+        }
+        return $stockMap;
+    }
+
+    /**
+     * 任一有效实物商品无库存记录或可用库存小于等于0，视为库存不足。
+     * @param array $gIds
+     * @param array $availableStockMap
+     * @return bool
+     */
+    protected function hasInsufficientPhysicalGoodsStock($gIds, $availableStockMap)
+    {
+        foreach ((array)$gIds as $gId) {
+            $gId = intval($gId);
+            if ($gId <= 0 || $gId === 9999) continue;
+            if (!array_key_exists($gId, $availableStockMap)
+                || floatval($availableStockMap[$gId]) <= 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -934,6 +1015,12 @@ class ApiClient extends ReceiveBaseClient
         $where["m_id"] = $this->machine['m_id'];
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (!isset($data['goods_no_stock_jump_to_mini_program'])
+            || !in_array(intval($data['goods_no_stock_jump_to_mini_program']), [1, 2], true)) {
+            $data['goods_no_stock_jump_to_mini_program'] = 2;
+        } else {
+            $data['goods_no_stock_jump_to_mini_program'] = intval($data['goods_no_stock_jump_to_mini_program']);
+        }
         if (!isset($data['run_mode']) || !in_array(intval($data['run_mode']), [1, 2], true)) {
             $data['run_mode'] = 1;
         } else {
@@ -1131,7 +1218,7 @@ class ApiClient extends ReceiveBaseClient
     }
 
     protected $goodsField = "
-            g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
+            g.g_id,g.goods_qrcode,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
             g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,g.g_type,
             mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
@@ -1153,8 +1240,10 @@ class ApiClient extends ReceiveBaseClient
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
         }
+
         return $this->rQ($goodsList);
     }
+
 
     /**
      * 获取指定商品信息
@@ -1166,7 +1255,7 @@ class ApiClient extends ReceiveBaseClient
             ["g_id" => $this->data['g_id']],
             "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
             sell_channel,exter_url,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
-            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price",
+            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price,goods_qrcode",
             'update_time desc'
         );
         if (is_string($goods)) return $this->rFail($goods);
@@ -3770,9 +3859,13 @@ class ApiClient extends ReceiveBaseClient
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
+        $physicalGIds = [];
         foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
+            $v['goods_qrcode'] = $wc_goods['goods_qrcode'] ?? '';
+            $v['jump_to_mini_program'] = 0;
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
                 if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
@@ -3780,9 +3873,22 @@ class ApiClient extends ReceiveBaseClient
             $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
             foreach($v['goods_lists'] as &$item){
                 $item['desc'] .= $wc_goods['description'] ?? '';
+                $gId = intval($item['g_id'] ?? 0);
+                if ($gId > 0 && $gId !== 9999) $physicalGIds[] = $gId;
             }
         }
         unset($v, $item);
+
+        if ($jumpEnabled && $physicalGIds) {
+            $availableStockMap = $this->getMachineGoodsAvailableStockMap($physicalGIds);
+            foreach ($wcMachineChannelData as &$v) {
+                $gIds = array_column($v['goods_lists'], 'g_id');
+                if ($this->hasInsufficientPhysicalGoodsStock($gIds, $availableStockMap)) {
+                    $v['jump_to_mini_program'] = 1;
+                }
+            }
+            unset($v);
+        }
         if ($pageNum) $wcMachineChannelLists['data'] = $wcMachineChannelData;
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }

@@ -466,6 +466,7 @@ return [
         "run_mode_in" => "设备模式参数错误",
         "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
         "subcar_mix_in" => "是否允许混合下单仅支持1或2",
+        "goods_no_stock_jump_to_mini_program_in" => "商品无库存跳转小程序仅支持1或2",
         "subcar_offline_sp_ids_invalid" => "线下商品收款策略ID格式错误",
         "subcar_online_sp_ids_invalid" => "线上商品收款策略ID格式错误",
     ],
