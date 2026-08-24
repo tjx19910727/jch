@@ -788,7 +788,7 @@ class ApiClient extends ReceiveBaseClient
         $rows = $this->getMachineGoodsList(
             $where,
             0,
-            'g_id,SUM(available_stock) available_stock',
+            'g_id,SUM(stock) stock',
             '',
             '',
             'g_id'
@@ -797,7 +797,7 @@ class ApiClient extends ReceiveBaseClient
 
         $stockMap = [];
         foreach ((array)$rows as $row) {
-            $stockMap[intval($row['g_id'])] = floatval($row['available_stock']);
+            $stockMap[intval($row['g_id'])] = floatval($row['stock']);
         }
         return $stockMap;
     }
