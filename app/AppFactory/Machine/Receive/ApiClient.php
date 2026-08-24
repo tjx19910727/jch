@@ -934,6 +934,12 @@ class ApiClient extends ReceiveBaseClient
         $where["m_id"] = $this->machine['m_id'];
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (!isset($data['goods_no_stock_jump_to_mini_program'])
+            || !in_array(intval($data['goods_no_stock_jump_to_mini_program']), [1, 2], true)) {
+            $data['goods_no_stock_jump_to_mini_program'] = 2;
+        } else {
+            $data['goods_no_stock_jump_to_mini_program'] = intval($data['goods_no_stock_jump_to_mini_program']);
+        }
         if (!isset($data['run_mode']) || !in_array(intval($data['run_mode']), [1, 2], true)) {
             $data['run_mode'] = 1;
         } else {
@@ -1131,7 +1137,7 @@ class ApiClient extends ReceiveBaseClient
     }
 
     protected $goodsField = "
-            g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
+            g.g_id,g.goods_qrcode,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
             g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,g.g_type,
             mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
@@ -1153,8 +1159,10 @@ class ApiClient extends ReceiveBaseClient
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
         }
+
         return $this->rQ($goodsList);
     }
+
 
     /**
      * 获取指定商品信息
@@ -3773,6 +3781,7 @@ class ApiClient extends ReceiveBaseClient
         foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
+            $v['goods_qrcode'] = $wc_goods['goods_qrcode'] ?? '';
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
                 if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];

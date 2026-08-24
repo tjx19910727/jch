@@ -82,6 +82,15 @@ return [
         'consumer_tag' => 'async_task',
     ],
 
+    # 微程商品同步独立队列，避免阻塞普通异步任务
+    'wc_goods_sync_queue' => [
+        'exchange_name' => 'async_task_exchange',
+        'exchange_type' => 'topic',
+        'queue_name' => 'wc_goods_sync_queue',
+        'route_key' => 'wc_goods_sync',
+        'consumer_tag' => 'wc_goods_sync',
+    ],
+
     # 发送设备信息队列
     'dataSend_queue' => [
         'exchange_name' => 'dataSend_exchange',

@@ -8,6 +8,7 @@ return [
         'dataUpload' => 'app\command\DataUpload',
         'exportQueue' => 'app\command\ExportQueue',
         'asyncTaskQueue' => 'app\command\AsyncTaskQueue',
+        'wcGoodsSyncQueue' => 'app\command\WcGoodsSyncQueue',
         'machineReceive' => 'app\command\MachineReceive',
         'time_task' => 'app\command\TimeTask',
         'api' => 'app\command\Api',

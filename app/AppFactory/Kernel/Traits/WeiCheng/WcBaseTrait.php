@@ -54,6 +54,7 @@ trait WcBaseTrait
         $this->query_hotel_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/hotel/queryDays";
         $this->query_user_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/queryUserRights";
         $this->query_login_qrcode_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getLoginQrcode";
+        $this->query_goods_qrcode_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getQrcode";
     }
 
     public function getDecptData($data)
@@ -268,6 +269,7 @@ trait WcBaseTrait
         }
 
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
+        $currentNos = [];
 
         $resourceDomain = $wc_goods['resourceDomain'];
         $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
@@ -297,16 +299,16 @@ trait WcBaseTrait
                 'gift_points' => $wc_goods['gift_points'] ?? 0,
             ];
 
-            if (!$wc_goods_local) {
-                return $this->addWcGoodsLocal($setData);
-            } else {
-                return $this->updateWcGoodsLocal($setData, ['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
-            }
+            $result = !$wc_goods_local ? $this->addWcGoodsLocal($setData) : $this->updateWcGoodsLocal($setData, ['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
+            $this->deleteWcGoodsLocalMissingNos($no, [$wc_goods['no']]);
+            return $result;
+
         }
         if (!is_null($wc_goods['goods'])) {//子商品信息
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $k => $good) {
+                $currentNos[] = strval($good['no'] ?? '');
                 $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'], 'out_no' => $no]);
                 $pic = isset($resourcesArray[$k]['url']) ? $resourceDomain . $resourcesArray[$k]['url'] : '';
                 $setData = [
@@ -341,6 +343,7 @@ trait WcBaseTrait
             // }
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
             foreach ($combination_goods as $kk => $combind_good) {
+                $currentNos[] = strval($combind_good['no'] ?? '');
                 $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';
                 $combindSetData = [
                     'g_id' => $combind_good['g_id'] ?? '9999',
@@ -380,6 +383,7 @@ trait WcBaseTrait
 
             }
         }
+        $this->deleteWcGoodsLocalMissingNos($no, $currentNos);
         return true;
     }
 
@@ -648,6 +652,39 @@ trait WcBaseTrait
         return $this->weicheng_curl($this->query_user_info_url, [], $header, [
             'request_body' => ['operation' => 'query_user_info'],
         ]);
+    }
+
+    public function requestWcGoodsQrCode($goodsNo)
+    {
+        $this->initWcBase();
+        $postUrl = $this->query_goods_qrcode_url . '?goods_no=' . urlencode($goodsNo);
+        return $this->weicheng_curl($postUrl, [], [], [
+            'request_body' => ['goods_no' => $goodsNo],
+        ]);
+    }
+
+    public function getWcGoodsQrCode($goodsNo)
+    {
+        $goodsNo = trim(strval($goodsNo));
+        if ($goodsNo === '') return '';
+        $wcGoods = $this->getWcGoodsFind(['no' => $goodsNo], 'no,goods_qrcode');
+        if (!$wcGoods) return '';
+        $cachedUrl = trim(strval($wcGoods['goods_qrcode'] ?? ''));
+        if ($cachedUrl !== '') return $cachedUrl;
+
+        $result = $this->requestWcGoodsQrCode($goodsNo);
+        if (intval($result['status'] ?? 0) !== 200) return '';
+        $response = json2arr($result['response'] ?? '');
+        if (!is_array($response)) return '';
+        $qrcodeUrl = '';
+        if (isset($response['data']['qrcodeUrl'])) {
+            $qrcodeUrl = trim(strval($response['data']['qrcodeUrl']));
+        } elseif (isset($response['qrcodeUrl'])) {
+            $qrcodeUrl = trim(strval($response['qrcodeUrl']));
+        }
+        if ($qrcodeUrl === '') return '';
+        $this->updateWcGoods(['goods_qrcode' => $qrcodeUrl], ['no' => $goodsNo]);
+        return $qrcodeUrl;
     }
 
     public function wcLoginQrCode($machine_id)
