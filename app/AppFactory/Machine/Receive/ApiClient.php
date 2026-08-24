@@ -710,6 +710,16 @@ class ApiClient extends ReceiveBaseClient
                 if ($jumpEnabled && $this->hasInsufficientPhysicalGoodsStock([$mc['g_id']], $availableStockMap)) {
                     $mc['jump_to_mini_program'] = 1;
                 }
+                $goodsQrcode = '';
+                if (!empty($mc['g_id'])) {
+                    $goodsInfo = $this->getGoodsFind(['g_id' => $mc['g_id']], 'goods_qrcode');
+                    if ($goodsInfo && !is_string($goodsInfo)) {
+                        $goodsInfo = $goodsInfo->toArray();
+                        $goodsQrcode = $goodsInfo['goods_qrcode'] ?? '';
+                    }
+                }
+                $mc['goods_qrcode'] = $goodsQrcode;
+
                 // ==================== 单货道多商品相关开始 ====================
                 $channelMultiGoodsEnabled = $machineMultiGoodsEnabled
                     && intval($mc['is_multi_goods'] ?? 2) === 1;
