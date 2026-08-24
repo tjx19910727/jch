@@ -409,6 +409,7 @@ return [
 
     "VMachine" => [
         "m_id_require" => "请选择设备",
+        "refunded_sod_remote_out_forbidden" => "该子订单已退款，不能远程出货",
         "machine_id_require" => "设备编号不能为空",
         "machine_id_alphaDash" => "设备编号只能包含字母和数字，'-','_'也可以使用",
         "machine_id_exists" => "设备编号已存在，请勿重复添加",

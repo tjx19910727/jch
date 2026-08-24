@@ -408,6 +408,7 @@ return [
 
     "VMachine" => [
         "m_id_require" => "Please select device",
+        "refunded_sod_remote_out_forbidden" => "The refunded sub-order cannot be remotely dispensed",
         "machine_id_require" => "Device number cannot be empty",
         "machine_id_alphaDash" => "Device number can only contain letters and numbers, '-','_' are also allowed",
         "machine_id_exists" => "The equipment number already exists. Please do not add it repeatedly.",
