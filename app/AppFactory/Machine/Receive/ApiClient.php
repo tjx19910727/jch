@@ -1174,7 +1174,7 @@ class ApiClient extends ReceiveBaseClient
             ["g_id" => $this->data['g_id']],
             "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
             sell_channel,exter_url,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
-            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price",
+            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price,goods_qrcode",
             'update_time desc'
         );
         if (is_string($goods)) return $this->rFail($goods);
