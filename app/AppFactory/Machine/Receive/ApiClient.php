@@ -785,7 +785,7 @@ class ApiClient extends ReceiveBaseClient
 
         $where = ['m_id' => $this->machine['m_id']];
         $where[] = ['g_id', 'in', $gIds];
-        $rows = $this->getMachineGoodsList(
+        $rows = $this->getMachineChannelList(
             $where,
             0,
             'g_id,SUM(stock) stock',
