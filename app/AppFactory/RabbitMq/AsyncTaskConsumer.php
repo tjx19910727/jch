@@ -3,6 +3,7 @@
 namespace app\AppFactory\RabbitMq;
 
 use app\AppFactory\RabbitMq\AsyncTask\AsyncTaskHandlerFactory;
+use app\AppFactory\RabbitMq\AsyncTask\WcGoodsSyncLock;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Connection\Heartbeat\PCNTLHeartbeatSender;
@@ -44,18 +45,26 @@ class AsyncTaskConsumer
      *
      * @throws \Exception
      */
+    protected $allowedTaskTypes = [];
+
     public function async_task_queue()
     {
+        return $this->consumeQueue('async_task_queue', ['goods_update']);
+    }
+
+    public function wc_goods_sync_queue()
+    {
+        return $this->consumeQueue('wc_goods_sync_queue', ['wc_goods_sync']);
+    }
+
+    protected function consumeQueue($queueConfigKey, array $allowedTaskTypes)
+    {
         $param = config('rabbit_mq.' . env('RabbitMq.config_name'));
-        if (!$param) {
-            die('获取不到RabbitMQ【' . env('RabbitMq.config_name') . "】的连接配置参数 \n");
-        }
+        if (!$param) die('获取不到RabbitMQ连接配置参数');
+        $amqpDetail = config('rabbit_mq.' . $queueConfigKey);
+        if (!$amqpDetail) die('获取不到异步任务配置参数【' . $queueConfigKey . '】');
 
-        $amqpDetail = config('rabbit_mq.async_task_queue');
-        if (!$amqpDetail) {
-            die("获取不到异步任务相关配置参数【async_task_queue】 \n");
-        }
-
+        $this->allowedTaskTypes = $allowedTaskTypes;
         $connection = MqConnectionFactory::create($param);
         $channel = $connection->channel();
         $heartbeatSender = null;
@@ -63,21 +72,10 @@ class AsyncTaskConsumer
 
         try {
             $heartbeatSender = $this->registerSignalHeartbeatSafely($connection);
-
             $channel->queue_declare($amqpDetail['queue_name'], false, true, false, false);
             $channel->exchange_declare($amqpDetail['exchange_name'], $amqpDetail['exchange_type'], false, true, false);
             $channel->queue_bind($amqpDetail['queue_name'], $amqpDetail['exchange_name'], $amqpDetail['route_key']);
-
-            $channel->basic_consume(
-                $amqpDetail['queue_name'],
-                $amqpDetail['consumer_tag'],
-                false,
-                false,
-                false,
-                false,
-                [$this, 'process_message']
-            );
-
+            $channel->basic_consume($amqpDetail['queue_name'], $amqpDetail['consumer_tag'], false, false, false, false, [$this, 'process_message']);
             while (count($channel->callbacks)) {
                 $channel->wait();
             }
@@ -209,51 +207,57 @@ class AsyncTaskConsumer
     public function process_message(AMQPMessage $message)
     {
         $data = [];
-        $acknowledged = false;
+        $taskId = '';
+        $taskType = '';
         try {
             $data = json2arr($message->body);
-            $taskId = $data['task_id'] ?? '';
-            $taskType = $data['task_type'] ?? '';
+            if (!is_array($data)) throw new \InvalidArgumentException('异步任务消息格式不正确');
+            $taskId = strval($data['task_id'] ?? '');
+            $taskType = strval($data['task_type'] ?? '');
+            if ($taskId === '') throw new \InvalidArgumentException('异步任务缺少task_id');
+            if ($this->allowedTaskTypes && !in_array($taskType, $this->allowedTaskTypes, true)) {
+                throw new \InvalidArgumentException('当前队列不支持任务类型：' . $taskType);
+            }
 
             actionLog([
                 'task_id' => $taskId,
                 'task_type' => $taskType,
             ], '异步任务消息处理摘要', 'async_task_message');
-
             if ($this->isTaskCompleted($taskType, $taskId)) {
                 actionLog([
                     'task_id' => $taskId,
                     'task_type' => $taskType,
                 ], '异步任务已完成，跳过重复执行', 'async_task_message');
-            } else {
-                $handler = AsyncTaskHandlerFactory::make($taskType);
-
-                // 微程商品同步允许人工重新触发，先ACK避免耗时处理期间连接断开导致整批任务重复执行。
-                if ($taskType === 'wc_goods_sync') {
-                    $message->ack();
-                    $acknowledged = true;
-                }
-
-                $result = $handler->handle($data['payload'] ?? [], $data);
-
-                // 保留完成缓存，用于过滤相同task_id被重复发布的情况。
-                $completionCachePersisted = $this->markTaskCompleted($taskType, $taskId);
-
-                actionLog([
-                    'task_id' => $taskId,
-                    'task_type' => $taskType,
-                    'completion_cache_persisted' => $completionCachePersisted ? 1 : 0,
-                    'result' => $result,
-                ], '异步任务处理结果', 'async_task_message');
+                $message->ack();
+                return;
             }
+
+            $handler = AsyncTaskHandlerFactory::make($taskType);
+            $result = $handler->handle($data['payload'] ?? [], $data);
+            $completionCachePersisted = $this->markTaskCompleted($taskType, $taskId);
+            actionLog([
+                'task_id' => $taskId,
+                'task_type' => $taskType,
+                'completion_cache_persisted' => $completionCachePersisted ? 1 : 0,
+                'result' => $result,
+            ], '异步任务处理结果', 'async_task_message');
+            $message->ack();
         } catch (\Throwable $e) {
             $this->logProcessException($e);
+            if ($this->isPermanentException($e) || $message->isRedelivered()) {
+                if ($taskType === 'wc_goods_sync') {
+                    WcGoodsSyncLock::release($taskId);
+                }
+                $message->ack();
+                return;
+            }
+            $message->nack(true);
         }
+    }
 
-        // 未提前ACK的任务在处理结束后统一ACK，异常向外抛出触发消费者重连。
-        if (!$acknowledged) {
-            $message->ack();
-        }
+    protected function isPermanentException(\Throwable $e)
+    {
+        return $e instanceof \InvalidArgumentException || $e instanceof \DomainException;
     }
 
     /**

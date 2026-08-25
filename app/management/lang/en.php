@@ -408,6 +408,7 @@ return [
 
     "VMachine" => [
         "m_id_require" => "Please select device",
+        "refunded_sod_remote_out_forbidden" => "The refunded sub-order cannot be remotely dispensed",
         "machine_id_require" => "Device number cannot be empty",
         "machine_id_alphaDash" => "Device number can only contain letters and numbers, '-','_' are also allowed",
         "machine_id_exists" => "The equipment number already exists. Please do not add it repeatedly.",
@@ -464,6 +465,7 @@ return [
         "run_mode_in" => "Device run mode out of range",
         "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
         "subcar_mix_in" => "Mixed ordering only supports 1 or 2",
+        "goods_no_stock_jump_to_mini_program_in" => "Out-of-stock mini program jump only supports 1 or 2",
         "subcar_offline_sp_ids_invalid" => "Invalid offline goods payee strategy IDs",
         "subcar_online_sp_ids_invalid" => "Invalid online goods payee strategy IDs",
     ],
