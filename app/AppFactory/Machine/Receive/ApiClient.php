@@ -682,15 +682,7 @@ class ApiClient extends ReceiveBaseClient
                 if ($jumpEnabled && $this->hasInsufficientPhysicalGoodsStock([$mc['g_id']], $availableStockMap)) {
                     $mc['jump_to_mini_program'] = 1;
                 }
-                $goodsQrcode = '';
-                if (!empty($mc['g_id'])) {
-                    $goodsInfo = $this->getGoodsFind(['g_id' => $mc['g_id']], 'goods_qrcode');
-                    if ($goodsInfo && !is_string($goodsInfo)) {
-                        $goodsInfo = $goodsInfo->toArray();
-                        $goodsQrcode = $goodsInfo['goods_qrcode'] ?? '';
-                    }
-                }
-                $mc['goods_qrcode'] = $goodsQrcode;
+                $mc['goods_qrcode'] = $this->getWcChannelGoodsQrcode($mc['m_id'] ?? 0, $mc['g_id'] ?? 0);
 
                 $where = [];
                 $where[] = ['gc.start_time', "<=", time()];
@@ -720,6 +712,38 @@ class ApiClient extends ReceiveBaseClient
         }
         actionLog($mcList, '返回的货道数据');
         return $this->r(200, "SUCCESS", $mcList);
+    }
+
+    /**
+     * 获取设备物理货道对应微程虚拟货道的小程序码。
+     * goods_qrcode 已从 goods 表迁移至 wc_machine_channel 表（小程序码场景含 machine_code，按货道生成）。
+     *
+     * @param int $mId 设备内部ID（machine.m_id，对应 wc_machine_channel.m_id）
+     * @param int $gId 实物商品ID（goods.g_id，经 wc_goods_local 关联微程商品）
+     * @return string
+     */
+    protected function getWcChannelGoodsQrcode($mId, $gId)
+    {
+        $mId = intval($mId);
+        $gId = intval($gId);
+        if ($mId <= 0 || $gId <= 0) return '';
+
+        $outNos = $this->getWcGoodsLocalColumn(['g_id' => $gId], 'out_no');
+        $outNos = array_values(array_unique(array_filter((array)$outNos, function ($outNo) {
+            return trim((string)$outNo) !== '';
+        })));
+        if (!$outNos) return '';
+
+        $wcChannel = $this->getWcMachineChannelFind(
+            [['m_id', '=', $mId], ['out_no', 'in', $outNos], ['is_hidden', '=', 2]],
+            'goods_qrcode',
+            'sort asc'
+        );
+        if (!$wcChannel) return '';
+        if (is_object($wcChannel) && method_exists($wcChannel, 'toArray')) {
+            $wcChannel = $wcChannel->toArray();
+        }
+        return trim(strval($wcChannel['goods_qrcode'] ?? ''));
     }
 
     /**
@@ -1218,7 +1242,7 @@ class ApiClient extends ReceiveBaseClient
     }
 
     protected $goodsField = "
-            g.g_id,g.goods_qrcode,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
+            g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
             g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,g.g_type,
             mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
@@ -1255,7 +1279,7 @@ class ApiClient extends ReceiveBaseClient
             ["g_id" => $this->data['g_id']],
             "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
             sell_channel,exter_url,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
-            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price,goods_qrcode",
+            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price",
             'update_time desc'
         );
         if (is_string($goods)) return $this->rFail($goods);
@@ -3864,7 +3888,7 @@ class ApiClient extends ReceiveBaseClient
         foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
-            $v['goods_qrcode'] = $wc_goods['goods_qrcode'] ?? '';
+            $v['goods_qrcode'] = $v['goods_qrcode'] ?? '';
             $v['jump_to_mini_program'] = 0;
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');

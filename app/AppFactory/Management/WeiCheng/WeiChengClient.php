@@ -316,49 +316,64 @@ class WeiChengClient extends ManagementClient
 
 
     /**
-     * 商品详情落库后同步父商品二维码，并仅向唯一父商品映射的实物商品回填二维码。
+     * 商品详情落库后按虚拟货道同步小程序码：requestWcGoodsQrCode 获取成功即写回 wc_machine_channel.goods_qrcode。
      */
     protected function synchronizeGoodsQrCode($goodsNo)
     {
-        $qrcodeUrl = $this->getWcGoodsQrCode($goodsNo);
-        if ($qrcodeUrl === '') {
-            return ['status' => false, 'msg' => '微程商品小程序码同步失败：' . $goodsNo];
+        $goodsNo = trim(strval($goodsNo));
+        if ($goodsNo === '') {
+            return ['status' => false, 'msg' => '微程商品编码为空：小程序码同步失败'];
         }
 
-        $gIds = $this->getWcGoodsLocalColumn(['out_no' => $goodsNo], 'g_id');
-        $gIds = array_values(array_unique(array_filter(array_map('intval', is_array($gIds) ? $gIds : []), function ($gId) {
-            return $gId > 0 && $gId !== 9999;
-        })));
-        if (!$gIds) return ['status' => true];
+        $channels = $this->getWcMachineChannelList(
+            ['out_no' => $goodsNo],
+            0,
+            'mc_id,m_id,machine_id,out_no,gc_id,goods_qrcode',
+            'sort asc'
+        );
+        if ($channels) $channels = $channels->toArray();
+        $channels = is_array($channels) ? $channels : [];
+        if (!$channels) {
+            return ['status' => true, 'msg' => '该商品暂无关联虚拟货道，跳过小程序码同步'];
+        }
 
-        $mappingRows = Db::name('wc_goods_local')
-            ->where('g_id', 'in', $gIds)
-            ->field('g_id,COUNT(DISTINCT out_no) out_no_count')
-            ->group('g_id')
-            ->select()
-            ->toArray();
-        $uniqueGIds = [];
-        $ambiguousGIds = [];
-        foreach ($mappingRows as $mappingRow) {
-            $gId = intval($mappingRow['g_id'] ?? 0);
-            if (intval($mappingRow['out_no_count'] ?? 0) === 1) {
-                $uniqueGIds[] = $gId;
+        $successCount = 0;
+        $skipCount = 0;
+        $failureCount = 0;
+        $failureMcIds = [];
+        foreach ($channels as $channel) {
+            // 已有小程序码则跳过，避免重复请求触发微程接口限流
+            if (trim(strval($channel['goods_qrcode'] ?? '')) !== '') {
+                $skipCount++;
+                continue;
+            }
+            $machineId = trim(strval($channel['machine_id'] ?? ''));
+            if ($machineId === '') {
+                $failureCount++;
+                $failureMcIds[] = $channel['mc_id'] ?? '';
+                continue;
+            }
+            $goodsCategory = trim(strval($channel['gc_id'] ?? ''));
+            $result = $this->requestWcGoodsQrCode($machineId, $goodsNo, $goodsCategory);
+            if (intval($result['status'] ?? 0) === 200 && ($result['qrcodeUrl'] ?? '') !== '') {
+                $successCount++;
             } else {
-                $ambiguousGIds[] = $gId;
+                $failureCount++;
+                $failureMcIds[] = $channel['mc_id'] ?? '';
             }
         }
 
-        if ($uniqueGIds) {
-            Db::name('goods')->where('g_id', 'in', $uniqueGIds)->update(['goods_qrcode' => $qrcodeUrl]);
+        if ($failureCount > 0) {
+            return [
+                'status' => false,
+                'msg' => "微程商品小程序码同步部分失败：{$goodsNo}（成功{$successCount}，跳过{$skipCount}，失败{$failureCount}）",
+                'failure_mc_ids' => array_slice($failureMcIds, 0, 50),
+            ];
         }
-        if ($ambiguousGIds) {
-            Db::name('goods')->where('g_id', 'in', $ambiguousGIds)->update(['goods_qrcode' => '']);
-            actionLog([
-                'out_no' => $goodsNo,
-                'g_ids' => $ambiguousGIds,
-            ], '微程商品二维码存在一对多映射，已跳过普通商品回填', 'async_task_wc_goods_sync');
-        }
-        return ['status' => true];
+        return [
+            'status' => true,
+            'msg' => "微程商品小程序码同步完成：{$goodsNo}（成功{$successCount}，跳过{$skipCount}）",
+        ];
     }
     /**
      * 预约商品明细位于 appointment.goods，合并到商品快照供父表和本地表复用。
