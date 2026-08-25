@@ -83,4 +83,18 @@ class WeiChengClient extends TimeTaskBase
             actionException($e, 1, 'wcOrderSyncFinalNotice');
         }
     }
+
+    /**
+     * 清理 N 小时前的微程商品同步日志，默认保留 24 小时（每日执行一次）。
+     * 命令：php think time_task weiCheng cleanGoodsSyncLogs
+     */
+    public function cleanGoodsSyncLogs($retainHours = 24)
+    {
+        $retainHours = max(1, intval($retainHours));
+        $deadline = date('Y-m-d H:i:s', time() - $retainHours * 3600);
+        $count = $this->deleteWcGoodsSyncLogBefore($deadline);
+        actionLog(['retain_hours' => $retainHours, 'deadline' => $deadline, 'deleted' => $count], '清理微程商品同步日志', 'wc_goods_sync_log_clean');
+        return "清理完成：删除 {$count} 条微程商品同步日志";
+    }
+
 }

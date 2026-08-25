@@ -399,7 +399,13 @@ trait WcBaseTrait
             if (is_array($decodedDaysInfo) && !empty($decodedDaysInfo)) return $daysInfo;
         }
 
-        $getData = isset($wcGoods['get_data']) ? json_decode($wcGoods['get_data'], true) : [];
+        // 兼容旧预约房快照：get_data 不在 wc_goods 时，从同步日志表取最新一条
+        $getDataRaw = isset($wcGoods['get_data']) ? $wcGoods['get_data'] : '';
+        if ($getDataRaw === '' && !empty($wcGoods['no'])) {
+            $log = $this->getWcGoodsLatestSyncLog($wcGoods['no']);
+            $getDataRaw = $log ? ($log['get_data'] ?? '') : '';
+        }
+        $getData = $getDataRaw ? json_decode($getDataRaw, true) : [];
         $product = isset($getData['product']) && is_array($getData['product']) ? $getData['product'] : [];
         if (isset($product['daysInfo']) && is_array($product['daysInfo']) && !empty($product['daysInfo'])) {
             return json_encode($product['daysInfo']);

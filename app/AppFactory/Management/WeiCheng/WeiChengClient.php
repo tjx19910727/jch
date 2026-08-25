@@ -274,7 +274,6 @@ class WeiChengClient extends ManagementClient
         }
 
         $updateData = $this->mergeAppointmentGoodsDaysInfo($res['product']);
-        $updateData['get_data'] = $result['response'];
         $updateData['goods'] = json_encode(isset($updateData['goods']) && is_array($updateData['goods']) ? $updateData['goods'] : [], JSON_UNESCAPED_UNICODE);
         $updateData['combination_goods'] = json_encode(isset($updateData['combination_goods']) && is_array($updateData['combination_goods']) ? $updateData['combination_goods'] : [], JSON_UNESCAPED_UNICODE);
         $updateData['resourcesArray'] = json_encode(isset($updateData['resourcesArray']) && is_array($updateData['resourcesArray']) ? $updateData['resourcesArray'] : [], JSON_UNESCAPED_UNICODE);
@@ -284,6 +283,8 @@ class WeiChengClient extends ManagementClient
 
         Db::startTrans();
         try {
+            // 原始响应迁入同步日志表（与商品落库同事务），wc_goods 不再保存 get_data 大字段
+            $this->addWcGoodsSyncLog($goods_no, $type, $syncBatchNo, $result['response']);
             $this->synchronizeGoods2Db($updateData, $syncBatchNo);
             $this->setWcGoodsLocal($goods_no, $type);
             Db::commit();
