@@ -30,7 +30,6 @@ class InspectionClient extends BaseClient
         $machineId = trim(strval($postData['machine_id'] ?? ''));
         $staffCode = trim(strval($postData['staff_code'] ?? ''));
         $now = time();
-        $isTest = (bool)env('CglPay.is_test', false);
 
         if ($machineId === '') {
             return $this->rValidate('设备ID不能为空');
@@ -38,13 +37,11 @@ class InspectionClient extends BaseClient
         if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
             return $this->rValidate('巡检账号必须为首位非0的6位数字');
         }
-        if (!$isTest) {
-            if (trim(strval($postData['sign'] ?? '')) === '') {
-                return $this->rValidate('签名不能为空');
-            }
-            if ($issuedAt <= 0 || $issuedAt > $now || $now - $issuedAt >= self::QR_EXPIRES_IN) {
-                return $this->r(100, '巡检二维码已过期，请重新扫码');
-            }
+        if (trim(strval($postData['sign'] ?? '')) === '') {
+            return $this->rValidate('签名不能为空');
+        }
+        if ($issuedAt <= 0 || $issuedAt > $now || $now - $issuedAt >= self::QR_EXPIRES_IN) {
+            return $this->r(100, '巡检二维码已过期，请重新扫码');
         }
 
         $machine = $this->getMachineFind(
@@ -58,22 +55,20 @@ class InspectionClient extends BaseClient
             $machine = $machine->toArray();
         }
 
-        if (!$isTest) {
-            $scanData = [
-                'timestamp' => $issuedAt,
-                'machine_id' => $machineId,
-                'sign' => trim(strval($postData['sign'] ?? '')),
-            ];
-            $signKey = cache($machineId . '.signKey');
-            if (!$signKey) {
-                $signKey = $machine['signKey'] ?? '';
-            }
-            if (!$signKey) {
-                $signKey = env('api.md5Key');
-            }
-            if (SignUtil::checkSign($scanData, $signKey) !== true) {
-                return $this->r(100, '巡检二维码验签失败，请重新扫码');
-            }
+        $scanData = [
+            'timestamp' => $issuedAt,
+            'machine_id' => $machineId,
+            'sign' => trim(strval($postData['sign'] ?? '')),
+        ];
+        $signKey = cache($machineId . '.signKey');
+        if (!$signKey) {
+            $signKey = $machine['signKey'] ?? '';
+        }
+        if (!$signKey) {
+            $signKey = env('api.md5Key');
+        }
+        if (SignUtil::checkSign($scanData, $signKey) !== true) {
+            return $this->r(100, '巡检二维码验签失败，请重新扫码');
         }
 
         $staff = $this->getAvailableInspectionStaff(['staff_code' => $staffCode]);
