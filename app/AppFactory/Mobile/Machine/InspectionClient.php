@@ -197,11 +197,6 @@ class InspectionClient extends BaseClient
                 if (!isset($enabledMap[$itemId])) {
                     continue;
                 }
-                // 一级节点仅用于分组，不生成巡检记录。
-                if (intval($enabledMap[$itemId]['item_level'] ?? 0) === 1) {
-                    continue;
-                }
-
                 $checkStatus = intval($row['check_status'] ?? 0);
                 if (!in_array($checkStatus, [1, 2], true)) {
                     return $this->rValidate('check_status必须为1或2');
