@@ -41,6 +41,8 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task machineAutoRefund autoRefund     自动退款（出货超时/异常），每3分钟执行一次
      * php /home/wwwroot/kiosk/think time_task revenue settleDue                结算已到计划时间的 T+N 分账，每分钟执行一次
      * php /home/wwwroot/kiosk/think time_task weiCheng retryOrderSync          重试微程订单同步任务，建议每分钟执行一次
+     * php /home/wwwroot/kiosk/think time_task weiCheng cleanGoodsSyncLogs     清理24小时前的微程商品同步日志，每天定时任务运行一次
+
      * 
      * command
      *      php think time_task [moduleType] [actionType]
@@ -73,6 +75,8 @@ class TimeTask extends Command
      *      revenue
      *          settleDue                   结算已到计划时间的 T+N 分账
      *      weiCheng
+     *          cleanGoodsSyncLogs          清理24小时前的微程商品同步日志，每天定时任务运行一次
+
      *          retryOrderSync              微程订单同步失败重试及最终失败公众号通知
      * @param Input $input
      * @param Output $output
