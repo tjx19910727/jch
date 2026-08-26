@@ -274,11 +274,135 @@ class InspectionClient extends BaseClient
         }
     }
 
+    /**
+     * 获取当前巡检人员在当前设备上的巡检记录。
+     */
+    public function getCheckListRecords($postData)
+    {
+        $auth = $this->authenticateInspectionToken();
+        if ($auth !== true) {
+            return $auth;
+        }
+
+        try {
+            $page = max(1, intval($postData['page'] ?? 1));
+            $pageSize = max(1, intval($postData['pageNum'] ?? ($postData['pageSize'] ?? 15)));
+            $where = [
+                ['cr.machine_id', '=', $this->machine['machine_id']],
+                ['cr.manager_id', '=', intval($this->staff['staff_id'])],
+            ];
+            $pageData = Db::name('check_list_records')
+                ->alias('cr')
+                ->where($where)
+                ->field('cr.records_code,MAX(cr.id) as max_id')
+                ->group('cr.records_code')
+                ->order('max_id desc')
+                ->paginate($pageSize, false, ['page' => $page])
+                ->toArray();
+
+            $where[] = ['cr.records_code', 'in', array_column($pageData['data'], 'records_code')];
+            $records = $this->groupCheckListRecords($this->getCheckListRecordRows($where));
+
+            return $this->r(200, 'SUCCESS', [
+                'list' => $records,
+                'pagination' => [
+                    'page' => intval($pageData['current_page']),
+                    'pageSize' => intval($pageData['per_page']),
+                    'total' => intval($pageData['total']),
+                    'totalPage' => intval($pageData['last_page']),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 查看当前巡检人员在当前设备上的单条巡检记录。
+     */
+    public function getCheckListRecord($postData)
+    {
+        $auth = $this->authenticateInspectionToken();
+        if ($auth !== true) {
+            return $auth;
+        }
+
+        $recordsCode = trim(strval($postData['records_code'] ?? ''));
+        if ($recordsCode === '') {
+            return $this->rValidate('records_code不能为空');
+        }
+
+        try {
+            $list = $this->getCheckListRecordRows([
+                ['cr.machine_id', '=', $this->machine['machine_id']],
+                ['cr.manager_id', '=', intval($this->staff['staff_id'])],
+                ['cr.records_code', '=', $recordsCode],
+            ]);
+            if (!$list) {
+                return $this->rFail('巡检记录不存在');
+            }
+
+            $records = $this->groupCheckListRecords($list);
+            return $this->r(200, 'SUCCESS', $records[0]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    protected function getCheckListRecordRows($where)
+    {
+        return Db::name('check_list_records')
+            ->alias('cr')
+            ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
+            ->leftJoin('inspection_staff ist', 'ist.staff_id = cr.manager_id')
+            ->where($where)
+            ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level,IFNULL(NULLIF(ist.account_name,''), cr.manager_id) as account_name")
+            ->order('cr.records_code desc,cr.id asc')
+            ->select()
+            ->toArray();
+    }
+
+    protected function groupCheckListRecords($list)
+    {
+        $grouped = [];
+        foreach ($list as $item) {
+            $code = $item['records_code'];
+            if (!isset($grouped[$code])) {
+                $grouped[$code] = [
+                    'records_code' => $code,
+                    'machine_id' => $item['machine_id'],
+                    'manager_id' => $item['manager_id'],
+                    'account_name' => $item['account_name'] ?? '',
+                    'nickname' => $item['account_name'] ?? '',
+                    'check_time' => $item['check_time'],
+                    'records' => [],
+                ];
+            }
+            $grouped[$code]['records'][] = [
+                'id' => $item['id'],
+                'item_id' => $item['item_id'],
+                'item_name' => $item['item_name'],
+                'description' => $item['description'] ?? '',
+                'check_status' => intval($item['check_status'] ?? 0),
+                'parent_id' => $item['parent_id'],
+                'item_level' => $item['item_level'],
+                'manager_id' => $item['manager_id'],
+                'account_name' => $item['account_name'] ?? '',
+                'nickname' => $item['account_name'] ?? '',
+                'notes' => $item['notes'],
+                'created_at' => $item['created_at'],
+            ];
+        }
+        return array_values($grouped);
+    }
+
     protected function authenticateInspectionToken()
     {
-        $token = request()->header('token');
+        $token = request()->header('h5-token');
         if (!$token) {
-            $token = input('token');
+            $token = request()->header('token');
         }
         if (!$token) {
             return $this->r(100, '令牌不能为空，请重新登录');
