@@ -402,7 +402,7 @@ class InspectionClient extends BaseClient
     {
         $token = request()->header('h5-token');
         if (!$token) {
-            $token = input('h5-token');
+            $token = request()->header('token');
         }
         if (!$token) {
             return $this->r(100, '令牌不能为空，请重新登录');
