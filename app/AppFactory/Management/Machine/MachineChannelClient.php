@@ -19,6 +19,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Traits\RemoteRemovalLog\RemoteRemovalLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\facade\Db;
 
@@ -28,7 +29,7 @@ class MachineChannelClient extends ManagementClient
     const REMOTE_REMOVAL_STATUS_INTERRUPT = 1;
     const REMOTE_REMOVAL_WAIT_REPORT_SECONDS = 1800;
 
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait,WcBaseTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
     use RemoteRemovalLogTrait;
@@ -938,6 +939,9 @@ class MachineChannelClient extends ManagementClient
             $newGId = isset($postData['g_id']) ? intval($postData['g_id']) : null;
             $oldGId = intval($mc['g_id'] ?? 0);
             $isChangingGoods = $newGId !== null && $newGId !== $oldGId;
+            if ($isChangingGoods) {
+                $postData['goods_qrcode'] = '';
+            }
 
             // 更换或清空货道商品时，先记录旧货架商品下货。
             if ($isChangingGoods && $oldGId > 0) {
@@ -1045,6 +1049,17 @@ class MachineChannelClient extends ManagementClient
             }
 
             $this->commitTrans();
+            if ($isChangingGoods && $newGId > 0 && $newGId !== 9999) {
+                try {
+                    $this->syncPhysicalMachineChannelQrCodes(
+                        ['mc_id' => intval($mc['mc_id'])],
+                        1,
+                        'management_update_mc'
+                    );
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'managementUpdateMcQrCode');
+                }
+            }
             // 同步同设备同商品其他货道的售价
             $syncGid = $postData['g_id'] ?? $mc['g_id'];
             if ($syncGid > 0 && isset($postData['retail_price'])) {
