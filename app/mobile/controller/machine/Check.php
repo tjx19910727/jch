@@ -41,6 +41,22 @@ class Check extends Common
     }
 
     /**
+     * 获取当前用户在当前设备上的 H5 巡检记录。
+     */
+    public function getCheckListRecords()
+    {
+        return $this->app->inspectionCheck->getCheckListRecords(input());
+    }
+
+    /**
+     * 查看单条 H5 巡检记录。
+     */
+    public function getCheckListRecord()
+    {
+        return $this->app->inspectionCheck->getCheckListRecord(input());
+    }
+
+    /**
      * 盘点库存
      * @return array|string
      */
