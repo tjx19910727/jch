@@ -22,17 +22,21 @@ class InspectionClient extends BaseClient
 
     /**
      * 校验设备端生成的二维码，并使用巡检号登录。
-     * 设备端签名字段：timestamp、machine_id；staff_code 为扫码后输入，不参与签名。
+     * 设备端签名字段：msg_id、machine_id、timestamp；staff_code 为扫码后输入，不参与签名。
      */
     public function login($postData)
     {
         $issuedAt = intval($postData['timestamp'] ?? 0);
         $machineId = trim(strval($postData['machine_id'] ?? ''));
+        $msgId = trim(strval($postData['msg_id'] ?? ''));
         $staffCode = trim(strval($postData['staff_code'] ?? ''));
         $now = time();
 
         if ($machineId === '') {
             return $this->rValidate('设备ID不能为空');
+        }
+        if ($msgId === '') {
+            return $this->rValidate('消息ID不能为空');
         }
         if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
             return $this->rValidate('巡检账号必须为首位非0的6位数字');
@@ -56,8 +60,9 @@ class InspectionClient extends BaseClient
         }
 
         $scanData = [
-            'timestamp' => $issuedAt,
+            'msg_id' => $msgId,
             'machine_id' => $machineId,
+            'timestamp' => $issuedAt,
             'sign' => trim(strval($postData['sign'] ?? '')),
         ];
         $signKey = cache($machineId . '.signKey');
