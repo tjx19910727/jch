@@ -16,12 +16,15 @@ trait OutGoodsTrait
 {
     use ApiOutStatusNotifyTrait;
 
+    protected $outGoodsRefreshMcIds = [];
+
     /**
      * 出货处理
      * @return int
      */
     public function outGoods()
     {
+        $this->outGoodsRefreshMcIds = [];
         $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
         if ($tradeNo === '') {
             actionLog($this->message, 'trade_no为空，拒绝处理', 'OutGoods');
@@ -123,6 +126,17 @@ trait OutGoodsTrait
                 $this->handleTripPayCallback();
                 $this->handleOrderOutStatusCallback();
                 Db::commit();
+                foreach ($this->outGoodsRefreshMcIds as $mcId) {
+                    try {
+                        $this->sendToMachine(
+                            ['machine_id' => $this->machine['machine_id']],
+                            'updateMc',
+                            ['mc_id' => $mcId]
+                        );
+                    } catch (\Throwable $e) {
+                        actionException($e, 1, 'OutGoodsUpdateMc');
+                    }
+                }
             } else {
                 Db::rollback();
             }
@@ -348,6 +362,7 @@ trait OutGoodsTrait
                 if ($updateMc) {
                     $updateMc['mc_id'] = $mc['mc_id'];
                     $flag[] = $this->updateMachineChannel($updateMc);
+                    $this->outGoodsRefreshMcIds[intval($mc['mc_id'])] = intval($mc['mc_id']);
                     actionLog($this->getLS(),'【SQL】修改设备货道','OutGoods');
                     // 多商品FIFO：出货后尝试切换下一批次
                     if (method_exists($this, 'trySwitchNextBatch')) {
