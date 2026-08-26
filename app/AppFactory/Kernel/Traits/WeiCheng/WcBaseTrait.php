@@ -399,7 +399,13 @@ trait WcBaseTrait
             if (is_array($decodedDaysInfo) && !empty($decodedDaysInfo)) return $daysInfo;
         }
 
-        $getData = isset($wcGoods['get_data']) ? json_decode($wcGoods['get_data'], true) : [];
+        // 兼容旧预约房快照：get_data 不在 wc_goods 时，从同步日志表取最新一条
+        $getDataRaw = isset($wcGoods['get_data']) ? $wcGoods['get_data'] : '';
+        if ($getDataRaw === '' && !empty($wcGoods['no'])) {
+            $log = $this->getWcGoodsLatestSyncLog($wcGoods['no']);
+            $getDataRaw = $log ? ($log['get_data'] ?? '') : '';
+        }
+        $getData = $getDataRaw ? json_decode($getDataRaw, true) : [];
         $product = isset($getData['product']) && is_array($getData['product']) ? $getData['product'] : [];
         if (isset($product['daysInfo']) && is_array($product['daysInfo']) && !empty($product['daysInfo'])) {
             return json_encode($product['daysInfo']);
@@ -654,37 +660,58 @@ trait WcBaseTrait
         ]);
     }
 
-    public function requestWcGoodsQrCode($goodsNo)
+    /**
+     * 获取微程商品小程序码（按设备 + 商品 + 分类），成功后同步写回 wc_machine_channel.goods_qrcode。
+     *
+     * @param string $machine_id     设备编码 machine_code（对应 wc_machine_channel.machine_id）
+     * @param string $out_no         微程商品编码（wc_machine_channel.out_no）
+     * @param string $goods_category 微程商品分类（wc_machine_channel.gc_id / wc_goods.type）
+     * @return array ['response' => 原始响应, 'status' => HTTP状态码, 'qrcodeUrl' => 小程序码]
+     */
+    public function requestWcGoodsQrCode($machine_id, $out_no, $goods_category)
     {
         $this->initWcBase();
-        $postUrl = $this->query_goods_qrcode_url . '?goods_no=' . urlencode($goodsNo);
-        return $this->weicheng_curl($postUrl, [], [], [
-            'request_body' => ['goods_no' => $goodsNo],
-        ]);
-    }
-
-    public function getWcGoodsQrCode($goodsNo)
-    {
-        $goodsNo = trim(strval($goodsNo));
-        if ($goodsNo === '') return '';
-        $wcGoods = $this->getWcGoodsFind(['no' => $goodsNo], 'no,goods_qrcode');
-        if (!$wcGoods) return '';
-        $cachedUrl = trim(strval($wcGoods['goods_qrcode'] ?? ''));
-        if ($cachedUrl !== '') return $cachedUrl;
-
-        $result = $this->requestWcGoodsQrCode($goodsNo);
-        if (intval($result['status'] ?? 0) !== 200) return '';
-        $response = json2arr($result['response'] ?? '');
-        if (!is_array($response)) return '';
-        $qrcodeUrl = '';
-        if (isset($response['data']['qrcodeUrl'])) {
-            $qrcodeUrl = trim(strval($response['data']['qrcodeUrl']));
-        } elseif (isset($response['qrcodeUrl'])) {
-            $qrcodeUrl = trim(strval($response['qrcodeUrl']));
+        $machine_id = trim(strval($machine_id));
+        $out_no = trim(strval($out_no));
+        $goods_category = trim(strval($goods_category));
+        if ($out_no === '') {
+            return ['status' => 400, 'response' => 'goods_no 不能为空', 'qrcodeUrl' => ''];
         }
-        if ($qrcodeUrl === '') return '';
-        $this->updateWcGoods(['goods_qrcode' => $qrcodeUrl], ['no' => $goodsNo]);
-        return $qrcodeUrl;
+
+        $postUrl = $this->query_goods_qrcode_url . '?machine_code=' . urlencode($machine_id)
+            . '&goods_no=' . urlencode($out_no)
+            . '&goods_category=' . urlencode($goods_category);
+        $result = $this->weicheng_curl($postUrl, [], [], [
+            'request_body' => [
+                'machine_code'   => $machine_id,
+                'goods_no'       => $out_no,
+                'goods_category' => $goods_category,
+            ],
+        ]);
+        $result['qrcodeUrl'] = '';
+
+        if (intval($result['status'] ?? 0) !== 200) {
+            return $result;
+        }
+        $response = json2arr($result['response'] ?? '');
+        if (!is_array($response)) {
+            return $result;
+        }
+        if (isset($response['data']['qrcodeUrl'])) {
+            $result['qrcodeUrl'] = trim(strval($response['data']['qrcodeUrl']));
+        } elseif (isset($response['qrcodeUrl'])) {
+            $result['qrcodeUrl'] = trim(strval($response['qrcodeUrl']));
+        }
+        if ($result['qrcodeUrl'] === '') {
+            return $result;
+        }
+
+        // 获取到小程序码后，同步写回货道表
+        $this->updateWcMachineChannel(
+            ['goods_qrcode' => $result['qrcodeUrl']],
+            ['machine_id' => $machine_id, 'out_no' => $out_no]
+        );
+        return $result;
     }
 
     public function wcLoginQrCode($machine_id)
