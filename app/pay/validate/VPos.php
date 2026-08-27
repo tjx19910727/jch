@@ -21,8 +21,7 @@ class VPos extends VCommon
         "mch_no" => "require",
         "payment_type" => "require",
         "machine_id" => "require",
-        "currency" => "require",
-        "totalAmount" => "require",
+        "payment_data" => "checkPaymentData",
     ];
     protected $message = [
         "msg_id.require" => "VPos.msg_id_require",
@@ -35,13 +34,12 @@ class VPos extends VCommon
         "trade_no.require" => "VPos.trade_no_require",
         "mch_no.require" => "VPos.mch_no_require",
         "payment_type.require" => "VPos.payment_type_require",
-        "currency.require" => "VPos.currency_require",
-        "totalAmount.require" => "VPos.totalAmount_require",
+        "payment_data.checkPaymentData" => "VPos.payment_data_format",
     ];
     protected $scene = [
         "posNotify" => [
             "msg_id", "timestamp", "sign", "machine_id", "payment_type", "payment_status", "trade_no", "mch_no",
-            "currency", "totalAmount",
+            "payment_data",
         ],
     ];
 
@@ -50,6 +48,22 @@ class VPos extends VCommon
     {
         if (!$item) return "时间戳不能为空";
         if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+        return true;
+    }
+
+    /**
+     * payment_data非必传；传入时必须是JSON对象字符串。
+     */
+    public function checkPaymentData($item)
+    {
+        if ($item === null || $item === '') return true;
+        if (!is_string($item)) return false;
+
+        $data = json_decode($item);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_object($data)) return false;
+        if (property_exists($data, 'currency') && !is_string($data->currency)) return false;
+        if (property_exists($data, 'totalAmount')
+            && (!is_scalar($data->totalAmount) || !is_numeric($data->totalAmount))) return false;
         return true;
     }
 }

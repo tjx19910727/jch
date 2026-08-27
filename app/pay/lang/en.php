@@ -79,7 +79,6 @@ return [
         "payment_status_require" => "The payment result cannot be left blank.",
         "trade_no_require" => "Payment result cannot be empty. Order number cannot be empty.",
         "mch_no_require" => "Payment result cannot be empty. Order number cannot be empty. Transaction order number cannot be empty.",
-        "currency_require" => "The payment currency cannot be empty.",
-        "totalAmount_require" => "The total payment amount cannot be empty.",
+        "payment_data_format" => "The payment provider data must be a valid JSON object string.",
     ],
 ];

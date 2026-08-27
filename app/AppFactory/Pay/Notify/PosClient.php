@@ -48,17 +48,23 @@ class PosClient extends PayBaseClient
         actionLog($this->order, '订单数据');
         if (!$this->order) return $this->rFail($this->lang("VPos.order_no_data"));
         $this->order = $this->order->toArray();
-        try {
-            $this->addPaymentRequestLogs($this->buildPaymentRequestLog($message, $this->order));
-        } catch (\Exception $e) {
-            actionException($e, 1);
+        $paymentData = [];
+        if (!empty($message['payment_data'])) {
+            $paymentData = json_decode($message['payment_data'], true);
+            try {
+                $this->addPaymentRequestLogs($this->buildPaymentRequestLog($message, $this->order, $paymentData));
+            } catch (\Exception $e) {
+                actionException($e, 1);
+            }
         }
         // pay_status，支付状态，3：已支付，5：取消支付
         if ($message['payment_status'] === 'TRADE_SUCCESS' || strstr($message['payment_status'], 'ERR_STATUS=21') ) {
             if ($this->order['pay_status'] != 3) {
                 $this->order['mch_no'] = $message['mch_no'];
-                $this->order['pay_currency'] = strtoupper($message['currency']);
-                $this->order['pay_amount'] = $message['totalAmount'];
+                if (!empty($paymentData['currency']) && is_string($paymentData['currency']))
+                    $this->order['pay_currency'] = strtoupper($paymentData['currency']);
+                if (isset($paymentData['totalAmount']) && is_numeric($paymentData['totalAmount']))
+                    $this->order['pay_amount'] = $paymentData['totalAmount'];
                 $this->startTrans();
                 // 结算分润收益
                 try {
