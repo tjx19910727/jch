@@ -14,6 +14,8 @@ use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
+use app\AppFactory\RabbitMq\AsyncTask\WcQrCodeFetchLock;
+use think\facade\Db;
 
 trait WcBaseTrait
 {
@@ -93,8 +95,14 @@ trait WcBaseTrait
         }
         //todo   上线后需删除   方便本地调用https接口
         if (strstr(php_uname('s'), 'Windows')) {
-            curl_setopt($ch, CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
+            $cacertFile = root_path('public' . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . 'cacert.pem');
+            if (is_file($cacertFile)) {
+                curl_setopt($ch, CURLOPT_CAINFO, $cacertFile);
+            }
         }
+        // if (strstr(php_uname('s'), 'Windows')) {
+        //     curl_setopt($ch, CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
+        // }
         $response = curl_exec($ch);
         $curlError = '';
         if (curl_errno($ch)) {
@@ -399,7 +407,13 @@ trait WcBaseTrait
             if (is_array($decodedDaysInfo) && !empty($decodedDaysInfo)) return $daysInfo;
         }
 
-        $getData = isset($wcGoods['get_data']) ? json_decode($wcGoods['get_data'], true) : [];
+        // 兼容旧预约房快照：get_data 不在 wc_goods 时，从同步日志表取最新一条
+        $getDataRaw = isset($wcGoods['get_data']) ? $wcGoods['get_data'] : '';
+        if ($getDataRaw === '' && !empty($wcGoods['no'])) {
+            $log = $this->getWcGoodsLatestSyncLog($wcGoods['no']);
+            $getDataRaw = $log ? ($log['get_data'] ?? '') : '';
+        }
+        $getData = $getDataRaw ? json_decode($getDataRaw, true) : [];
         $product = isset($getData['product']) && is_array($getData['product']) ? $getData['product'] : [];
         if (isset($product['daysInfo']) && is_array($product['daysInfo']) && !empty($product['daysInfo'])) {
             return json_encode($product['daysInfo']);
@@ -654,37 +668,316 @@ trait WcBaseTrait
         ]);
     }
 
-    public function requestWcGoodsQrCode($goodsNo)
+    /**
+     * 获取微程商品小程序码。此方法只负责请求，不直接写库，避免按设备和商品编码宽范围误更新货道。
+     */
+    public function requestWcGoodsQrCode($machine_id, $out_no, $goods_category)
     {
         $this->initWcBase();
-        $postUrl = $this->query_goods_qrcode_url . '?goods_no=' . urlencode($goodsNo);
-        return $this->weicheng_curl($postUrl, [], [], [
-            'request_body' => ['goods_no' => $goodsNo],
+        $machine_id = trim(strval($machine_id));
+        $out_no = trim(strval($out_no));
+        $goods_category = trim(strval($goods_category));
+        if ($out_no === '') {
+            return ['status' => 400, 'response' => 'goods_no 不能为空', 'qrcodeUrl' => ''];
+        }
+
+        $postUrl = $this->query_goods_qrcode_url . '?machine_code=' . urlencode($machine_id)
+            . '&goods_no=' . urlencode($out_no)
+            . '&goods_category=' . urlencode($goods_category);
+        $result = $this->weicheng_curl($postUrl, [], [], [
+            'request_body' => [
+                'machine_code'   => $machine_id,
+                'goods_no'       => $out_no,
+                'goods_category' => $goods_category,
+            ],
         ]);
+        $result['qrcodeUrl'] = '';
+
+        if (intval($result['status'] ?? 0) !== 200) {
+            return $result;
+        }
+        $response = json2arr($result['response'] ?? '');
+        if (!is_array($response)) {
+            return $result;
+        }
+        if (isset($response['data']['qrcodeUrl'])) {
+            $result['qrcodeUrl'] = trim(strval($response['data']['qrcodeUrl']));
+        } elseif (isset($response['qrcodeUrl'])) {
+            $result['qrcodeUrl'] = trim(strval($response['qrcodeUrl']));
+        }
+        if ($result['qrcodeUrl'] === '') {
+            return $result;
+        }
+
+        return $result;
     }
 
-    public function getWcGoodsQrCode($goodsNo)
+    /**
+     * 为一条微程虚拟货道补充二维码。
+     */
+    public function ensureWcMachineChannelQrCode($channel, $source = '')
     {
-        $goodsNo = trim(strval($goodsNo));
-        if ($goodsNo === '') return '';
-        $wcGoods = $this->getWcGoodsFind(['no' => $goodsNo], 'no,goods_qrcode');
-        if (!$wcGoods) return '';
-        $cachedUrl = trim(strval($wcGoods['goods_qrcode'] ?? ''));
-        if ($cachedUrl !== '') return $cachedUrl;
-
-        $result = $this->requestWcGoodsQrCode($goodsNo);
-        if (intval($result['status'] ?? 0) !== 200) return '';
-        $response = json2arr($result['response'] ?? '');
-        if (!is_array($response)) return '';
-        $qrcodeUrl = '';
-        if (isset($response['data']['qrcodeUrl'])) {
-            $qrcodeUrl = trim(strval($response['data']['qrcodeUrl']));
-        } elseif (isset($response['qrcodeUrl'])) {
-            $qrcodeUrl = trim(strval($response['qrcodeUrl']));
+        $channel = $this->normalizeQrCodeChannel($channel);
+        $mcId = intval($channel['mc_id'] ?? 0);
+        if ($mcId <= 0) return $this->qrCodeResult(false, false, '虚拟货道ID无效');
+        if (trim(strval($channel['goods_qrcode'] ?? '')) !== '') {
+            return $this->qrCodeResult(true, false, '二维码已存在', $channel['goods_qrcode']);
         }
-        if ($qrcodeUrl === '') return '';
-        $this->updateWcGoods(['goods_qrcode' => $qrcodeUrl], ['no' => $goodsNo]);
-        return $qrcodeUrl;
+
+        $machineId = trim(strval($channel['machine_id'] ?? ''));
+        $outNo = trim(strval($channel['out_no'] ?? ''));
+        $goodsCategory = trim(strval($channel['gc_id'] ?? ''));
+        if ($machineId === '' || $outNo === '') return $this->qrCodeResult(false, false, '虚拟货道二维码参数不完整');
+
+        $owner = WcQrCodeFetchLock::acquire($mcId, '', 'wc');
+        if ($owner === '') return $this->qrCodeResult(false, false, '虚拟货道二维码正在处理中');
+        $rateOwner = WcQrCodeFetchLock::acquireRateLimit();
+        if ($rateOwner === '') {
+            WcQrCodeFetchLock::release($mcId, $owner, 'wc');
+            return $this->qrCodeResult(false, false, '二维码接口调用间隔未到', '', true);
+        }
+
+        try {
+            $result = $this->requestWcGoodsQrCode($machineId, $outNo, $goodsCategory);
+            WcQrCodeFetchLock::cooldownRateLimit($rateOwner);
+            $qrcode = trim(strval($result['qrcodeUrl'] ?? ''));
+            if (intval($result['status'] ?? 0) !== 200 || $qrcode === '') {
+                $this->logQrCodeFailure('wc_machine_channel', $channel, $result, $source);
+                return $this->qrCodeResult(false, true, '获取虚拟货道二维码失败');
+            }
+
+            Db::name('wc_machine_channel')
+                ->where('mc_id', '=', $mcId)
+                ->where('machine_id', '=', $machineId)
+                ->where('out_no', '=', $outNo)
+                ->where('gc_id', '=', $goodsCategory)
+                ->where('goods_qrcode', '=', '')
+                ->update(['goods_qrcode' => $qrcode]);
+            $persistedQrCode = Db::name('wc_machine_channel')
+                ->where('mc_id', '=', $mcId)
+                ->where('machine_id', '=', $machineId)
+                ->where('out_no', '=', $outNo)
+                ->where('gc_id', '=', $goodsCategory)
+                ->value('goods_qrcode');
+            WcQrCodeFetchLock::release($mcId, $owner, 'wc');
+            $persistedQrCode = trim(strval($persistedQrCode));
+            if ($persistedQrCode === '') {
+                return $this->qrCodeResult(false, true, '虚拟货道业务键已变化，放弃旧二维码');
+            }
+            return $this->qrCodeResult(true, true, '获取虚拟货道二维码成功', $persistedQrCode);
+        } catch (\Throwable $e) {
+            WcQrCodeFetchLock::cooldownRateLimit($rateOwner);
+            actionException($e, 1, 'ensureWcMachineChannelQrCode');
+            return $this->qrCodeResult(false, true, $e->getMessage());
+        }
+    }
+
+    /**
+     * 为一条实物货道补充二维码。
+     * 映射规则：g_id -> wc_goods_local(type=1或5)；父 out_no 的全部子商品总数必须等于1。
+     */
+    public function ensurePhysicalMachineChannelQrCode($channel, $source = '')
+    {
+        $channel = $this->normalizeQrCodeChannel($channel);
+        $mcId = intval($channel['mc_id'] ?? 0);
+        $gId = intval($channel['g_id'] ?? 0);
+        if ($mcId <= 0 || $gId <= 0 || $gId === 9999) return $this->qrCodeResult(false, false, '实物货道商品无效');
+        if (trim(strval($channel['goods_qrcode'] ?? '')) !== '') {
+            return $this->qrCodeResult(true, false, '二维码已存在', $channel['goods_qrcode']);
+        }
+
+        $mapping = $this->getPhysicalGoodsQrCodeMappings([$gId]);
+        if (!isset($mapping[$gId])) return $this->qrCodeResult(false, false, '未找到符合规则的微程父商品');
+
+        $machineId = trim(strval($channel['machine_id'] ?? ''));
+        if ($machineId === '') return $this->qrCodeResult(false, false, '实物货道设备编码为空');
+        $outNo = $mapping[$gId]['out_no'];
+        $goodsCategory = $mapping[$gId]['goods_category'];
+
+        $owner = WcQrCodeFetchLock::acquire($mcId, '', 'mc');
+        if ($owner === '') return $this->qrCodeResult(false, false, '实物货道二维码正在处理中');
+        $rateOwner = WcQrCodeFetchLock::acquireRateLimit();
+        if ($rateOwner === '') {
+            WcQrCodeFetchLock::release($mcId, $owner, 'mc');
+            return $this->qrCodeResult(false, false, '二维码接口调用间隔未到', '', true);
+        }
+
+        try {
+            $result = $this->requestWcGoodsQrCode($machineId, $outNo, $goodsCategory);
+            WcQrCodeFetchLock::cooldownRateLimit($rateOwner);
+            $qrcode = trim(strval($result['qrcodeUrl'] ?? ''));
+            if (intval($result['status'] ?? 0) !== 200 || $qrcode === '') {
+                $this->logQrCodeFailure('machine_channel', array_merge($channel, $mapping[$gId]), $result, $source);
+                return $this->qrCodeResult(false, true, '获取实物货道二维码失败');
+            }
+
+            Db::name('machine_channel')
+                ->where('mc_id', '=', $mcId)
+                ->where('machine_id', '=', $machineId)
+                ->where('g_id', '=', $gId)
+                ->where('goods_qrcode', '=', '')
+                ->update(['goods_qrcode' => $qrcode]);
+            $persistedQrCode = Db::name('machine_channel')
+                ->where('mc_id', '=', $mcId)
+                ->where('machine_id', '=', $machineId)
+                ->where('g_id', '=', $gId)
+                ->value('goods_qrcode');
+            WcQrCodeFetchLock::release($mcId, $owner, 'mc');
+            $persistedQrCode = trim(strval($persistedQrCode));
+            if ($persistedQrCode === '') {
+                return $this->qrCodeResult(false, true, '实物货道商品已变化，放弃旧二维码');
+            }
+            return $this->qrCodeResult(true, true, '获取实物货道二维码成功', $persistedQrCode);
+        } catch (\Throwable $e) {
+            WcQrCodeFetchLock::cooldownRateLimit($rateOwner);
+            actionException($e, 1, 'ensurePhysicalMachineChannelQrCode');
+            return $this->qrCodeResult(false, true, $e->getMessage());
+        }
+    }
+
+    /**
+     * 批量补齐虚拟货道二维码。limit 是本轮最多发起的外部请求数。
+     */
+    public function syncWcMachineChannelQrCodes($where = [], $limit = 1, $source = 'batch')
+    {
+        return $this->syncQrCodeRows('wc_machine_channel', $where, $limit, $source, false);
+    }
+
+    /**
+     * 批量补齐实物货道二维码。limit 是本轮最多发起的外部请求数。
+     */
+    public function syncPhysicalMachineChannelQrCodes($where = [], $limit = 1, $source = 'batch')
+    {
+        return $this->syncQrCodeRows('machine_channel', $where, $limit, $source, true);
+    }
+
+    protected function syncQrCodeRows($table, $where, $limit, $source, $physical)
+    {
+        $limit = max(1, intval($limit));
+        $query = Db::name($table)->where($where)->where('goods_qrcode', '=', '');
+        if ($physical) {
+            $query->where('g_id', '>', 0)
+                ->where('g_id', '<>', 9999)
+                ->whereRaw(
+                    'EXISTS (SELECT 1 FROM wc_goods_local wgl '
+                    . 'WHERE wgl.g_id = machine_channel.g_id AND wgl.type IN (1,5) '
+                    . 'AND (SELECT COUNT(*) FROM wc_goods_local child WHERE child.out_no = wgl.out_no) = 1)'
+                );
+        }
+        $rows = $query->field($physical
+            ? 'mc_id,m_id,machine_id,g_id,goods_qrcode'
+            : 'mc_id,m_id,machine_id,out_no,gc_id,goods_qrcode')
+            ->order('mc_id asc')
+            ->limit(max(50, $limit * 20))
+            ->select();
+        $rows = $rows ? $rows->toArray() : [];
+        $summary = ['total' => count($rows), 'requested' => 0, 'success' => 0, 'failed' => 0, 'skipped' => 0, 'rate_limited' => false];
+
+        foreach ($rows as $row) {
+            if ($summary['requested'] >= $limit) break;
+            $result = $physical
+                ? $this->ensurePhysicalMachineChannelQrCode($row, $source)
+                : $this->ensureWcMachineChannelQrCode($row, $source);
+            if (!empty($result['rate_limited'])) {
+                $summary['rate_limited'] = true;
+                break;
+            }
+            if (!empty($result['requested'])) $summary['requested']++;
+            if (!empty($result['status'])) {
+                $summary['success']++;
+            } elseif (!empty($result['requested'])) {
+                $summary['failed']++;
+            } else {
+                $summary['skipped']++;
+            }
+            if (!empty($result['requested']) && $summary['requested'] < $limit) {
+                // getQrcode 有请求频率限制，批处理按全局闸门间隔串行执行。
+                usleep((WcQrCodeFetchLock::RATE_INTERVAL * 1000000) + 100000);
+            }
+        }
+        return $summary;
+    }
+
+    /**
+     * 返回 g_id 对应的唯一子商品父编码和二维码接口分类。
+     */
+    protected function getPhysicalGoodsQrCodeMappings($gIds)
+    {
+        $gIds = array_values(array_unique(array_filter(array_map('intval', (array)$gIds), function ($gId) {
+            return $gId > 0 && $gId !== 9999;
+        })));
+        if (!$gIds) return [];
+
+        $candidates = Db::name('wc_goods_local')
+            ->where('g_id', 'in', $gIds)
+            ->where('type', 'in', [1, 5])
+            ->field('id,g_id,out_no,type')
+            ->order('out_no asc,id asc')
+            ->select();
+        $candidates = $candidates ? $candidates->toArray() : [];
+        if (!$candidates) return [];
+
+        $outNos = array_values(array_unique(array_filter(array_column($candidates, 'out_no'))));
+        if (!$outNos) return [];
+        $counts = Db::name('wc_goods_local')
+            ->where('out_no', 'in', $outNos)
+            ->field('out_no,COUNT(*) AS child_count')
+            ->group('out_no')
+            ->select();
+        $counts = $counts ? $counts->toArray() : [];
+        $countMap = array_column($counts, 'child_count', 'out_no');
+
+        $mapping = [];
+        foreach ($candidates as $candidate) {
+            $gId = intval($candidate['g_id'] ?? 0);
+            $outNo = trim(strval($candidate['out_no'] ?? ''));
+            if ($outNo === '' || intval($countMap[$outNo] ?? 0) !== 1) continue;
+            if (isset($mapping[$gId])) {
+                actionLog([
+                    'g_id' => $gId,
+                    'selected_out_no' => $mapping[$gId]['out_no'],
+                    'ignored_out_no' => $outNo,
+                ], '实物商品匹配到多个非组合父商品，按编码顺序取首条', 'wc_goods_qrcode_mapping');
+                continue;
+            }
+            $mapping[$gId] = [
+                'out_no' => $outNo,
+                'goods_category' => trim(strval($candidate['type'] ?? '')),
+            ];
+        }
+        return $mapping;
+    }
+
+    protected function normalizeQrCodeChannel($channel)
+    {
+        if (is_object($channel) && method_exists($channel, 'toArray')) return $channel->toArray();
+        return is_array($channel) ? $channel : (array)$channel;
+    }
+
+    protected function qrCodeResult($status, $requested, $msg, $qrcode = '', $rateLimited = false)
+    {
+        return [
+            'status' => (bool)$status,
+            'requested' => (bool)$requested,
+            'msg' => $msg,
+            'qrcodeUrl' => $qrcode,
+            'rate_limited' => (bool)$rateLimited,
+        ];
+    }
+
+    protected function logQrCodeFailure($table, $channel, $result, $source)
+    {
+        actionLog([
+            'table' => $table,
+            'source' => $source,
+            'mc_id' => $channel['mc_id'] ?? 0,
+            'machine_id' => $channel['machine_id'] ?? '',
+            'g_id' => $channel['g_id'] ?? 0,
+            'out_no' => $channel['out_no'] ?? '',
+            'goods_category' => $channel['goods_category'] ?? ($channel['gc_id'] ?? ''),
+            'http_status' => $result['status'] ?? 0,
+            'response' => mb_substr(strval($result['response'] ?? ''), 0, 500, 'UTF-8'),
+        ], '货道商品小程序码获取失败', 'wc_goods_qrcode');
     }
 
     public function wcLoginQrCode($machine_id)

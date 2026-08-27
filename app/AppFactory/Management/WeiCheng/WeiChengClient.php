@@ -274,7 +274,6 @@ class WeiChengClient extends ManagementClient
         }
 
         $updateData = $this->mergeAppointmentGoodsDaysInfo($res['product']);
-        $updateData['get_data'] = $result['response'];
         $updateData['goods'] = json_encode(isset($updateData['goods']) && is_array($updateData['goods']) ? $updateData['goods'] : [], JSON_UNESCAPED_UNICODE);
         $updateData['combination_goods'] = json_encode(isset($updateData['combination_goods']) && is_array($updateData['combination_goods']) ? $updateData['combination_goods'] : [], JSON_UNESCAPED_UNICODE);
         $updateData['resourcesArray'] = json_encode(isset($updateData['resourcesArray']) && is_array($updateData['resourcesArray']) ? $updateData['resourcesArray'] : [], JSON_UNESCAPED_UNICODE);
@@ -284,6 +283,8 @@ class WeiChengClient extends ManagementClient
 
         Db::startTrans();
         try {
+            // 原始响应迁入同步日志表（与商品落库同事务），wc_goods 不再保存 get_data 大字段
+            $this->addWcGoodsSyncLog($goods_no, $type, $syncBatchNo, $result['response']);
             $this->synchronizeGoods2Db($updateData, $syncBatchNo);
             $this->setWcGoodsLocal($goods_no, $type);
             Db::commit();
@@ -315,49 +316,24 @@ class WeiChengClient extends ManagementClient
 
 
     /**
-     * 商品详情落库后同步父商品二维码，并仅向唯一父商品映射的实物商品回填二维码。
+     * 商品详情落库后尝试补一条虚拟货道二维码，其余由定时任务串行补齐。
      */
     protected function synchronizeGoodsQrCode($goodsNo)
     {
-        $qrcodeUrl = $this->getWcGoodsQrCode($goodsNo);
-        if ($qrcodeUrl === '') {
-            return ['status' => false, 'msg' => '微程商品小程序码同步失败：' . $goodsNo];
+        $goodsNo = trim(strval($goodsNo));
+        if ($goodsNo === '') {
+            return ['status' => false, 'msg' => '微程商品编码为空：小程序码同步失败'];
         }
 
-        $gIds = $this->getWcGoodsLocalColumn(['out_no' => $goodsNo], 'g_id');
-        $gIds = array_values(array_unique(array_filter(array_map('intval', is_array($gIds) ? $gIds : []), function ($gId) {
-            return $gId > 0 && $gId !== 9999;
-        })));
-        if (!$gIds) return ['status' => true];
-
-        $mappingRows = Db::name('wc_goods_local')
-            ->where('g_id', 'in', $gIds)
-            ->field('g_id,COUNT(DISTINCT out_no) out_no_count')
-            ->group('g_id')
-            ->select()
-            ->toArray();
-        $uniqueGIds = [];
-        $ambiguousGIds = [];
-        foreach ($mappingRows as $mappingRow) {
-            $gId = intval($mappingRow['g_id'] ?? 0);
-            if (intval($mappingRow['out_no_count'] ?? 0) === 1) {
-                $uniqueGIds[] = $gId;
-            } else {
-                $ambiguousGIds[] = $gId;
-            }
+        $channelCount = Db::name('wc_machine_channel')->where('out_no', '=', $goodsNo)->count();
+        if (!$channelCount) {
+            return ['status' => true, 'msg' => '该商品暂无关联虚拟货道，跳过小程序码同步'];
         }
-
-        if ($uniqueGIds) {
-            Db::name('goods')->where('g_id', 'in', $uniqueGIds)->update(['goods_qrcode' => $qrcodeUrl]);
-        }
-        if ($ambiguousGIds) {
-            Db::name('goods')->where('g_id', 'in', $ambiguousGIds)->update(['goods_qrcode' => '']);
-            actionLog([
-                'out_no' => $goodsNo,
-                'g_ids' => $ambiguousGIds,
-            ], '微程商品二维码存在一对多映射，已跳过普通商品回填', 'async_task_wc_goods_sync');
-        }
-        return ['status' => true];
+        $summary = $this->syncWcMachineChannelQrCodes(['out_no' => $goodsNo], 1, 'wc_goods_sync');
+        return [
+            'status' => intval($summary['failed']) === 0,
+            'msg' => "微程商品小程序码同步：{$goodsNo}（请求{$summary['requested']}，成功{$summary['success']}，失败{$summary['failed']}，待后续补齐{$summary['skipped']}）",
+        ];
     }
     /**
      * 预约商品明细位于 appointment.goods，合并到商品快照供父表和本地表复用。
@@ -658,6 +634,21 @@ class WeiChengClient extends ManagementClient
             return $this->r(100, '上架失败，以下微程商品不存在商品库信息：' . implode(',', $missing_out_nos));
         }
 
+        // 删除重建虚拟货道前保留同设备、同父商品、同分类的二维码。
+        $existingQrCodeMap = [];
+        $existingChannels = $this->getWcMachineChannelList(
+            [['m_id', 'in', $m_ids], ['out_no', 'in', $out_nos]],
+            0,
+            'm_id,out_no,gc_id,goods_qrcode'
+        );
+        if ($existingChannels) $existingChannels = $existingChannels->toArray();
+        foreach ((array)$existingChannels as $existingChannel) {
+            $existingKey = intval($existingChannel['m_id'] ?? 0)
+                . '|' . trim(strval($existingChannel['out_no'] ?? ''))
+                . '|' . trim(strval($existingChannel['gc_id'] ?? ''));
+            $existingQrCodeMap[$existingKey] = trim(strval($existingChannel['goods_qrcode'] ?? ''));
+        }
+
         $sort_map = array_flip($out_nos);
         $insert_all = [];
         $log_details = [];
@@ -693,6 +684,8 @@ class WeiChengClient extends ManagementClient
                     'gift_points' => $wc_goods['gift_points'] ?? 0,
                     'sort' => isset($sort_map[$out_no]) ? $sort_map[$out_no] + 1 : 0,
                 ];
+                $qrCodeKey = intval($id) . '|' . trim(strval($row['out_no'])) . '|' . trim(strval($row['gc_id']));
+                $row['goods_qrcode'] = $existingQrCodeMap[$qrCodeKey] ?? '';
                 $insert_all[] = $row;
 
                 $log_details[] = [
@@ -754,6 +747,12 @@ class WeiChengClient extends ManagementClient
             actionLog(['log_id' => $log_id, 'detail_count' => count($log_details), 'result_type' => gettype($detailResult)], '排序日志明细写入', 'wc_sort_log');
 
             $this->commitTrans();
+            // 外部接口失败或限流不影响上架事务，每次只尝试一条，剩余交给定时补偿。
+            try {
+                $this->syncWcMachineChannelQrCodes([['m_id', 'in', $m_ids]], 1, 'wc_channel_publish');
+            } catch (\Throwable $e) {
+                actionException($e, 1, 'wcChannelPublishQrCode');
+            }
             return $this->rA('虚拟货道微程商品上架完成', ['log_id' => $log_id]);
         } catch (\Throwable $e) {
             $this->rollbackTrans();

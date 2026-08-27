@@ -670,7 +670,7 @@ class ApiClient extends ReceiveBaseClient
         if (isset($this->data['mc_id']) && $this->data['mc_id']) $where['mc_id'] = $this->data['mc_id'];
         $channelField = "mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,length,width,width2,height,height2,
         cost_price,market_price,retail_price,gift_points,x_axis,y_axis,shelf_way,cost_points,
-        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status";
+        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status,goods_qrcode";
         $mcList = $this->getMachineChannelList($where, 0, $channelField, 'channel_code asc');
         if ($mcList) {
             $mcList = $mcList->toArray();
@@ -678,20 +678,21 @@ class ApiClient extends ReceiveBaseClient
             $availableStockMap = $jumpEnabled
                 ? $this->getMachineGoodsAvailableStockMap(array_column($mcList, 'g_id'))
                 : [];
+            $physicalQrRequested = false;
             foreach ($mcList as $key => $mc) {
                 $mc['jump_to_mini_program'] = 0;
+                $mc['goods_qrcode'] = trim(strval($mc['goods_qrcode'] ?? ''));
                 if ($jumpEnabled && $this->hasInsufficientPhysicalGoodsStock([$mc['g_id']], $availableStockMap)) {
                     $mc['jump_to_mini_program'] = 1;
-                }
-                $goodsQrcode = '';
-                if (!empty($mc['g_id'])) {
-                    $goodsInfo = $this->getGoodsFind(['g_id' => $mc['g_id']], 'goods_qrcode');
-                    if ($goodsInfo && !is_string($goodsInfo)) {
-                        $goodsInfo = $goodsInfo->toArray();
-                        $goodsQrcode = $goodsInfo['goods_qrcode'] ?? '';
+                    // 售罄时兜底补码；一次设备请求最多调用一次外部接口，失败不影响货道返回。
+                    if ($mc['goods_qrcode'] === '' && !$physicalQrRequested) {
+                        $qrcodeResult = $this->ensurePhysicalMachineChannelQrCode($mc, 'machine_channel_sold_out');
+                        if (!empty($qrcodeResult['requested'])) $physicalQrRequested = true;
+                        if (!empty($qrcodeResult['qrcodeUrl'])) {
+                            $mc['goods_qrcode'] = $qrcodeResult['qrcodeUrl'];
+                        }
                     }
                 }
-                $mc['goods_qrcode'] = $goodsQrcode;
 
                 $where = [];
                 $where[] = ['gc.start_time', "<=", time()];
@@ -837,6 +838,7 @@ class ApiClient extends ReceiveBaseClient
         try { // 清空旧商品库存，生成退货记录
             $mc = $this->getMachineChannelFind(['mc_id' => $this->data['mc_id']]);
             $mc = obj2arr($mc);
+            $oldGId = intval($mc['g_id'] ?? 0);
             if ($mc['frozen_stock'] > 0) {
                 return $this->rFail($this->lang("VChangeChannelGoods.mg_no_data"));
             }
@@ -979,6 +981,10 @@ class ApiClient extends ReceiveBaseClient
                 $mc['update_price'] = 2;
             }
             $mc = array_merge($mc, $mg, $g);
+            $newGId = intval($mc['g_id'] ?? 0);
+            if ($newGId !== $oldGId) {
+                $mc['goods_qrcode'] = '';
+            }
             actionLog($mc, '要修改的货架数据');
             if (isset($this->data['quantity']) && $this->data['quantity'] > 0) {
 
@@ -999,6 +1005,13 @@ class ApiClient extends ReceiveBaseClient
             actionLog($this->getLS(), '【SQL】修改货道信息');
             $result = $this->checkFlag($flag);
             $result ? $this->commitTrans() : $this->rollbackTrans();
+            if ($result && $newGId !== $oldGId && $newGId > 0 && $newGId !== 9999) {
+                try {
+                    $this->ensurePhysicalMachineChannelQrCode($mc, 'terminal_change_channel_goods');
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'changeChannelGoodsQrCode');
+                }
+            }
             return $this->rAction($result);
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -1219,7 +1232,7 @@ class ApiClient extends ReceiveBaseClient
     }
 
     protected $goodsField = "
-            g.g_id,g.goods_qrcode,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
+            g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.exter_url,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
             g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,g.g_type,
             mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
@@ -1256,7 +1269,7 @@ class ApiClient extends ReceiveBaseClient
             ["g_id" => $this->data['g_id']],
             "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
             sell_channel,exter_url,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
-            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price,goods_qrcode",
+            `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price",
             'update_time desc'
         );
         if (is_string($goods)) return $this->rFail($goods);
@@ -3861,11 +3874,12 @@ class ApiClient extends ReceiveBaseClient
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
         $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
+        $wcQrRequested = false;
         $physicalGIds = [];
         foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
-            $v['goods_qrcode'] = $wc_goods['goods_qrcode'] ?? '';
+            $v['goods_qrcode'] = $v['goods_qrcode'] ?? '';
             $v['jump_to_mini_program'] = 0;
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
@@ -3886,6 +3900,13 @@ class ApiClient extends ReceiveBaseClient
                 $gIds = array_column($v['goods_lists'], 'g_id');
                 if ($this->hasInsufficientPhysicalGoodsStock($gIds, $availableStockMap)) {
                     $v['jump_to_mini_program'] = 1;
+                    if (trim(strval($v['goods_qrcode'] ?? '')) === '' && !$wcQrRequested) {
+                        $qrcodeResult = $this->ensureWcMachineChannelQrCode($v, 'wc_channel_sold_out');
+                        if (!empty($qrcodeResult['requested'])) $wcQrRequested = true;
+                        if (!empty($qrcodeResult['qrcodeUrl'])) {
+                            $v['goods_qrcode'] = $qrcodeResult['qrcodeUrl'];
+                        }
+                    }
                 }
             }
             unset($v);
