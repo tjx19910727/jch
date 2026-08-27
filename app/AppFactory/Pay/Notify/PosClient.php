@@ -11,6 +11,7 @@ namespace app\AppFactory\Pay\Notify;
 
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\Payment\PaymentRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
 use app\AppFactory\Pay\PayBaseClient;
@@ -18,6 +19,7 @@ use app\AppFactory\Pay\PayBaseClient;
 class PosClient extends PayBaseClient
 {
     use AfterOrderPaymentTrait;
+    use PaymentRequestLogsTrait;
     use SaleOrdersRevenueTrait;
 
     public function __construct(ServiceContainer $app)
@@ -46,10 +48,17 @@ class PosClient extends PayBaseClient
         actionLog($this->order, '订单数据');
         if (!$this->order) return $this->rFail($this->lang("VPos.order_no_data"));
         $this->order = $this->order->toArray();
+        try {
+            $this->addPaymentRequestLogs($this->buildPaymentRequestLog($message, $this->order));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+        }
         // pay_status，支付状态，3：已支付，5：取消支付
         if ($message['payment_status'] === 'TRADE_SUCCESS' || strstr($message['payment_status'], 'ERR_STATUS=21') ) {
             if ($this->order['pay_status'] != 3) {
                 $this->order['mch_no'] = $message['mch_no'];
+                $this->order['pay_currency'] = strtoupper($message['currency']);
+                $this->order['pay_amount'] = $message['totalAmount'];
                 $this->startTrans();
                 // 结算分润收益
                 try {

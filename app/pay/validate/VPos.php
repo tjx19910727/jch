@@ -21,6 +21,8 @@ class VPos extends VCommon
         "mch_no" => "require",
         "payment_type" => "require",
         "machine_id" => "require",
+        "currency" => "require",
+        "totalAmount" => "require",
     ];
     protected $message = [
         "msg_id.require" => "VPos.msg_id_require",
@@ -33,9 +35,14 @@ class VPos extends VCommon
         "trade_no.require" => "VPos.trade_no_require",
         "mch_no.require" => "VPos.mch_no_require",
         "payment_type.require" => "VPos.payment_type_require",
+        "currency.require" => "VPos.currency_require",
+        "totalAmount.require" => "VPos.totalAmount_require",
     ];
     protected $scene = [
-        "posNotify" => ["msg_id","machine_id","payment_type","payment_status","trade_no","mch_no"],
+        "posNotify" => [
+            "msg_id", "timestamp", "sign", "machine_id", "payment_type", "payment_status", "trade_no", "mch_no",
+            "currency", "totalAmount",
+        ],
     ];
 
 
