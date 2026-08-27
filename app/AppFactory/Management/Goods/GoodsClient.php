@@ -68,6 +68,15 @@ class GoodsClient extends ManagementClient
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
+        // 非超管账号按绑定设备过滤（与 getData / getDataV2 一致）；无绑定设备时返回空数据
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            } else {
+                $where[] = ['m_id', '=', 0];
+            }
+        }
         $list = $this->queryGoodsRanking($where, 1, 0, 10);
         if ($list) {
             $list = $this->formatGoodsRankingList($list)->toArray();
