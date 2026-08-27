@@ -35,6 +35,9 @@ class MachineConfigClient extends ManagementClient
 
     public function updateMcV2($postData)
     {
+        if (intval($postData['is_only_octopus'] ?? 0) === 1 && (string)($postData['pay_type'] ?? '') !== '8') {
+            return $this->r(100, '开启仅支持八达通后，支付类型只能选择CoGoLink(八达通POS机)支付');
+        }
         $oldMc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'mc_id,m_id,machine_id,remote_calibration,is_multi_goods');
         $oldMc = $oldMc ? $oldMc->toArray() : [];
         $oldRemoteCalibration = isset($oldMc['remote_calibration']) ? intval($oldMc['remote_calibration']) : null;
@@ -86,20 +89,28 @@ class MachineConfigClient extends ManagementClient
         try {
             foreach ($postData['mcList'] as $key => $value) {
                 validate(VMachineConfig::class)->scene("mcList")->check($value);
+                $oldMc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id,is_multi_goods");
+                $oldMc = $oldMc ? $oldMc->toArray() : [];
                 $result = $this->updateMachineConfig($value, ['m_id' => $value['m_id']]);
                 if ($result) {
-                    $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id,is_multi_goods");
-                    $mc = $mc ? $mc->toArray() : [];
-                    $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
+                    $machineId = $oldMc['machine_id'] ?? '';
+                    if (!$machineId) {
+                        $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], 'machine_id');
+                        $mc = $mc ? $mc->toArray() : [];
+                        $machineId = $mc['machine_id'] ?? '';
+                    }
+                    if ($machineId) {
+                        $this->sendToMachine(['machine_id' => $machineId],'updateMachineConfig');
+                    }
                     // ==================== 单货道多商品相关开始 ====================
                     $closedChannels = [];
-                    if (intval($mc['is_multi_goods'] ?? 2) === 1
+                    if (intval($oldMc['is_multi_goods'] ?? 2) === 1
                         && array_key_exists('is_multi_goods', $value)
                         && intval($value['is_multi_goods']) === 2
                     ) {
                         $closedChannels = $this->closeMachineMultiGoods($value['m_id']);
-                        if($closedChannels){
-                            $this->sendClosedMultiGoodsChannelUpdates($mc['machine_id'], $closedChannels);
+                        if ($closedChannels && $machineId) {
+                            $this->sendClosedMultiGoodsChannelUpdates($machineId, $closedChannels);
                         }
                     }
                     // ==================== 单货道多商品相关结束 ====================
