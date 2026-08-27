@@ -1547,6 +1547,89 @@ class SaleOrdersClient extends ManagementClient
     }
 
     /**
+     * 手动将出货异常订单状态置为正常(出货成功)
+     * 可操作状态：2-已发出货命令、3-等待出货通知、5-出货失败、6-未取商品
+     * 限制：已支付(pay_status 3/7)、未退款(refund_status=1)、http_out_status非3(宽口径)、支付成功5分钟后
+     * @param array $postData
+     * @return array|string
+     */
+    public function markOutSuccess($postData = [])
+    {
+        $orderId = intval($postData['order_id'] ?? 0);
+        if (!$orderId) return $this->rFail('order_id不能为空');
+
+        $order = $this->getSaleOrdersFind(
+            ['order_id' => $orderId],
+            'order_id,trade_no,m_id,machine_id,out_status,http_out_status,pay_status,pay_time,refund_status'
+        );
+        if (!$order) return $this->rFail('订单不存在');
+        $order = is_object($order) ? $order->toArray() : $order;
+
+        // 出货状态白名单：仅异常状态可操作
+        if (!in_array(intval($order['out_status']), [2, 3, 5, 6])) {
+            return $this->rFail('仅出货异常订单(已发出货命令/等待出货通知/出货失败/未取商品)可设置');
+        }
+        // http出货状态非成功(宽口径：非3即放行)
+        if (intval($order['http_out_status'] ?? 0) === 3) {
+            return $this->rFail('订单http已成功出货，无需设置');
+        }
+        // 已支付
+        if (!in_array($order['pay_status'], ['3', '7'])) {
+            return $this->rFail('订单未支付，不能设置');
+        }
+        // 未退款
+        if (intval($order['refund_status'] ?? 0) !== 1) {
+            return $this->rFail('退款订单不允许设置');
+        }
+        // 支付成功5分钟后
+        if (intval($order['pay_time'] ?? 0) <= 0 || (time() - intval($order['pay_time'])) < 300) {
+            return $this->rFail('支付成功后5分钟才能设置');
+        }
+
+        Db::startTrans();
+        try {
+            // 乐观锁：仅当仍处于异常状态时才更新，防止并发重复设置
+            $affected = Db::name('sale_orders')
+                ->where('order_id', $orderId)
+                ->whereIn('out_status', [2, 3, 5, 6])
+                ->update(['out_status' => 4]);
+            if (!$affected) {
+                Db::rollback();
+                return $this->rFail('订单状态已变化，请刷新后重试');
+            }
+
+            $logRes = Db::name('sale_orders_out_status_log')->insert([
+                'order_id' => $orderId,
+                'trade_no' => $order['trade_no'] ?? '',
+                'm_id' => intval($order['m_id'] ?? 0),
+                'machine_id' => $order['machine_id'] ?? '',
+                'from_out_status' => intval($order['out_status']),
+                'to_out_status' => 4,
+                'manager_id' => intval($this->manager['manager_id'] ?? 0),
+                'remark' => trim($postData['remark'] ?? ''),
+                'create_time' => time(),
+            ]);
+            if (!$logRes) {
+                Db::rollback();
+                return $this->rFail('日志写入失败');
+            }
+
+            Db::commit();
+            actionLog([
+                'order_id' => $orderId,
+                'from_out_status' => $order['out_status'],
+                'to_out_status' => 4,
+                'manager_id' => $this->manager['manager_id'] ?? 0,
+            ], '手动将出货异常订单置为正常');
+            return $this->rSuccess('设置成功');
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * saleDataCollect 的销售额按订单主表汇总，避免商场积分支付时明细金额计入现金销售额。
      *
      * @param array $where

@@ -1088,4 +1088,25 @@ class SaleOrders extends Common
         return $this->app->saleOrders->manualPushToWeiCheng($postData);
     }
 
+    /**
+     * 手动将出货异常订单状态置为正常(出货成功)
+     * 可操作状态：out_status 2/3/5/6；限制：支付成功5分钟后、未退款、http_out_status非3
+     * @return array|string
+     */
+    public function markOutSuccess()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'markOutSuccess');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+
+        $frequencyKey = 'mark_out_success:' . intval($postData['order_id'] ?? 0);
+        $check = checkFrequency($frequencyKey, 3);
+        if ($check !== true) return returnState(100, $check);
+
+        return $this->app->saleOrders->markOutSuccess($postData);
+    }
+
 }

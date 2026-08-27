@@ -51,5 +51,6 @@ class VSaleOrders extends VCommon
             "receiver_account",
         ],
         "manualPushToWeiCheng" => ["trade_no", "sod_id"],
+        "markOutSuccess" => ["order_id"],
     ];
 }
