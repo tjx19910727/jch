@@ -677,12 +677,15 @@ class SaleOrdersClient extends ManagementClient
         $group = "";
         $order = "create_date asc";
         $todayEnd = strtotime(date("Y-m-d 23:59:59"));
-        // if ($this->manager['pid'] > 0) {
-        //     $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        //     if ($mIds) {
-        //         $where[] = ['m_id', 'in', $mIds];
-        //     }
-        // }
+        // 非超管账号按绑定设备过滤（与 getData / getDataV2 一致）；无绑定设备时返回空数据
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            } else {
+                $where[] = ['m_id', '=', 0];
+            }
+        }
         if ($type == 1) {
             $field = "ROUND(SUM(totalPrice - totalRefundAmount),2) totalPrice,SUM(totalQuantity - totalRefundQuantity) totalQuantity,countDate";
             $group = "create_date";
