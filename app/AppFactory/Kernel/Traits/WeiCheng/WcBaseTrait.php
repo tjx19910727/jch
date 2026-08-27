@@ -95,8 +95,14 @@ trait WcBaseTrait
         }
         //todo   上线后需删除   方便本地调用https接口
         if (strstr(php_uname('s'), 'Windows')) {
-            curl_setopt($ch, CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
+            $cacertFile = root_path('public' . DIRECTORY_SEPARATOR . 'static' . DIRECTORY_SEPARATOR . 'cacert.pem');
+            if (is_file($cacertFile)) {
+                curl_setopt($ch, CURLOPT_CAINFO, $cacertFile);
+            }
         }
+        // if (strstr(php_uname('s'), 'Windows')) {
+        //     curl_setopt($ch, CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
+        // }
         $response = curl_exec($ch);
         $curlError = '';
         if (curl_errno($ch)) {
