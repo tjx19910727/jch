@@ -97,4 +97,40 @@ class WeiChengClient extends TimeTaskBase
         return "清理完成：删除 {$count} 条微程商品同步日志";
     }
 
+    /**
+     * 补齐线上与实物货道二维码，建议每分钟执行一次。
+     * 每轮请求数受 limit 限制，内部按微程接口频率串行调用。
+     */
+    public function repairGoodsQrCodes($limit = 20)
+    {
+        $limit = max(1, intval($limit));
+        $wcLimit = max(1, intval(ceil($limit / 2)));
+        $wcResult = $this->syncWcMachineChannelQrCodes([], $wcLimit, 'time_task_repair');
+        $remaining = max(0, $limit - intval($wcResult['requested']));
+
+        $physicalResult = ['total' => 0, 'requested' => 0, 'success' => 0, 'failed' => 0, 'skipped' => 0, 'rate_limited' => false];
+        if ($remaining > 0) {
+            if (intval($wcResult['requested']) > 0) {
+                usleep(1100000);
+            }
+            $physicalResult = $this->syncPhysicalMachineChannelQrCodes([], $remaining, 'time_task_repair');
+        }
+
+        $result = ['wc_machine_channel' => $wcResult, 'machine_channel' => $physicalResult];
+        actionLog($result, '补齐货道商品小程序码', 'wc_goods_qrcode_repair');
+        return '处理完成：' . json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function repairWcMachineChannelQrCodes($limit = 20)
+    {
+        $result = $this->syncWcMachineChannelQrCodes([], $limit, 'time_task_wc_repair');
+        return '处理完成：' . json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function repairPhysicalMachineChannelQrCodes($limit = 20)
+    {
+        $result = $this->syncPhysicalMachineChannelQrCodes([], $limit, 'time_task_physical_repair');
+        return '处理完成：' . json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
 }

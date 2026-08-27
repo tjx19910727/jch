@@ -175,6 +175,7 @@ trait MachineChannelTrait
     {
         $channelList = [];
         $flag = [];
+        $qrCodeMcIds = [];
         $this->startTrans();
         try {
             // ==================== 单货道多商品相关开始 ====================
@@ -190,6 +191,8 @@ trait MachineChannelTrait
             }
             if (isset($this->data['mcList'])) {
                 foreach ($mcList as $key => $value) {
+                    // 二维码只允许服务端生成，忽略终端上报值。
+                    unset($value['goods_qrcode']);
                     $whereMc = [];
                     $batchArr = $value['batch_arr'] ?? [];
                     if (is_string($batchArr)) {
@@ -251,6 +254,9 @@ trait MachineChannelTrait
                             $this->rollbackTrans();
                             return $this->rFail($this->lang("VChannel.add_channel_fail") . ":" . $mc['channel_code']);
                         }
+                        if (intval($mc['g_id'] ?? 0) > 0 && intval($mc['g_id'] ?? 0) !== 9999) {
+                            $qrCodeMcIds[] = intval($mc['mc_id']);
+                        }
                         // ==================== 单货道多商品相关开始 ====================
                         // 多商品批次处理（设备上报固定队首模式）
                         if ($isMultiGoods) {
@@ -306,6 +312,12 @@ trait MachineChannelTrait
                         $this->addGoodsChange($insertGChange);
                     } else {
                         $mc = $mc->toArray() ?? obj2arr($mc);
+                        $oldGId = intval($mc['g_id'] ?? 0);
+                        $newGId = array_key_exists('g_id', $value) ? intval($value['g_id']) : $oldGId;
+                        if ($newGId !== $oldGId) {
+                            $value['goods_qrcode'] = '';
+                            if ($newGId > 0 && $newGId !== 9999) $qrCodeMcIds[] = intval($mc['mc_id']);
+                        }
                         // ==================== 单货道多商品相关开始 ====================
                         $multiStateChanging = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) !== intval($mc['is_multi_goods'] ?? 2);
                         if (intval($mc['frozen_stock'] ?? 0) > 0 && ($multiStateChanging || !empty($batchArr))) {
@@ -421,7 +433,20 @@ trait MachineChannelTrait
                     $channelList[] = $mc;
                 }
             }
-            return $this->checkTrans($this->checkFlag($flag));
+            $transactionSuccess = (bool)$this->checkFlag($flag);
+            $transResult = $this->checkTrans($transactionSuccess);
+            if ($transactionSuccess && $qrCodeMcIds && method_exists($this, 'syncPhysicalMachineChannelQrCodes')) {
+                try {
+                    $this->syncPhysicalMachineChannelQrCodes(
+                        [['mc_id', 'in', array_values(array_unique($qrCodeMcIds))]],
+                        1,
+                        'terminal_sub_channel'
+                    );
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'terminalSubChannelQrCode');
+                }
+            }
+            return $transResult;
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
