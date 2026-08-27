@@ -13,12 +13,13 @@ trait PaymentRequestLogsTrait
     }
 
     /**
-     * 将设备顶层上报的 GoLink 字段映射到支付请求日志表。
+     * 将payment_data中的GoLink字段映射到支付请求日志表。
      */
-    protected function buildPaymentRequestLog(array $message, array $order)
+    protected function buildPaymentRequestLog(array $message, array $order, array $paymentData)
     {
         $success = $message['payment_status'] === 'TRADE_SUCCESS'
             || strstr($message['payment_status'], 'ERR_STATUS=21');
+        $currency = $this->paymentLogValue($paymentData, 'currency');
 
         return [
             'order_id' => $order['order_id'] ?? 0,
@@ -27,37 +28,37 @@ trait PaymentRequestLogsTrait
             'machine_id' => $message['machine_id'] ?? '',
             'provider_code' => 'cogolinks',
             'device_payment_status' => $message['payment_status'] ?? '',
-            'request_id' => $this->paymentLogValue($message, 'requestId'),
-            'terminal_sn' => $this->paymentLogValue($message, 'sn'),
-            'api' => $this->paymentLogValue($message, 'api'),
-            'merchant_order_no' => $this->paymentLogValue($message, 'merchantOrderNo'),
-            'merchant_serial_no' => $this->paymentLogValue($message, 'merchantSerialNo'),
-            'provider_order_no' => $this->paymentLogValue($message, 'orderNo'),
-            'transaction_no' => $this->paymentLogValue($message, 'transactionNo'),
-            'currency' => strtoupper($message['currency']),
-            'total_amount' => $message['totalAmount'],
-            'order_amount' => $this->paymentLogValue($message, 'orderAmount'),
-            'tip_amount' => $this->paymentLogValue($message, 'tipAmount'),
-            'payer_fee' => $this->paymentLogValue($message, 'payerFee'),
-            'transaction_status' => $this->paymentLogValue($message, 'transactionStatus'),
-            'payment_way' => $this->paymentLogValue($message, 'paymentWay'),
-            'payment_type' => $this->paymentLogValue($message, 'paymentType'),
-            'payment_sub_type' => $this->paymentLogValue($message, 'paymentSubType'),
-            'card_brand' => $this->paymentLogValue($message, 'cardBrand'),
-            'card_no_mask' => $this->paymentLogValue($message, 'cardNoMask'),
-            'pos_batch_no' => $this->paymentLogValue($message, 'posBatchNo'),
-            'pos_serial_no' => $this->paymentLogValue($message, 'posSerialNo'),
-            'retrieval_no' => $this->paymentLogValue($message, 'retrievalNo'),
-            'auth_code' => $this->paymentLogValue($message, 'authCode'),
-            'transaction_time' => $this->paymentLogTime($message['transactionTime'] ?? null),
-            'completion_time' => $this->paymentLogTime($message['completionTime'] ?? null),
+            'request_id' => $this->paymentLogValue($paymentData, 'requestId'),
+            'terminal_sn' => $this->paymentLogValue($paymentData, 'sn'),
+            'api' => $this->paymentLogValue($paymentData, 'api'),
+            'merchant_order_no' => $this->paymentLogValue($paymentData, 'merchantOrderNo'),
+            'merchant_serial_no' => $this->paymentLogValue($paymentData, 'merchantSerialNo'),
+            'provider_order_no' => $this->paymentLogValue($paymentData, 'orderNo'),
+            'transaction_no' => $this->paymentLogValue($paymentData, 'transactionNo'),
+            'currency' => $currency === null ? null : strtoupper($currency),
+            'total_amount' => $this->paymentLogValue($paymentData, 'totalAmount'),
+            'order_amount' => $this->paymentLogValue($paymentData, 'orderAmount'),
+            'tip_amount' => $this->paymentLogValue($paymentData, 'tipAmount'),
+            'payer_fee' => $this->paymentLogValue($paymentData, 'payerFee'),
+            'transaction_status' => $this->paymentLogValue($paymentData, 'transactionStatus'),
+            'payment_way' => $this->paymentLogValue($paymentData, 'paymentWay'),
+            'payment_type' => $this->paymentLogValue($paymentData, 'paymentType'),
+            'payment_sub_type' => $this->paymentLogValue($paymentData, 'paymentSubType'),
+            'card_brand' => $this->paymentLogValue($paymentData, 'cardBrand'),
+            'card_no_mask' => $this->paymentLogValue($paymentData, 'cardNoMask'),
+            'pos_batch_no' => $this->paymentLogValue($paymentData, 'posBatchNo'),
+            'pos_serial_no' => $this->paymentLogValue($paymentData, 'posSerialNo'),
+            'retrieval_no' => $this->paymentLogValue($paymentData, 'retrievalNo'),
+            'auth_code' => $this->paymentLogValue($paymentData, 'authCode'),
+            'transaction_time' => $this->paymentLogTime($paymentData['transactionTime'] ?? null),
+            'completion_time' => $this->paymentLogTime($paymentData['completionTime'] ?? null),
             'process_status' => $success ? 2 : 3,
         ];
     }
 
     protected function paymentLogValue(array $message, $key)
     {
-        if (!isset($message[$key]) || $message[$key] === '') return null;
+        if (!isset($message[$key]) || $message[$key] === '' || !is_scalar($message[$key])) return null;
         return $message[$key];
     }
 

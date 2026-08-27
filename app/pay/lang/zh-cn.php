@@ -89,7 +89,6 @@ return  [
         "payment_status_require" => "支付结果不能为空",
         "trade_no_require" => "订单编号不能为空",
         "mch_no_require" => "交易订单号不能为空",
-        "currency_require" => "支付币种不能为空",
-        "totalAmount_require" => "支付总金额不能为空",
+        "payment_data_format" => "支付渠道数据必须是有效的JSON对象字符串",
     ],
 ];
