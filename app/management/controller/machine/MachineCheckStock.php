@@ -21,7 +21,7 @@ class MachineCheckStock extends Common
 //        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
 //        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->machineCheckStock->getList($where,$pageNum,'
-            id,machine_id,machine_name,channel_code,g_name,sku,gc_name,system_stock,check_stock,creator,status,create_date,create_time
+            id,m_id,machine_id,machine_name,channel_code,g_name,sku,gc_name,system_stock,check_stock,creator,status,create_date,create_time
         ','id desc');
     }
 

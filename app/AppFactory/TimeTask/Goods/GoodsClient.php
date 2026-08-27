@@ -309,12 +309,13 @@ class GoodsClient extends TimeTaskBase
             actionLog($machineGoods,'绑定该商品的所有设备商品','synchronizationMachineGoods');
             foreach ($machineGoods as $mgk => $mgv) {
                 // 同步设备商品库
-                $updateMgResult = $this->updateMachineGoods($goods, ['mg_id' => $mgv['mg_id']],
-                    ["g_id", "g_name", "gc_id", "gc_name", "pic", "sku", "bar_code", "cost_price", "market_price", "retail_price"]);
-                actionLog($this->getLS(),'修改设备商品库SQL','synchronizationMachineGoods');
-                if (!$updateMgResult) {
-                    return $this->rFail($this->lang("VMachineGoods.synchronization_fail"));
-                }
+                //20260821注释
+                // $updateMgResult = $this->updateMachineGoods($goods, ['mg_id' => $mgv['mg_id']],
+                //     ["g_id", "g_name", "gc_id", "gc_name", "pic", "sku", "bar_code", "cost_price", "market_price", "retail_price"]);
+                // actionLog($this->getLS(),'修改设备商品库SQL','synchronizationMachineGoods');
+                // if (!$updateMgResult) {
+                //     return $this->rFail($this->lang("VMachineGoods.synchronization_fail"));
+                // }
                 $result = $this->sendToMachine(['machine_id' => $mgv['machine_id']],'updateMg',['mg_id' => $mgv['mg_id']]);
                 actionLog($result,$mgv['machine_id'] . "设备商品【" . $mgv['mg_id'] . '】更新发送数据结果','synchronizationMachineGoods');
             }
@@ -335,15 +336,16 @@ class GoodsClient extends TimeTaskBase
             foreach ($mcList as $key => $value) {
                 $update = $goods;
                 // 有手动修改过货道价格的不同步商品价格
-                if ($value['update_price'] == 1) {
-                    unset($update['cost_price'], $update['market_price'], $update['retail_price']);
-                }
-                $update['mc_id'] = $value['mc_id'];
-                $updateMcResult = $this->updateMachineChannel($update);
-                actionLog($this->getLS(),'修改设备货架商品信息SQL','synchronizationMachineChannel');
-                if (!$updateMcResult) {
-                    return $this->rFail($this->lang("VMachineChannel.synchronization_fail"));
-                }
+                //20260821注释，已经不需要从此处修改货道的价格
+                // if ($value['update_price'] == 1) {
+                //     unset($update['cost_price'], $update['market_price'], $update['retail_price']);
+                // }
+                // $update['mc_id'] = $value['mc_id'];
+                // $updateMcResult = $this->updateMachineChannel($update);
+                // actionLog($this->getLS(),'修改设备货架商品信息SQL','synchronizationMachineChannel');
+                // if (!$updateMcResult) {
+                //     return $this->rFail($this->lang("VMachineChannel.synchronization_fail"));
+                // }
                 $result = $this->sendToMachine(['machine_id' => $value['machine_id']],'updateMc',['mc_id' => $value['mc_id']]);
                 actionLog($result,$value['machine_id'] . "货架【" . $value['mc_id'] . '】更新发送数据结果','synchronizationMachineChannel');
             }

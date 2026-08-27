@@ -23,6 +23,21 @@ class MqConsumer
     use MachineMqRecordTrait;
 
     /**
+     * 当前进程内是否正在执行MQ消费回调（用于消费线程内嵌套下发时缩短发布确认等待）。
+     * @var bool
+     */
+    protected static $insideConsumer = false;
+
+    /**
+     * 是否当前正在MQ消费回调内。
+     * @return bool
+     */
+    public static function isInsideConsumerThread()
+    {
+        return self::$insideConsumer;
+    }
+
+    /**
      *  消费端 消费端需要保持运行状态实现方式
      * @param AMQPChannel $channel
      * @param AMQPStreamConnection $connection
@@ -63,6 +78,7 @@ class MqConsumer
     {
         $data = [];
         $alreadyProcessed = false;
+        self::$insideConsumer = true;
         try {
             $data = $message->body;
             $data = json2arr($data);
@@ -121,6 +137,7 @@ class MqConsumer
             // 认证/格式错误属于永久错误；其他瞬时异常最多重试一次。
             $isPermanent = $e instanceof \InvalidArgumentException;
             $requeue = !$isPermanent && !$message->isRedelivered();
+            self::$insideConsumer = false;
             $message->nack($requeue, false);
             return;
         }
@@ -135,6 +152,7 @@ class MqConsumer
             $this->recordMachineMqStatusSafely($data, 2);
         }
         // ACK异常直接交给消费循环处理，关闭连接后由Broker重新投递。
+        self::$insideConsumer = false;
         $message->ack();
     }
 

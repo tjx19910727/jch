@@ -33,8 +33,7 @@ class MachineChannelStockReportClient extends ManagementClient
             return $this->rValidate('设备在营状态参数错误');
         }
         $where = $this->applyStockReportOperatingWhere($where, $isOperating);
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        $where = $this->applyStockReportDataScope($where);
         $data = $this->getMachineChannelStockReportList($where,$pageNum,$field,$order,$group);
         return $this->rQ($data);
     }
@@ -58,6 +57,30 @@ class MachineChannelStockReportClient extends ManagementClient
     }
 
     /**
+     * 主账号按组织查询，子账号按明确授权的设备查询。
+     * 子账号无设备授权时使用不存在的设备 ID，防止权限条件退化为全量查询。
+     *
+     * @param array $where
+     * @param string $machineIdField
+     * @param string $aoIdField
+     * @return array
+     */
+    protected function applyStockReportDataScope($where, $machineIdField = 'm_id', $aoIdField = 'ao_id')
+    {
+        if (intval($this->manager['pid'] ?? 0) > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(
+                ['manager_id' => $this->manager['manager_id']],
+                'm_id'
+            );
+            $where[] = [$machineIdField, 'in', $mIds ?: [0]];
+            return $where;
+        }
+
+        $where[$aoIdField] = intval($this->manager['ao_id'] ?? 0);
+        return $where;
+    }
+
+    /**
      * 导出库存报表
      * @param $where
      * @param int $eType
@@ -74,6 +97,7 @@ class MachineChannelStockReportClient extends ManagementClient
         $field = "*";
         if ($eType == 1) {
             $where = $this->applyStockReportOperatingWhere($where, $isOperating);
+            $where = $this->applyStockReportDataScope($where);
             $field = "sku,g_name,bar_code,model,gc_name,
         retail_price,
         sum(mc_stock) mc_stock,
@@ -86,15 +110,12 @@ class MachineChannelStockReportClient extends ManagementClient
         }
         if ($eType == 2) {
             $where = $this->applyStockReportOperatingWhere($where, $isOperating, 'mcs.m_id');
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            if ($mIds) $where[] = ['mcs.m_id', 'in', $mIds];
-            $where['mcs.ao_id'] = $this->manager['ao_id'];
-            unset($where['ao_id']);
+            $where = $this->applyStockReportDataScope($where, 'mcs.m_id', 'mcs.ao_id');
             $field = "mcs.machine_id,mcs.machine_name,mcs.sku,mcs.g_name,mcs.model,mcs.gc_name,mcs.retail_price,mcs.mc_stock,mcs.pre_stock,mcs.standby_stock,mcs.bad_stock,mcs.total_stock,m.factory,m.inventory_location";
             $list = $this->getMachineChannelStockReportJoinMchList($where,0,$field,"total_stock desc",$group);
         }
+        $list = isset($list) && $list ? $list->toArray() : [];
         if ($list) {
-            $list = $list->toArray();
             if ($eType == 1) {
                 $title = [
                     "sku" => "SKU",
@@ -131,7 +152,7 @@ class MachineChannelStockReportClient extends ManagementClient
             }
             return $this->sendToExport("统计报表-库存报表", $filename, $title, $list);
         }
-        return $this->rFail();
+        return $this->rFail('暂无可导出的库存报表数据');
     }
     /**
      * 库存报表只支持在营、在库两种设备状态。
