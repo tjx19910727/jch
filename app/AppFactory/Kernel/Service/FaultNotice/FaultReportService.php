@@ -382,9 +382,13 @@ class FaultReportService
     protected function buildReplaceData($machine, $message, $rule, $errorCode, $now)
     {
         $tradeNo = $this->getTradeNo($message);
-        $channelCode = strval($rule['template_type'] ?? '') === 'mShipmentFailed'
-            ? $this->getFailedChannelCode($machine, $tradeNo)
-            : '';
+        $channelCode = '';
+        if (strval($rule['template_type'] ?? '') === 'mShipmentFailed') {
+            $channelCode = trim(strval($message['channel_code'] ?? ($message['channelCode'] ?? '')));
+            if ($channelCode === '') {
+                $channelCode = $this->getFailedChannelCode($machine, $tradeNo);
+            }
+        }
         $lastOnline = $message['last_online_time'] ?? ($machine['last_online_time'] ?? 0);
         if (is_numeric($lastOnline)) {
             $lastOnline = intval($lastOnline) > 0 ? date('Y-m-d H:i:s', intval($lastOnline)) : '-';
@@ -408,7 +412,7 @@ class FaultReportService
     }
 
     /**
-     * 出货失败模板按出货结果筛选明细，并优先取失败数量最多的货道号。
+     * 调用方未传货道号时，按出货结果筛选明细，并优先取失败数量最多的货道号。
      */
     protected function getFailedChannelCode($machine, $tradeNo)
     {

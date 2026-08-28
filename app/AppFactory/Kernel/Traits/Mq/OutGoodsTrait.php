@@ -275,27 +275,25 @@ trait OutGoodsTrait
                     $updateMc['stock'] = max(0, $currentStock - $fail);
                     $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + $fail;
 
-                    // 出货失败发送通知
+                    // 出货失败上报新版故障通知
                     try {
-                        $this->noticeSendData = [
-                            "ao_id" => $this->machine['ao_id'],
-                            "m_id" => $this->machine['m_id'],
-                            "templateType" => "tException",
-                            "replaceData" => [
-                                "machine_id" => $this->machine['machine_id'],
-                                "machine_name" => $this->machine['machine_name'],
-                                "now" => date('Y-m-d H:i:s'),
-                                "error_info" => $this->lang("tException.out_fail"),
-                                "error_code" => $channel_code,
-                                "exceptionDeclaration" => $channel_code . $this->lang("tException.out_fail"),
-                            ]
-                        ];
-                        actionLog($this->noticeSendData,'发送出货失败通知');
-                        $result = @$this->noticeSend();
-                        actionLog($result, '发送出货失败通知结果');
+                        $meId = $this->reportFaultCode($this->machine, [
+                            'errorCode' => '1000102',
+                            'msg' => '订单出货失败',
+                            'error_position' => 3,
+                            'trade_no' => $this->order['trade_no'] ?? ($this->message['trade_no'] ?? ''),
+                            'channel_code' => $channel_code,
+                        ]);
+                        actionLog([
+                            'me_id' => intval($meId),
+                            'trade_no' => $this->order['trade_no'] ?? ($this->message['trade_no'] ?? ''),
+                            'channel_code' => $channel_code,
+                            'fail_quantity' => $fail,
+                            'error_code' => '1000102',
+                        ], '发送出货失败故障通知结果', 'OutGoods');
                     } catch (\Exception $e) {
-                        actionLog("发送出货失败抛出异常");
-                        actionException($e, 1);
+                        actionLog('发送出货失败故障通知抛出异常', '', 'OutGoods');
+                        actionException($e, 1, 'OutGoodsShipmentFault');
                     }
                 }
                 if ($updateMc) {
