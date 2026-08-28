@@ -131,7 +131,9 @@ trait FaultEventTrait
             "mec.error_position,mec.errorCode,mec.remark,mec.category_id,mec.level," .
             "mec.status,mec.notice_status,mec.notice_reason,mec.notice_time," .
             "mec.handle_manager_id,mec.handle_time,mec.create_time," .
-            "COALESCE(NULLIF(mecnr.error_name,''),NULLIF(mec.remark,''),mec.errorCode) AS error_name," .
+            "CASE WHEN mec.errorCode='11103021' " .
+            "THEN COALESCE(NULLIF(mec.remark,''),NULLIF(mecnr.error_name,''),mec.errorCode) " .
+            "ELSE COALESCE(NULLIF(mecnr.error_name,''),NULLIF(mec.remark,''),mec.errorCode) END AS error_name," .
             "COALESCE(NULLIF(mfc.category_name,''),'未分类') AS category_name," .
             "COALESCE(mfl.grade,mec.level) AS grade," .
             "COALESCE(NULLIF(mfl.level_name,''),'') AS level_name," .

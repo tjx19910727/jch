@@ -8,8 +8,7 @@
 
 namespace app\AppFactory\Kernel\Support\SimiotService;
 
-use app\AppFactory\AppFactory;
-use think\facade\Db;
+use app\AppFactory\Kernel\Service\FaultNotice\FaultReportService;
 
 define("SIMIOT_QUERY_CARD", "https://iot.simiot.com/api/client/v1");
 
@@ -54,22 +53,6 @@ class Simiot
 
 	public $defaultWarningValue;
 	public $defaultWarningAoId;
-
-	/**
-	 * 流量预警接收账号（auth_manager.account）
-	 * 先写死，后续改成有mFault权限的账号都可以接收预警
-	 * @var array
-	 */
-	public $warningAccounts = [
-		'18163326',
-		'18163058',
-		'jixiang2026',
-		'gfliu',
-		'18138127',
-		'82005720',
-		'82006153',
-		'18162217',
-	];
 
 	/**
 	 * 初始化
@@ -269,55 +252,25 @@ class Simiot
 	protected function sendTrafficWarningNotice($rate)
 	{
 		try {
-			$list = Db::name('auth_manager')
-				->whereIn('account', $this->warningAccounts)
-				->where('status', 1)
-				->field('manager_id,nickname,ao_id,openid,wx_notice')
-				->select()
-				->toArray();
-			$receivers = [];
-			foreach ($list as $item) {
-				if ($item['openid']) {
-					$receivers[] = [
-						'manager_id' => $item['manager_id'],
-						'nickname' => $item['nickname'],
-						'ao_id' => $this->defaultWarningAoId,
-						'openid' => $item['openid'],
-					];
-				}
-			}
-			if (empty($receivers)) {
-				actionLog(['accounts' => $this->warningAccounts], '流量预警通知发送失败，未找到接收账号');
-				return false;
-			}
-
-			$warningData = [
+			$machine = [
+				'm_id' => 0,
+				'ao_id' => $this->defaultWarningAoId,
 				'machine_id' => 'LLYJ',
 				'machine_name' => '流量预警',
-				'errorCode' => '120333311',
-				'error_code' => '剩余流量仅' . $rate . '%，请及时充值',
-				'error_info' => '120333311',
-				'error_time' => date('Y-m-d H:i:s'),
 			];
-
-			$hasSend = false;
-			if (!empty($receivers) ) {
-				$noticeData = [
-					'ao_id' => $this->defaultWarningAoId,
-					'sendType' => 1,
-					'templateType' => 'mFault',
-					'receiver' => $receivers,
-					'replaceData' => $warningData,
-				];
-				actionLog($noticeData, '发送新物联流量预警微信通知');
-				$result = AppFactory::notice($noticeData)->weChat->send();
-				actionLog($result, '发送新物联流量预警微信通知结果');
-				if ($result !== false) {
-					$hasSend = true;
-				}
-			}
-
-			return $hasSend;
+			$message = [
+				'errorCode' => '120333311',
+				'msg' => '剩余流量仅' . $rate . '%，请及时充值',
+				'error_position' => 2,
+				'organization_notice' => true,
+			];
+			$meId = (new FaultReportService())->report($machine, $message);
+			actionLog([
+				'me_id' => intval($meId),
+				'error_code' => '120333311',
+				'rate' => $rate,
+			], '发送新物联流量预警故障通知结果', 'simiotTrafficWarning');
+			return intval($meId) > 0;
 		} catch (\Throwable $e) {
 			actionException($e, 1);
 			return false;

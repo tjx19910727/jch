@@ -43,7 +43,7 @@ trait FaultSettingTrait
         }
 
         $offlineMinutes = intval($params['offline_minutes'] ?? 30);
-        if ($offlineMinutes <= 0) {
+        if ($offlineMinutes < 5) {
             $offlineMinutes = 30;
         }
 
@@ -253,7 +253,7 @@ trait FaultSettingTrait
         return [
             'notice_enabled' => intval($row['notice_enabled'] ?? 1),
             'offline_notice_enabled' => intval($row['offline_notice_enabled'] ?? 1),
-            'offline_minutes' => intval($row['offline_minutes'] ?? 0) > 0
+            'offline_minutes' => intval($row['offline_minutes'] ?? 0) >= 5
                 ? intval($row['offline_minutes'])
                 : 30,
             'is_configured' => $configured ? 1 : 2,
@@ -485,7 +485,7 @@ trait FaultSettingTrait
                 '保存全局设置：总开关%s，离线通知%s，离线阈值%d分钟',
                 intval($params['notice_enabled'] ?? 1) === 1 ? '开启' : '关闭',
                 intval($params['offline_notice_enabled'] ?? 1) === 1 ? '开启' : '关闭',
-                intval($params['offline_minutes'] ?? 0) > 0
+                intval($params['offline_minutes'] ?? 0) >= 5
                     ? intval($params['offline_minutes'])
                     : 30
             );

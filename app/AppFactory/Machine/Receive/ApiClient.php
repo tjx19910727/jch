@@ -1357,7 +1357,7 @@ class ApiClient extends ReceiveBaseClient
                 "msg" => '',
                 "error_position" => '',
             ];
-            $this->errorCode();
+            $this->reportFaultCode();
         } catch (\Exception $e) {
             actionException($e, 1);
         }

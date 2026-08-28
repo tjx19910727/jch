@@ -269,28 +269,21 @@ trait OutGoodsTrait
                     // 发送补货通知
                     if ($stock <= $mc['stock_warning']) {
                         try {
-                            $errorCode = "1000101";
-                            $this->noticeSendData = [
-                                "ao_id" => $this->machine['ao_id'],
-                                "m_id" => $this->machine['m_id'],
-                                "templateType" => "understock",
-                                "replaceData" => [
-                                    "machine_id" => $this->machine['machine_id'],
-                                    "machine_name" => $this->machine['machine_name'],
-                                    "stock" => $stock,
-                                    "channel_code" => $mc['channel_code'],
-                                    "stock_warning" => $mc['stock_warning'] ?? 0,
-                                    "error_code" => $this->lang("deviceErrorCode.".$errorCode),
-                                    "error_time" => date('Y-m-d H:i:s'),
-                                    "error_info" => $mc['channel_code'],
-                                ]
-                            ];
-                            actionLog($this->noticeSendData,'发送补货通知','OutGoods');
-                            $result = $this->noticeSend();
-                            actionLog($result, '发送补货通知结果','OutGoods');
+                            $meId = $this->reportFaultCode($this->machine, [
+                                'errorCode' => '1000101',
+                                'msg' => '货道商品库存不足',
+                                'error_position' => 3,
+                                'channel_code' => $mc['channel_code'] ?? '',
+                            ]);
+                            actionLog([
+                                'me_id' => intval($meId),
+                                'channel_code' => $mc['channel_code'] ?? '',
+                                'stock' => $stock,
+                                'stock_warning' => $mc['stock_warning'] ?? 0,
+                            ], '发送补货故障通知结果', 'OutGoods');
                         } catch (\Exception $e) {
                             actionLog("发送补货通知抛出异常","",'OutGoods');
-                            actionException($e, 1);
+                            actionException($e, 1, 'OutGoodsUnderstockFault');
                         }
                     }
 
@@ -336,27 +329,25 @@ trait OutGoodsTrait
                     }
                     //单货道多商品结束
 
-                    // 出货失败发送通知
+                    // 出货失败上报新版故障通知
                     try {
-                        $this->noticeSendData = [
-                            "ao_id" => $this->machine['ao_id'],
-                            "m_id" => $this->machine['m_id'],
-                            "templateType" => "tException",
-                            "replaceData" => [
-                                "machine_id" => $this->machine['machine_id'],
-                                "machine_name" => $this->machine['machine_name'],
-                                "now" => date('Y-m-d H:i:s'),
-                                "error_info" => $this->lang("tException.out_fail"),
-                                "error_code" => $channel_code,
-                                "exceptionDeclaration" => $channel_code . $this->lang("tException.out_fail"),
-                            ]
-                        ];
-                        actionLog($this->noticeSendData,'发送出货失败通知');
-                        $result = @$this->noticeSend();
-                        actionLog($result, '发送出货失败通知结果');
+                        $meId = $this->reportFaultCode($this->machine, [
+                            'errorCode' => '1000102',
+                            'msg' => '订单出货失败',
+                            'error_position' => 3,
+                            'trade_no' => $this->order['trade_no'] ?? ($this->message['trade_no'] ?? ''),
+                            'channel_code' => $channel_code,
+                        ]);
+                        actionLog([
+                            'me_id' => intval($meId),
+                            'trade_no' => $this->order['trade_no'] ?? ($this->message['trade_no'] ?? ''),
+                            'channel_code' => $channel_code,
+                            'fail_quantity' => $fail,
+                            'error_code' => '1000102',
+                        ], '发送出货失败故障通知结果', 'OutGoods');
                     } catch (\Exception $e) {
-                        actionLog("发送出货失败抛出异常");
-                        actionException($e, 1);
+                        actionLog('发送出货失败故障通知抛出异常', '', 'OutGoods');
+                        actionException($e, 1, 'OutGoodsShipmentFault');
                     }
                 }
                 if ($updateMc) {
