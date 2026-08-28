@@ -54,7 +54,7 @@ class FaultNoticeConfig
                     // 商品名称字段复用为故障短名称。
                     ['商品名称' => ['value' => '{{error_code}}', 'field' => 'thing3']],
                     ['出货时间' => ['value' => '{{error_time}}', 'field' => 'time4']],
-                    // 货道号按订单从sale_orders_details中取fail_quantity>0的第一条明细。
+                    // 货道号筛选未回写出货结果或已有失败数量的明细，按失败数量倒序取第一条。
                     ['货道号' => ['value' => '{{channel_code}}', 'field' => 'character_string5']],
                 ],
             ],

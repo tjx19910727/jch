@@ -408,7 +408,7 @@ class FaultReportService
     }
 
     /**
-     * 出货失败模板只取订单中第一条失败明细的货道号，不写入故障事件表。
+     * 出货失败模板按出货结果筛选明细，并优先取失败数量最多的货道号。
      */
     protected function getFailedChannelCode($machine, $tradeNo)
     {
@@ -424,8 +424,8 @@ class FaultReportService
             ->where('so.m_id', intval($machine['m_id'] ?? 0))
             ->where('so.machine_id', strval($machine['machine_id'] ?? ''))
             ->where('so.ao_id', intval($machine['ao_id'] ?? 0))
-            ->where('sod.fail_quantity', '>', 0)
-            ->order('sod.sod_id asc')
+            ->whereRaw('((sod.success_quantity = 0 AND sod.fail_quantity = 0) OR sod.fail_quantity > 0)')
+            ->order('sod.fail_quantity desc,sod.sod_id asc')
             ->value('sod.channel_code')));
     }
 

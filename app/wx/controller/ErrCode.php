@@ -137,6 +137,10 @@ class ErrCode
             ->order('create_time asc,s_id asc')
             ->select()
             ->toArray();
+        foreach ($solutions as &$solution) {
+            $solution['content'] = $this->normalizeSolutionContent(strval($solution['content'] ?? ''));
+        }
+        unset($solution);
 
         $showShipmentInfo = strval($log['template_type'] ?? '') === 'mShipmentFailed';
         $videoService = new FaultOrderVideoService();
@@ -454,6 +458,58 @@ class ErrCode
     protected function getHost()
     {
         return rtrim(strval(config('app.app_host') ?: env('app.host', '')), '/');
+    }
+
+    /**
+     * 规范解决方案富文本中的本地资源路径，并增强微信内置浏览器的视频兼容性。
+     */
+    protected function normalizeSolutionContent($content)
+    {
+        $content = strval($content);
+        if ($content === '') {
+            return '';
+        }
+
+        $host = $this->getHost();
+        $content = preg_replace_callback(
+            '/\b(src|poster)\s*=\s*(["\'])(.*?)\2/i',
+            function ($matches) use ($host) {
+                $url = trim(html_entity_decode(strval($matches[3]), ENT_QUOTES, 'UTF-8'));
+                if ($url === ''
+                    || preg_match('#^(?:https?:)?//#i', $url)
+                    || strpos($url, 'data:') === 0
+                    || strpos($url, 'blob:') === 0) {
+                    return $matches[0];
+                }
+
+                $normalized = preg_replace('#^(?:\.\./|\./)+#', '', $url);
+                if (strpos($normalized, 'uploads/') === 0) {
+                    $normalized = '/' . $normalized;
+                }
+                if (strpos($normalized, '/uploads/') === 0 && $host !== '') {
+                    $normalized = $host . $normalized;
+                }
+
+                return $matches[1] . '=' . $matches[2]
+                    . htmlspecialchars($normalized, ENT_QUOTES, 'UTF-8')
+                    . $matches[2];
+            },
+            $content
+        );
+
+        return preg_replace_callback('/<video\b([^>]*)>/i', function ($matches) {
+            $attributes = strval($matches[1]);
+            if (!preg_match('/\bplaysinline\b/i', $attributes)) {
+                $attributes .= ' playsinline';
+            }
+            if (!preg_match('/\bwebkit-playsinline\b/i', $attributes)) {
+                $attributes .= ' webkit-playsinline';
+            }
+            if (!preg_match('/\bpreload\s*=/i', $attributes)) {
+                $attributes .= ' preload="metadata"';
+            }
+            return '<video' . $attributes . '>';
+        }, $content);
     }
 
     protected function renderError($message)

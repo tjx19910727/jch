@@ -17,7 +17,7 @@ class FaultOrderVideoService
     const REQUEST_CACHE_SECONDS = 60;
 
     /**
-     * 获取与故障事件严格匹配的订单及第一条出货失败明细。
+     * 获取与故障事件严格匹配的订单及优先级最高的出货失败明细。
      */
     public function getOrderInfo($event)
     {
@@ -28,9 +28,9 @@ class FaultOrderVideoService
 
         $detail = (array)Db::name('sale_orders_details')
             ->where('order_id', intval($order['order_id']))
-            ->where('fail_quantity', '>', 0)
-            ->field('sod_id,channel_code,fail_quantity')
-            ->order('sod_id asc')
+            ->whereRaw('((success_quantity = 0 AND fail_quantity = 0) OR fail_quantity > 0)')
+            ->field('sod_id,channel_code,success_quantity,fail_quantity')
+            ->order('fail_quantity desc,sod_id asc')
             ->find();
 
         return [
