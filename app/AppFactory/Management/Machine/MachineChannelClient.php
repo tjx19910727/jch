@@ -19,6 +19,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Traits\RemoteRemovalLog\RemoteRemovalLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\facade\Db;
 
@@ -28,7 +29,7 @@ class MachineChannelClient extends ManagementClient
     const REMOTE_REMOVAL_STATUS_INTERRUPT = 1;
     const REMOTE_REMOVAL_WAIT_REPORT_SECONDS = 1800;
 
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait,WcBaseTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
     use RemoteRemovalLogTrait;
@@ -932,12 +933,16 @@ class MachineChannelClient extends ManagementClient
             "bar_code" => $mc['bar_code'],
             "ao_id" => $machine['ao_id'],
         ];
+        $newMachineGoods = [];
 
         $this->startTrans();
         try {
             $newGId = isset($postData['g_id']) ? intval($postData['g_id']) : null;
             $oldGId = intval($mc['g_id'] ?? 0);
             $isChangingGoods = $newGId !== null && $newGId !== $oldGId;
+            if ($isChangingGoods) {
+                $postData['goods_qrcode'] = '';
+            }
 
             // 更换或清空货道商品时，先记录旧货架商品下货。
             if ($isChangingGoods && $oldGId > 0) {
@@ -961,9 +966,31 @@ class MachineChannelClient extends ManagementClient
                     $postData['stock'] = 0;
                 }
                 $postData['out_fail_stock'] = 0;
-                if (!isset($postData['mg_id'])) {
-                    $postData['mg_id'] = $this->getMachineGoodsValue(['m_id' => $mc['m_id'], 'g_id' => $newGId], 'mg_id') ?? 0;
+                $mgId = $this->getMachineGoodsValue(['m_id' => $mc['m_id'], 'g_id' => $newGId], 'mg_id') ?? 0;
+                if (!$mgId) {
+                    $machineGoods = $this->getGoodsFind(
+                        ['g_id' => $newGId],
+                        'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,intergral_rate,gift_points,cost_points,ao_id'
+                    );
+                    $machineGoods = obj2arr($machineGoods);
+                    $machineGoods = array_merge($machineGoods, [
+                        'm_id' => $machine['m_id'],
+                        'machine_id' => $machine['machine_id'],
+                        'ao_id' => $machine['ao_id'],
+                        'pic' => str_replace($this->host, '', $machineGoods['pic'] ?? ''),
+                        'is_shelf' => 1,
+                    ]);
+                    $mgId = $this->addMachineGoods($machineGoods);
+                    if (!$mgId) {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang('action_fail'));
+                    }
+                    $newMachineGoods = [
+                        'mg_id' => $mgId,
+                        'machine_id' => $machine['machine_id'],
+                    ];
                 }
+                $postData['mg_id'] = $mgId;
                 $postData = array_merge($postData, $goods);
 
                 $insertGc = array_merge($insertGChange,[
@@ -1045,6 +1072,24 @@ class MachineChannelClient extends ManagementClient
             }
 
             $this->commitTrans();
+            if ($isChangingGoods && $newGId > 0 && $newGId !== 9999) {
+                try {
+                    $this->syncPhysicalMachineChannelQrCodes(
+                        ['mc_id' => intval($mc['mc_id'])],
+                        1,
+                        'management_update_mc'
+                    );
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'managementUpdateMcQrCode');
+                }
+            }
+            if ($newMachineGoods) {
+                try {
+                    $this->afterMgInsert($newMachineGoods);
+                } catch (\Exception $e) {
+                    actionException($e, 1);
+                }
+            }
             // 同步同设备同商品其他货道的售价
             $syncGid = $postData['g_id'] ?? $mc['g_id'];
             if ($syncGid > 0 && isset($postData['retail_price'])) {

@@ -174,6 +174,7 @@ trait MachineChannelTrait
     {
         $channelList = [];
         $flag = [];
+        $qrCodeMcIds = [];
         $this->startTrans();
         try {
             if (isset($this->data['delList']) && $this->data['delList']) {
@@ -182,6 +183,8 @@ trait MachineChannelTrait
             if (isset($this->data['mcList'])) {
                 $mcList = json2arr($this->data['mcList']);
                 foreach ($mcList as $key => $value) {
+                    // 二维码只允许服务端生成，忽略终端上报值。
+                    unset($value['goods_qrcode']);
                     $whereMc = [];
                     try {
                         validate(VChannel::class)->scene("subChannel")->check($value);
@@ -218,6 +221,9 @@ trait MachineChannelTrait
                             $this->rollbackTrans();
                             return $this->rFail($this->lang("VChannel.add_channel_fail") . ":" . $mc['channel_code']);
                         }
+                        if (intval($mc['g_id'] ?? 0) > 0 && intval($mc['g_id'] ?? 0) !== 9999) {
+                            $qrCodeMcIds[] = intval($mc['mc_id']);
+                        }
                         // 20250604 新增货道，增加“上货”商品变化记录
                         $insertGChange = [
                             "m_id" => $this->machine['m_id'],
@@ -242,6 +248,12 @@ trait MachineChannelTrait
                         $this->addGoodsChange($insertGChange);
                     } else {
                         $mc = $mc->toArray() ?? obj2arr($mc);
+                        $oldGId = intval($mc['g_id'] ?? 0);
+                        $newGId = array_key_exists('g_id', $value) ? intval($value['g_id']) : $oldGId;
+                        if ($newGId !== $oldGId) {
+                            $value['goods_qrcode'] = '';
+                            if ($newGId > 0 && $newGId !== 9999) $qrCodeMcIds[] = intval($mc['mc_id']);
+                        }
 
                         $insertGChange = [
                             "m_id" => $this->machine['m_id'],
@@ -294,7 +306,20 @@ trait MachineChannelTrait
                     $channelList[] = $mc;
                 }
             }
-            return $this->checkTrans($this->checkFlag($flag));
+            $transactionSuccess = (bool)$this->checkFlag($flag);
+            $transResult = $this->checkTrans($transactionSuccess);
+            if ($transactionSuccess && $qrCodeMcIds && method_exists($this, 'syncPhysicalMachineChannelQrCodes')) {
+                try {
+                    $this->syncPhysicalMachineChannelQrCodes(
+                        [['mc_id', 'in', array_values(array_unique($qrCodeMcIds))]],
+                        1,
+                        'terminal_sub_channel'
+                    );
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'terminalSubChannelQrCode');
+                }
+            }
+            return $transResult;
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);

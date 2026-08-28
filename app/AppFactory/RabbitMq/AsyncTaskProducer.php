@@ -16,13 +16,14 @@ class AsyncTaskProducer
      * @param array $payload
      * @return string
      */
-    public static function publish($taskType, $payload = [])
+    public static function publish($taskType, $payload = [], $taskId = '')
     {
         $connection = null;
         $channel = null;
         try {
             $param = config('rabbit_mq.' . env('RabbitMq.config_name'));
-            $amqpDetail = config('rabbit_mq.async_task_queue');
+            $queueConfigKey = $taskType === 'wc_goods_sync' ? 'wc_goods_sync_queue' : 'async_task_queue';
+            $amqpDetail = config('rabbit_mq.' . $queueConfigKey);
             if (!$param || !$amqpDetail) {
                 throw new \RuntimeException('RabbitMQ configuration is incomplete');
             }
@@ -35,7 +36,7 @@ class AsyncTaskProducer
             $channel->queue_bind($amqpDetail['queue_name'], $amqpDetail['exchange_name'], $amqpDetail['route_key']);
 
             $data = [
-                'task_id' => uniqid('task_'),
+                'task_id' => $taskId !== '' ? $taskId : self::createTaskId(),
                 'task_type' => $taskType,
                 'payload' => $payload,
             ];
@@ -70,5 +71,10 @@ class AsyncTaskProducer
                 }
             }
         }
+    }
+
+    public static function createTaskId()
+    {
+        return uniqid('task_');
     }
 }

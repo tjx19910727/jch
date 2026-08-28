@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Mobile\Machine\CheckClient;
 use app\AppFactory\Mobile\Machine\InfoClient;
+use app\AppFactory\Mobile\Machine\InspectionClient;
 
 class MachineProvider implements ServiceProviderInterface
 {
@@ -24,6 +25,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineInfo'] = function ($app) {
             return new InfoClient($app);
+        };
+        $app['inspectionCheck'] = function ($app) {
+            return new InspectionClient($app);
         };
     }
 }

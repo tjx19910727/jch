@@ -14,6 +14,8 @@ use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
+use app\AppFactory\RabbitMq\AsyncTask\WcGoodsSyncLock;
 
 class WeiChengClient extends ManagementClient
 {
@@ -146,9 +148,9 @@ class WeiChengClient extends ManagementClient
     }
 
 
-    public function synchronizeGoodsTypesAll()
+    public function synchronizeGoodsTypesAll($syncBatchNo = '')
     {
-        $syncBatchNo = date('YmdHis');
+        if ($syncBatchNo === '') $syncBatchNo = date('YmdHis');
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']]);
         if (!$wc_goods_type) return true;
         $wc_goods_type = $wc_goods_type->toArray();
@@ -215,24 +217,31 @@ class WeiChengClient extends ManagementClient
         return $combined;
     }
 
-    public function synchronizeGoodsAll()
+    public function synchronizeGoodsAll($syncBatchNo = '', $taskId = '')
     {
         $startTime = microtime(true);
-        $syncBatchNo = date('YmdHis');
-        $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
+        if ($syncBatchNo === '') $syncBatchNo = date('YmdHis');
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0'], ['is_pub', '=', '1']])->toArray();
         $successCount = 0;
         $failureCount = 0;
         $failureGoodsNos = [];
-        foreach ($wc_goods as $v) {
+        $qrcodeFailureCount = 0;
+        $qrcodeFailureGoodsNos = [];
+        foreach ($wc_goods as $index => $v) {
+            if ($taskId !== '' && $index % 20 === 0) WcGoodsSyncLock::refresh($taskId);
             $res = $this->synchronizeGoods($v['no'], $v['type'], $syncBatchNo);
-            if (!$res['status']) {
+            if (empty($res['status'])) {
                 $failureCount++;
                 if (count($failureGoodsNos) < 100) $failureGoodsNos[] = $v['no'];
                 continue;
             }
+            if (isset($res['qrcode_status']) && !$res['qrcode_status']) {
+                $qrcodeFailureCount++;
+                if (count($qrcodeFailureGoodsNos) < 100) $qrcodeFailureGoodsNos[] = $v['no'];
+            }
             $successCount++;
         }
-        $this->wcGoodsWriteLocal();
+        if ($taskId !== '') WcGoodsSyncLock::refresh($taskId);
         $summary = [
             'sync_batch_no' => $syncBatchNo,
             'total_count' => count($wc_goods),
@@ -241,44 +250,91 @@ class WeiChengClient extends ManagementClient
             'failure_goods_nos' => $failureGoodsNos,
             'failure_goods_nos_truncated' => $failureCount > count($failureGoodsNos) ? 1 : 0,
             'duration_ms' => intval((microtime(true) - $startTime) * 1000),
+            'qrcode_failure_count' => $qrcodeFailureCount,
+            'qrcode_failure_goods_nos' => $qrcodeFailureGoodsNos,
+            'qrcode_failure_goods_nos_truncated' => $qrcodeFailureCount > count($qrcodeFailureGoodsNos) ? 1 : 0,
         ];
         actionLog($summary, '微程商品详情同步汇总', 'async_task_wc_goods_sync');
-        return returnState('200', '分类商品同步成功', $summary);
+        $state = $failureCount > 0 ? 100 : 200;
+        $message = $failureCount > 0
+            ? '微程商品详情同步存在失败'
+            : ($qrcodeFailureCount > 0 ? '微程商品基础信息同步成功，部分二维码同步失败' : '微程商品详情同步成功');
+        return returnState($state, $message, $summary);
     }
 
     public function synchronizeGoods($goods_no, $type, $syncBatchNo = '')
     {
         if ($syncBatchNo === '') $syncBatchNo = date('YmdHis');
         $result = $this->goodsSync($goods_no, $type);
+        if ($result['status'] != 200) return ['status' => false, 'msg' => $result['response']];
 
-        if ($result['status'] == 200) {
-            $res = json2arr($result['response']);
-            if (!$res || !isset($res['product'])) {
-                // actionLog('同步失败', $goods_no);
-                return ['status' => false, 'msg' => $result['response']];
-            }
-
-            $updateData = $this->mergeAppointmentGoodsDaysInfo($res['product']);
-            $updateData['get_data'] = $result['response'];
-            if (isset($updateData['goods']))
-                $updateData['goods'] = json_encode($updateData['goods']);
-            if (isset($updateData['combination_goods']))
-                $updateData['combination_goods'] = json_encode($updateData['combination_goods'], JSON_UNESCAPED_UNICODE);
-            if (isset($updateData['resourcesArray']))
-                $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
-            if (isset($updateData['daysInfo']))
-                $updateData['daysInfo'] = json_encode($updateData['daysInfo']);
-            if (isset($updateData['present_integral']))
-                $updateData['gift_points'] = $updateData['present_integral'] ?? 0;
-
-            //type值是从goods_type带过来的，这里不要修改商品的type，否则查询不到数据
-            if (isset($updateData['type'])) unset($updateData['type']);
-            $res = $this->synchronizeGoods2Db($updateData, $syncBatchNo);
-            return ['status' => $res];
+        $res = json2arr($result['response']);
+        if (!$res || !isset($res['product']) || !is_array($res['product'])) {
+            return ['status' => false, 'msg' => '微程返回商品详情格式异常'];
         }
-        return ['status' => false, 'msg' => $result['response']];;
+
+        $updateData = $this->mergeAppointmentGoodsDaysInfo($res['product']);
+        $updateData['goods'] = json_encode(isset($updateData['goods']) && is_array($updateData['goods']) ? $updateData['goods'] : [], JSON_UNESCAPED_UNICODE);
+        $updateData['combination_goods'] = json_encode(isset($updateData['combination_goods']) && is_array($updateData['combination_goods']) ? $updateData['combination_goods'] : [], JSON_UNESCAPED_UNICODE);
+        $updateData['resourcesArray'] = json_encode(isset($updateData['resourcesArray']) && is_array($updateData['resourcesArray']) ? $updateData['resourcesArray'] : [], JSON_UNESCAPED_UNICODE);
+        $updateData['daysInfo'] = json_encode(isset($updateData['daysInfo']) && is_array($updateData['daysInfo']) ? $updateData['daysInfo'] : [], JSON_UNESCAPED_UNICODE);
+        if (isset($updateData['present_integral'])) $updateData['gift_points'] = $updateData['present_integral'] ?? 0;
+        if (isset($updateData['type'])) unset($updateData['type']);
+
+        Db::startTrans();
+        try {
+            // 原始响应迁入同步日志表（与商品落库同事务），wc_goods 不再保存 get_data 大字段
+            $this->addWcGoodsSyncLog($goods_no, $type, $syncBatchNo, $result['response']);
+            $this->synchronizeGoods2Db($updateData, $syncBatchNo);
+            $this->setWcGoodsLocal($goods_no, $type);
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return ['status' => false, 'msg' => $e->getMessage()];
+        }
+
+        try {
+            $qrcodeResult = $this->synchronizeGoodsQrCode($goods_no);
+            if (!$qrcodeResult['status']) {
+                actionLog([
+                    'goods_no' => $goods_no,
+                    'msg' => $qrcodeResult['msg'] ?? '',
+                ], '微程商品二维码同步失败，基础信息已保留', 'async_task_wc_goods_sync');
+                return ['status' => true, 'qrcode_status' => false, 'qrcode_msg' => $qrcodeResult['msg'] ?? ''];
+            }
+            return ['status' => true, 'qrcode_status' => true];
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            actionLog([
+                'goods_no' => $goods_no,
+                'msg' => $e->getMessage(),
+            ], '微程商品二维码同步异常，基础信息已保留', 'async_task_wc_goods_sync');
+            return ['status' => true, 'qrcode_status' => false, 'qrcode_msg' => $e->getMessage()];
+        }
     }
 
+
+    /**
+     * 商品详情落库后尝试补一条虚拟货道二维码，其余由定时任务串行补齐。
+     */
+    protected function synchronizeGoodsQrCode($goodsNo)
+    {
+        $goodsNo = trim(strval($goodsNo));
+        if ($goodsNo === '') {
+            return ['status' => false, 'msg' => '微程商品编码为空：小程序码同步失败'];
+        }
+
+        $channelCount = Db::name('wc_machine_channel')->where('out_no', '=', $goodsNo)->count();
+        if (!$channelCount) {
+            return ['status' => true, 'msg' => '该商品暂无关联虚拟货道，跳过小程序码同步'];
+        }
+        $summary = $this->syncWcMachineChannelQrCodes(['out_no' => $goodsNo], 1, 'wc_goods_sync');
+        return [
+            'status' => intval($summary['failed']) === 0,
+            'msg' => "微程商品小程序码同步：{$goodsNo}（请求{$summary['requested']}，成功{$summary['success']}，失败{$summary['failed']}，待后续补齐{$summary['skipped']}）",
+        ];
+    }
     /**
      * 预约商品明细位于 appointment.goods，合并到商品快照供父表和本地表复用。
      */
@@ -319,26 +375,12 @@ class WeiChengClient extends ManagementClient
     protected function markWcGoodsMissingFromSync($syncBatchNo, $goodsType = 0)
     {
         $onlineStatus = $syncBatchNo . '_1';
-        $offlineStatus = $syncBatchNo . '_2';
         $missingOutNos = array_values(array_filter(array_unique($this->getWcGoodsMissingSyncOutNos($onlineStatus, $goodsType))));
-        $result = $this->updateWcGoodsMissingSyncStatus($onlineStatus, $offlineStatus, $goodsType);
-        $machineGoodsResult = $this->markWcMachineGoodsOffShelf($missingOutNos);
-        $machineChannelResult = $this->deleteWcMachineChannelByOutNos($missingOutNos);
-        actionLog([
-            'sync_batch_no' => $syncBatchNo,
-            'goods_type' => $goodsType,
-            'offline_status' => $offlineStatus,
-            'missing_out_no_count' => count($missingOutNos),
-            'result' => $result,
-            'machine_goods_result' => $machineGoodsResult,
-            'machine_channel_result' => $machineChannelResult,
-        ], '微程商品未返回标记结果', "export_message_sync");
-        return $result;
-    }
-
-    protected function markWcMachineGoodsOffShelf(array $outNos)
-    {
-        return $this->offShelfWcMachineGoodsByOutNos($outNos);
+        $summary = $this->deleteWcGoodsDataByOutNos($missingOutNos);
+        $summary['sync_batch_no'] = $syncBatchNo;
+        $summary['goods_type'] = $goodsType;
+        actionLog($summary, '微程商品未返回物理删除结果', 'export_message_sync');
+        return $summary;
     }
 
     protected function isWcSyncSuccess($result)
@@ -592,6 +634,21 @@ class WeiChengClient extends ManagementClient
             return $this->r(100, '上架失败，以下微程商品不存在商品库信息：' . implode(',', $missing_out_nos));
         }
 
+        // 删除重建虚拟货道前保留同设备、同父商品、同分类的二维码。
+        $existingQrCodeMap = [];
+        $existingChannels = $this->getWcMachineChannelList(
+            [['m_id', 'in', $m_ids], ['out_no', 'in', $out_nos]],
+            0,
+            'm_id,out_no,gc_id,goods_qrcode'
+        );
+        if ($existingChannels) $existingChannels = $existingChannels->toArray();
+        foreach ((array)$existingChannels as $existingChannel) {
+            $existingKey = intval($existingChannel['m_id'] ?? 0)
+                . '|' . trim(strval($existingChannel['out_no'] ?? ''))
+                . '|' . trim(strval($existingChannel['gc_id'] ?? ''));
+            $existingQrCodeMap[$existingKey] = trim(strval($existingChannel['goods_qrcode'] ?? ''));
+        }
+
         $sort_map = array_flip($out_nos);
         $insert_all = [];
         $log_details = [];
@@ -627,6 +684,8 @@ class WeiChengClient extends ManagementClient
                     'gift_points' => $wc_goods['gift_points'] ?? 0,
                     'sort' => isset($sort_map[$out_no]) ? $sort_map[$out_no] + 1 : 0,
                 ];
+                $qrCodeKey = intval($id) . '|' . trim(strval($row['out_no'])) . '|' . trim(strval($row['gc_id']));
+                $row['goods_qrcode'] = $existingQrCodeMap[$qrCodeKey] ?? '';
                 $insert_all[] = $row;
 
                 $log_details[] = [
@@ -688,6 +747,12 @@ class WeiChengClient extends ManagementClient
             actionLog(['log_id' => $log_id, 'detail_count' => count($log_details), 'result_type' => gettype($detailResult)], '排序日志明细写入', 'wc_sort_log');
 
             $this->commitTrans();
+            // 外部接口失败或限流不影响上架事务，每次只尝试一条，剩余交给定时补偿。
+            try {
+                $this->syncWcMachineChannelQrCodes([['m_id', 'in', $m_ids]], 1, 'wc_channel_publish');
+            } catch (\Throwable $e) {
+                actionException($e, 1, 'wcChannelPublishQrCode');
+            }
             return $this->rA('虚拟货道微程商品上架完成', ['log_id' => $log_id]);
         } catch (\Throwable $e) {
             $this->rollbackTrans();
