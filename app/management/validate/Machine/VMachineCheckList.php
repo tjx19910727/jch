@@ -36,5 +36,6 @@ class VMachineCheckList extends VCommon
         'add' => ['item_name', 'parent_id', 'description', 'sort_order', 'is_active'],
         'update' => ['id', 'item_name', 'parent_id', 'description', 'sort_order', 'is_active'],
         'setActive' => ['id', 'is_active'],
+        'del' => ['id'],
     ];
 }

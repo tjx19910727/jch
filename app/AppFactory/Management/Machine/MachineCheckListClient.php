@@ -119,6 +119,32 @@ class MachineCheckListClient extends ManagementClient
     }
 
     /**
+     * 删除检查项
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function delItem($postData)
+    {
+        $id = $postData['id'] ?? '';
+        if (!$id) {
+            return $this->rValidate('id不能为空');
+        }
+        $ids = is_array($id) ? $id : explode(',', strval($id));
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (!$ids) {
+            return $this->rValidate('id不能为空');
+        }
+
+        $ids = $this->collectDescendantIds($ids);
+        $existsCount = Db::name('check_list_items')->where([['id', 'in', $ids]])->count();
+        if ($existsCount <= 0) {
+            return $this->rValidate('检查项不存在');
+        }
+        Db::name('check_list_items')->where([['id', 'in', $ids]])->update(['is_active' => 0]);
+        return $this->rD($existsCount);
+    }
+
+    /**
      * 启用/禁用检查项
      * @param array $postData
      * @return array|\think\response\Json
