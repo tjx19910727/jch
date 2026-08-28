@@ -324,7 +324,9 @@ class ErrCode
                 'mec.me_id,mec.m_id,mec.ao_id,mec.machine_id,mec.machine_name,mec.address,' .
                 'mec.errorCode AS error_code,mec.trade_no,' .
                 'mec.remark,mec.msg,mec.create_time,' .
-                "COALESCE(NULLIF(mecnr.error_name,''),NULLIF(mec.remark,''),mec.errorCode) AS error_name," .
+                "CASE WHEN mec.errorCode='11103021' " .
+                "THEN COALESCE(NULLIF(mec.remark,''),NULLIF(mecnr.error_name,''),mec.errorCode) " .
+                "ELSE COALESCE(NULLIF(mecnr.error_name,''),NULLIF(mec.remark,''),mec.errorCode) END AS error_name," .
                 'mfc.category_name'
             )
             ->find();

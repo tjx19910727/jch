@@ -33,7 +33,8 @@ class FaultReportService
         $mId = intval($machine['m_id'] ?? 0);
         $aoId = intval($machine['ao_id'] ?? 0);
         $errorCode = trim(strval($message['errorCode'] ?? ($message['error_code'] ?? '')));
-        if ($mId <= 0 || $aoId <= 0 || $errorCode === '') {
+        $organizationNotice = !empty($message['organization_notice']);
+        if ($aoId <= 0 || $errorCode === '' || (!$organizationNotice && $mId <= 0)) {
             throw new \InvalidArgumentException('故障上报缺少设备、组织或故障码');
         }
 
@@ -71,7 +72,10 @@ class FaultReportService
             $length = strlen($errorCode);
             $position = $length === 9 ? 2 : ($length === 7 ? 3 : 1);
         }
-        $remark = trim(strval($rule['error_name'] ?? ''));
+        $remark = trim(strval($message['event_remark'] ?? ''));
+        if ($remark === '') {
+            $remark = trim(strval($rule['error_name'] ?? ''));
+        }
         if ($remark === '') {
             $remark = trim(strval($message['msg'] ?? '')) ?: $errorCode;
         }
@@ -149,7 +153,8 @@ class FaultReportService
             intval($machine['m_id']),
             intval($rule['category_id']),
             $errorCode,
-            intval($official['id'])
+            intval($official['id']),
+            !empty($message['organization_notice'])
         );
         if (!$receivers) {
             return $this->updateEventNotice($meId, 4, 'no_receiver');
@@ -269,7 +274,7 @@ class FaultReportService
         return true;
     }
 
-    protected function getMatchedReceivers($aoId, $mId, $categoryId, $errorCode, $wxId)
+    protected function getMatchedReceivers($aoId, $mId, $categoryId, $errorCode, $wxId, $organizationNotice = false)
     {
         $rows = Db::name('machine_fault_receiver')
             ->alias('mfr')
@@ -294,16 +299,25 @@ class FaultReportService
                 continue;
             }
             $receiverId = intval($row['receiver_id']);
-            if (intval($row['machine_scope']) === 2
-                && !$this->receiverHasScope($receiverId, 1, strval($mId))) {
-                continue;
-            }
-            if (intval($row['pid'] ?? 0) > 0
-                && !Db::name('auth_manager_machine')->where([
-                    'manager_id' => intval($row['manager_id']),
-                    'm_id' => intval($mId),
-                ])->find()) {
-                continue;
+            if ($organizationNotice) {
+                // 组织级预警没有具体设备，只匹配“全部设备”的接收人。
+                if (intval($row['machine_scope']) !== 1
+                    || intval($row['pid'] ?? 0) > 0
+                    || intval($row['manager_ao_id'] ?? 0) !== intval($aoId)) {
+                    continue;
+                }
+            } else {
+                if (intval($row['machine_scope']) === 2
+                    && !$this->receiverHasScope($receiverId, 1, strval($mId))) {
+                    continue;
+                }
+                if (intval($row['pid'] ?? 0) > 0
+                    && !Db::name('auth_manager_machine')->where([
+                        'manager_id' => intval($row['manager_id']),
+                        'm_id' => intval($mId),
+                    ])->find()) {
+                    continue;
+                }
             }
             $faultScope = intval($row['fault_scope']);
             if ($faultScope === 2
@@ -402,6 +416,7 @@ class FaultReportService
             // 通用模板的“设备地址”以及出货模板的“商品名称”均显示该短名称。
             'error_code' => strval($rule['wechat_text'] ?? ''),
             'last_online_time' => strval($lastOnline ?: '-'),
+            'offline_minutes' => strval(intval($message['offline_minutes'] ?? 0)),
             'channel_code' => $channelCode ?: '-',
         ];
     }
