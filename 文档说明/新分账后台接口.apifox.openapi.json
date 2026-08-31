@@ -226,7 +226,7 @@
                     "新分账-分账触发类型"
                 ],
                 "summary": "新增分账触发支付类型配置",
-                "description": "配置某订单支付类型是否需要参与新分账。pay_type 唯一；不会新增或修改原业务收款渠道。",
+                "description": "配置某订单支付类型是否需要参与新分账。pay_type 必须大于0、存在于启用的支付类型字典中且全表唯一；不会新增或修改原业务收款渠道。",
                 "operationId": "revenuePayChannelAdd",
                 "parameters": [
                     {
@@ -249,7 +249,7 @@
                     "新分账-分账触发类型"
                 ],
                 "summary": "修改分账触发支付类型配置",
-                "description": "修改新分账触发配置。除 rpc_id 必填外，其余字段按需提交；不会修改原业务收款渠道。",
+                "description": "修改新分账触发配置。除 rpc_id 必填外，其余字段按需提交；提交 pay_type 时必须大于0、存在于启用的支付类型字典中且全表唯一；不会修改原业务收款渠道。",
                 "operationId": "revenuePayChannelUpdate",
                 "parameters": [
                     {
@@ -1208,6 +1208,13 @@
                                     "pay_type": 4,
                                     "channel_name": "京东收银",
                                     "status": 2
+                                }
+                            },
+                            "错误示例-免支付": {
+                                "summary": "pay_type=0会返回免支付不能配置为分账触发支付类型",
+                                "value": {
+                                    "pay_type": 0,
+                                    "status": 1
                                 }
                             }
                         }
@@ -2731,11 +2738,15 @@
             },
             "RevenuePayChannelAddRequest": {
                 "type": "object",
-                "description": "新增新分账独立触发配置，不新增或修改原业务收款渠道。pay_type 必填且唯一；channel_name 为空时按支付类型说明补全。",
+                "description": "新增新分账独立触发配置，不新增或修改原业务收款渠道。pay_type 必须大于0、存在于启用的支付类型字典中且全表唯一；channel_name 为空时按支付类型说明补全。",
+                "required": [
+                    "pay_type"
+                ],
                 "properties": {
                     "pay_type": {
                         "type": "integer",
-                        "description": "订单支付类型（sale_orders.pay_type），必填且唯一；只有配置并启用的订单支付类型才生成新分账"
+                        "minimum": 1,
+                        "description": "订单支付类型（sale_orders.pay_type），必填；必须存在于状态为启用的pay_type字典中且全表唯一。pay_type=0免支付不允许配置"
                     },
                     "channel_name": {
                         "type": "string",
@@ -2765,7 +2776,8 @@
                     },
                     "pay_type": {
                         "type": "integer",
-                        "description": "订单支付类型（sale_orders.pay_type），可选且唯一；提交后按此字段触发分账"
+                        "minimum": 1,
+                        "description": "订单支付类型（sale_orders.pay_type），可选；提交时必须存在于状态为启用的pay_type字典中且全表唯一。pay_type=0免支付不允许配置"
                     },
                     "channel_name": {
                         "type": "string",

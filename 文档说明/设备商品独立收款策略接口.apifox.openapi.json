@@ -1,0 +1,303 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "设备商品多收款策略接口",
+    "version": "2.0.0",
+    "description": "设备商品可关联多个收款策略。关联关系仅存储在 machine_goods_payee_strategy，不在 machine_goods 存储收款策略字段。后台查询以 machine_goods 为设备商品主体并聚合关联配置；单个或批量配置策略时，machine_goods 仅用于商品存在性、设备权限和组织兼容性校验，策略配置只写 machine_goods_payee_strategy。设备结算前计算购物车商品策略交集，subCar 再次复核并将最终策略写入订单。配套 SQL：文档说明/设备商品多收款策略数据库变更.sql、文档说明/设备商品批量配置收款策略权限节点.sql、文档说明/设备商品所属组织收款策略查询权限节点.sql。"
+  },
+  "servers": [{"url": "{{baseUrl}}"}],
+  "tags": [
+    {"name": "后台-设备商品收款策略", "description": "查询和维护设备商品关联的收款策略"},
+    {"name": "设备端-购物车收款策略", "description": "计算购物车策略交集并复核支付选择"}
+  ],
+  "paths": {
+    "/management/machine.machine_goods/getList": {
+      "post": {
+        "tags": ["后台-设备商品收款策略"],
+        "summary": "查询设备商品及已关联收款策略",
+        "description": "返回设备商品列表，并从 machine_goods_payee_strategy 聚合 sp_ids、sp_names、payee_types、strategies_status。该接口不会修改任何收款策略配置。",
+        "operationId": "getMachineGoodsPayeeStrategyList",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {
+          "required": false,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsListRequest"}, "example": {"m_id": 127, "pageNum": 1, "g_name": "测试商品"}}}
+        },
+        "responses": {
+          "200": {"description": "项目业务响应", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsListResponse"}}}}
+        }
+      }
+    },
+    "/management/machine.machine_goods/getFind": {
+      "post": {
+        "tags": ["后台-设备商品收款策略"],
+        "summary": "查询单个设备商品及已关联收款策略",
+        "description": "根据 mg_id 查询设备商品详情，策略字段全部来自 machine_goods_payee_strategy 与 strategy_payee。",
+        "operationId": "getMachineGoodsPayeeStrategyDetail",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "required": ["mg_id"], "properties": {"mg_id": {"type": "integer", "minimum": 1, "description": "设备商品ID", "example": 5001}}}, "example": {"mg_id": 5001}}}
+        },
+        "responses": {
+          "200": {"description": "项目业务响应", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsDetailResponse"}}}}
+        }
+      }
+    },
+    "/management/machine.machine_goods/getOrganizationPayeeStrategies": {
+      "post": {
+        "tags": ["后台-设备商品收款策略"],
+        "summary": "查询设备商品所属组织的可用收款策略",
+        "description": "根据 mg_id 查询 machine_goods.ao_id，并返回该商品所属组织当前启用的收款策略。A组织设备中配置B组织商品时，本接口返回B组织策略，而不是A组织设备策略。接口只读取 machine_goods、auth_organization 和 strategy_payee，不修改设备商品或策略关联关系。",
+        "operationId": "getMachineGoodsOrganizationPayeeStrategies",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "required": ["mg_id"], "properties": {"mg_id": {"type": "integer", "minimum": 1, "description": "设备商品ID", "example": 5001}}}, "example": {"mg_id": 5001}}}
+        },
+        "responses": {
+          "200": {"description": "state=200 查询成功；策略列表允许为空。state=100 表示商品不存在、无设备权限或商品未配置所属组织", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/OrganizationPayeeStrategiesResponse"}, "examples": {
+            "success": {"summary": "查询成功", "value": {"state": 200, "msg": "查询成功", "data": {"mg_id": 5001, "m_id": 127, "g_id": 1001, "g_name": "B组织商品", "ao_id": 20, "organization_name": "B组织", "strategies": [{"sp_id": 18, "sp_name": "B组织微信收款", "title": "微信支付", "payee_type": 1, "ico": "/uploads/pay/wx.png", "status": 1, "ao_id": 20}]}}},
+            "empty": {"summary": "所属组织暂无启用策略", "value": {"state": 200, "msg": "查询成功", "data": {"mg_id": 5001, "m_id": 127, "g_id": 1001, "g_name": "B组织商品", "ao_id": 20, "organization_name": "B组织", "strategies": []}}},
+            "permissionDenied": {"summary": "无设备权限", "value": {"state": 100, "msg": "操作失败:无权查询该设备商品的收款策略", "data": []}}
+          }}}}
+        }
+      }
+    },
+    "/management/machine.machine_goods/add": {
+      "post": {
+        "tags": ["后台-设备商品收款策略"],
+        "summary": "新增设备商品并配置收款策略",
+        "description": "新增 machine_goods 设备商品记录；sp_ids 不写入 machine_goods，而是写入 machine_goods_payee_strategy。",
+        "operationId": "addMachineGoodsWithPayeeStrategies",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsAddRequest"}, "examples": {
+            "multipleStrategies": {"summary": "新增并关联多个策略", "value": {"m_id": 127, "machine_id": "JCHH2D-030", "g_id": 1001, "g_name": "测试商品", "ao_id": 20, "sp_ids": [18, 21]}},
+            "withoutIndependentStrategy": {"summary": "不配置独立策略", "value": {"m_id": 127, "machine_id": "JCHH2D-030", "g_id": 1001, "g_name": "测试商品", "sp_ids": []}}
+          }}}
+        },
+        "responses": {"200": {"description": "state=200 新增成功；state=100 校验或业务失败", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CommonResponse"}}}}}
+      }
+    },
+    "/management/machine.machine_goods/update": {
+      "post": {
+        "tags": ["后台-设备商品收款策略"],
+        "summary": "单个设备商品整体替换收款策略",
+        "description": "传入 sp_ids 时，整体替换该 mg_id 在 machine_goods_payee_strategy 中的全部有效关联；sp_ids=[] 表示清空；不传 sp_ids/sp_id 表示保留原策略。仅提交 mg_id 和策略字段时不会更新 machine_goods，也不会触发设备商品更新通知。若同时提交价格等设备商品字段，则按原设备商品修改逻辑更新 machine_goods。",
+        "operationId": "updateMachineGoodsPayeeStrategies",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsUpdateRequest"}, "examples": {
+            "replaceStrategies": {"summary": "整体替换为两个策略", "value": {"mg_id": 5001, "sp_ids": [18, 21]}},
+            "clearStrategies": {"summary": "清空独立策略", "value": {"mg_id": 5001, "sp_ids": []}},
+            "legacySingleStrategy": {"summary": "兼容旧单策略参数", "value": {"mg_id": 5001, "sp_id": 18}},
+            "keepStrategies": {"summary": "不传策略字段，保留原关联", "value": {"mg_id": 5001, "retail_price": "9.90"}}
+          }}}
+        },
+        "responses": {"200": {"description": "state=200 修改成功；state=100 校验或业务失败", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CommonResponse"}}}}}
+      }
+    },
+    "/management/machine.machine_goods/updatePayeeStrategiesBatch": {
+      "post": {
+        "tags": ["后台-设备商品收款策略"],
+        "summary": "多个设备商品统一整体替换收款策略",
+        "description": "将 mg_ids 中每个设备商品的策略整体替换为同一个有序 sp_ids 集合。接口只读取 machine_goods 校验商品存在性、账号设备权限和商品组织，不对 machine_goods 执行新增、修改或删除；策略关系只写 machine_goods_payee_strategy。任一商品或策略校验失败时全部不更新。不同商品需要不同策略集合时，应分组调用本接口或逐个调用 update。",
+        "operationId": "updateMachineGoodsPayeeStrategiesBatch",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsPayeeBatchRequest"}, "examples": {
+            "replaceMultiple": {"summary": "多个商品配置相同的多个策略", "value": {"mg_ids": [5001, 5002, 5003], "sp_ids": [18, 21]}},
+            "clearMultiple": {"summary": "批量清空独立策略", "value": {"mg_ids": [5001, 5002, 5003], "sp_ids": []}},
+            "stringCompatible": {"summary": "兼容逗号分隔字符串", "value": {"mg_ids": "5001,5002,5003", "sp_ids": "18,21"}}
+          }}}
+        },
+        "responses": {
+          "200": {"description": "HTTP 200 业务响应；state=200 全部更新成功，state=100 全部不更新", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BatchUpdateResponse"}, "examples": {
+            "success": {"summary": "批量更新成功", "value": {"state": 200, "msg": "操作成功", "data": {"updated_count": 3, "mg_ids": [5001, 5002, 5003], "sp_ids": [18, 21]}}},
+            "goodsMissing": {"summary": "部分设备商品不存在", "value": {"state": 100, "msg": "操作失败:部分设备商品不存在或已删除", "data": []}},
+            "organizationMismatch": {"summary": "策略与商品组织不匹配", "value": {"state": 100, "msg": "操作失败:收款策略与设备商品所属组织不匹配", "data": []}},
+            "permissionDenied": {"summary": "无设备管理权限", "value": {"state": 100, "msg": "操作失败:无权配置部分设备商品，请重新选择", "data": []}}
+          }}}}
+        }
+      }
+    },
+    "/machine/receive/resolveCartPayTypes": {
+      "post": {
+        "tags": ["设备端-购物车收款策略"],
+        "summary": "结算前计算购物车可用收款策略交集",
+        "description": "设备展示支付方式前调用。后台计算购物车内所有商品可用策略集合的交集并返回 payTypeList。交集为空时 state=100，data.error_code=strategy_conflict。",
+        "operationId": "resolveCartPayTypes",
+        "parameters": [{"$ref": "#/components/parameters/MacHeader"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResolveRequest"}}}},
+        "responses": {"200": {"description": "业务响应", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ResolveResponse"}}}}}
+      }
+    },
+    "/machine/receive/subCar": {
+      "post": {
+        "tags": ["设备端-购物车收款策略"],
+        "summary": "提交购物车并复核收款策略",
+        "description": "沿用原 subCar 请求结构。下单时重新计算策略交集并校验设备选择的支付方式，防止展示支付方式后配置发生变化；成功后将最终 sp_id 固化到订单。",
+        "operationId": "subCarWithGoodsPayeeStrategyValidation",
+        "parameters": [{"$ref": "#/components/parameters/MacHeader"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SubCarRequest"}}}},
+        "responses": {"200": {"description": "沿用 subCar 原项目业务响应"}}
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TokenHeader": {"name": "token", "in": "header", "required": true, "description": "后台登录令牌", "schema": {"type": "string", "example": "{{token}}"}},
+      "MacHeader": {"name": "mac", "in": "header", "required": true, "description": "设备MAC地址", "schema": {"type": "string", "example": "{{mac}}"}}
+    },
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "required": ["state", "msg", "data"],
+        "properties": {
+          "state": {"type": "integer", "description": "业务状态：200成功，100失败", "example": 200},
+          "msg": {"type": "string", "description": "业务提示", "example": "修改成功"},
+          "data": {"description": "业务数据；无数据时通常为空数组", "nullable": true}
+        }
+      },
+      "MachineGoodsListRequest": {
+        "type": "object",
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "设备主键ID"},
+          "machine_id": {"type": "string", "description": "设备编号"},
+          "mg_id": {"type": "integer", "minimum": 1, "description": "设备商品ID"},
+          "g_name": {"type": "string", "description": "商品名称，模糊查询"},
+          "sku": {"type": "string", "description": "商品编码，模糊查询"},
+          "pageNum": {"type": "integer", "minimum": 0, "description": "分页页码；项目现有分页规则", "example": 1}
+        }
+      },
+      "MachineGoodsStrategyFields": {
+        "type": "object",
+        "properties": {
+          "mg_id": {"type": "integer", "description": "设备商品ID", "example": 5001},
+          "m_id": {"type": "integer", "description": "设备主键ID", "example": 127},
+          "g_id": {"type": "integer", "description": "商品ID", "example": 1001},
+          "g_name": {"type": "string", "description": "商品名称", "example": "测试商品"},
+          "sp_ids": {"type": "string", "nullable": true, "description": "已关联且启用的策略ID，按关联顺序以逗号分隔；未配置时为 null", "example": "18,21"},
+          "sp_names": {"type": "string", "nullable": true, "description": "策略名称，按关联顺序以顿号分隔", "example": "微信直营网商户、支付宝直营网商户"},
+          "payee_types": {"type": "string", "nullable": true, "description": "策略收款类型，按关联顺序以逗号分隔", "example": "1,2"},
+          "strategies_status": {"type": "integer", "nullable": true, "description": "关联策略状态聚合值；未配置时为 null", "example": 1}
+        }
+      },
+      "MachineGoodsListResponse": {
+        "allOf": [{"$ref": "#/components/schemas/CommonResponse"}, {"type": "object", "properties": {"data": {"description": "项目分页对象或设备商品数组；列表项包含策略聚合字段"}}}]
+      },
+      "MachineGoodsDetailResponse": {
+        "allOf": [{"$ref": "#/components/schemas/CommonResponse"}, {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/MachineGoodsStrategyFields"}}}]
+      },
+      "OrganizationPayeeStrategiesResponse": {
+        "allOf": [{"$ref": "#/components/schemas/CommonResponse"}, {"type": "object", "properties": {"data": {"type": "object", "required": ["mg_id", "m_id", "g_id", "g_name", "ao_id", "organization_name", "strategies"], "properties": {
+          "mg_id": {"type": "integer", "description": "设备商品ID"},
+          "m_id": {"type": "integer", "description": "设备主键ID"},
+          "g_id": {"type": "integer", "description": "商品ID"},
+          "g_name": {"type": "string", "description": "商品名称"},
+          "ao_id": {"type": "integer", "description": "设备商品所属组织ID"},
+          "organization_name": {"type": "string", "description": "设备商品所属组织名称"},
+          "strategies": {"type": "array", "description": "所属组织当前启用的收款策略，按sp_id倒序", "items": {"$ref": "#/components/schemas/OrganizationPayeeStrategy"}}
+        }}}}]
+      },
+      "OrganizationPayeeStrategy": {
+        "type": "object",
+        "required": ["sp_id", "sp_name", "title", "payee_type", "status", "ao_id"],
+        "properties": {
+          "sp_id": {"type": "integer", "description": "收款策略ID"},
+          "sp_name": {"type": "string", "description": "收款策略名称"},
+          "title": {"type": "string", "description": "支付方式展示标题"},
+          "payee_type": {"type": "integer", "description": "收款类型"},
+          "ico": {"type": "string", "nullable": true, "description": "支付方式图标"},
+          "status": {"type": "integer", "enum": [1], "description": "策略状态，本接口仅返回启用状态1"},
+          "ao_id": {"type": "integer", "description": "策略所属组织ID，与设备商品ao_id一致"}
+        }
+      },
+      "StrategyIds": {
+        "oneOf": [
+          {"type": "array", "maxItems": 50, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
+          {"type": "string", "description": "JSON数组字符串或逗号分隔字符串；空字符串表示清空"}
+        ],
+        "description": "收款策略ID有序集合，顺序即优先级；空集合表示不配置独立策略"
+      },
+      "MachineGoodsAddRequest": {
+        "type": "object",
+        "required": ["m_id", "machine_id", "g_id", "g_name"],
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "设备主键ID"},
+          "machine_id": {"type": "string", "description": "设备编号"},
+          "g_id": {"type": "integer", "minimum": 1, "description": "商品ID"},
+          "g_name": {"type": "string", "description": "商品名称"},
+          "ao_id": {"type": "integer", "minimum": 1, "description": "商品所属组织ID，用于校验策略组织兼容性"},
+          "sp_ids": {"$ref": "#/components/schemas/StrategyIds"},
+          "sp_id": {"type": "integer", "minimum": 0, "deprecated": true, "description": "旧单策略兼容参数；转为关联表记录，不写 machine_goods；与 sp_ids 同传时以 sp_ids 为准"}
+        }
+      },
+      "MachineGoodsUpdateRequest": {
+        "type": "object",
+        "required": ["mg_id"],
+        "properties": {
+          "mg_id": {"type": "integer", "minimum": 1, "description": "设备商品ID"},
+          "sp_ids": {"$ref": "#/components/schemas/StrategyIds"},
+          "sp_id": {"type": "integer", "minimum": 0, "deprecated": true, "description": "旧单策略兼容参数；转为关联表记录，不写 machine_goods；与 sp_ids 同传时以 sp_ids 为准"},
+          "retail_price": {"type": "string", "description": "示例设备商品字段；传入时会按原逻辑更新 machine_goods"}
+        }
+      },
+      "MachineGoodsPayeeBatchRequest": {
+        "type": "object",
+        "required": ["mg_ids", "sp_ids"],
+        "properties": {
+          "mg_ids": {"oneOf": [{"type": "array", "minItems": 1, "maxItems": 500, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}}, {"type": "string", "description": "JSON数组字符串或逗号分隔字符串"}], "description": "需要配置的设备商品ID集合，单次最多500个"},
+          "sp_ids": {"$ref": "#/components/schemas/StrategyIds"}
+        }
+      },
+      "BatchUpdateResponse": {
+        "allOf": [{"$ref": "#/components/schemas/CommonResponse"}, {"type": "object", "properties": {"data": {"type": "object", "properties": {
+          "updated_count": {"type": "integer", "description": "成功更新的设备商品数量", "example": 3},
+          "mg_ids": {"type": "array", "items": {"type": "integer"}, "description": "已更新的设备商品ID"},
+          "sp_ids": {"type": "array", "items": {"type": "integer"}, "description": "统一替换后的策略ID集合"}
+        }}}}]
+      },
+      "ResolveRequest": {
+        "type": "object",
+        "required": ["msg_id", "machine_id", "timestamp", "sign", "carList"],
+        "properties": {
+          "msg_id": {"type": "string", "description": "请求消息ID"},
+          "machine_id": {"type": "string", "description": "设备编号"},
+          "timestamp": {"type": "integer", "description": "请求时间戳"},
+          "sign": {"type": "string", "description": "设备请求签名"},
+          "carList": {"type": "string", "description": "购物车明细JSON字符串，每项包含 mc_id、quantity，可包含 channel_code", "example": "[{\"mc_id\":1001,\"quantity\":1,\"channel_code\":\"A01\"}]"}
+        }
+      },
+      "ResolveResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "description": "业务状态", "example": 200},
+          "msg": {"type": "string", "description": "业务提示"},
+          "data": {"type": "object", "properties": {
+            "effective_sp_id": {"type": "integer", "nullable": true, "description": "可直接确定时的最终策略ID；存在多个候选时可能为空"},
+            "strategy_source": {"type": "string", "enum": ["legacy", "goods_explicit"], "description": "策略来源：旧设备/组织逻辑或商品独立配置"},
+            "error_code": {"type": "string", "nullable": true, "description": "失败错误码"},
+            "payTypeList": {"type": "array", "description": "购物车策略交集对应的可展示支付方式", "items": {"type": "object", "properties": {
+              "sp_id": {"type": "integer", "description": "收款策略ID"},
+              "sp_name": {"type": "string", "description": "收款策略名称"},
+              "title": {"type": "string", "description": "设备端支付方式标题"},
+              "payee_type": {"type": "integer", "description": "收款类型"},
+              "ico": {"type": "string", "description": "支付方式图标"},
+              "ao_id": {"type": "integer", "description": "策略所属组织ID"}
+            }}}
+          }}
+        }
+      },
+      "SubCarRequest": {
+        "allOf": [{"$ref": "#/components/schemas/ResolveRequest"}, {"type": "object", "required": ["pay_type", "pay_method"], "properties": {
+          "pay_type": {"type": "integer", "description": "设备选择的支付类型", "example": 1},
+          "pay_method": {"type": "integer", "description": "设备选择的支付方式", "example": 1}
+        }}]
+      }
+    }
+  }
+}

@@ -58,7 +58,9 @@ class RevenuePayChannelClient extends ManagementClient
                 return $this->rFail("支付类型不能为空");
             }
             $payType = intval($data['pay_type']);
-            if ($payType < 0) return $this->rFail("支付类型不合法");
+            if ($payType <= 0) return $this->rFail("免支付不能配置为分账触发支付类型");
+            $payTypeConfig = $this->getPayTypeFind(['pay_type' => $payType, 'status' => 1], 'pt_id,pay_type');
+            if (!$payTypeConfig) return $this->rFail("支付类型不存在或已停用");
             $exists = $this->getRevenuePayChannelFind(['pay_type' => $payType], 'rpc_id');
             if ($exists && (!$isUpdate || intval($exists['rpc_id']) !== intval($data['rpc_id'] ?? 0))) {
                 return $this->rFail("该支付类型已配置分账渠道");

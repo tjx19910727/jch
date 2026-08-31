@@ -11,7 +11,22 @@ FROM revenue_pay_channel
 WHERE status = 1
 ORDER BY rpc_id DESC;
 
--- 1.1 分账时间配置不合法的分账规则
+-- 1.1 支付类型为空、重复或未在启用字典中的异常配置
+SELECT rpc_id, pay_type, channel_name, status
+FROM revenue_pay_channel
+WHERE pay_type IS NULL OR pay_type <= 0;
+
+SELECT pay_type, COUNT(*) count
+FROM revenue_pay_channel
+GROUP BY pay_type
+HAVING COUNT(*) > 1;
+
+SELECT rpc.rpc_id, rpc.pay_type, rpc.channel_name, rpc.status
+FROM revenue_pay_channel rpc
+LEFT JOIN pay_type pt ON pt.pay_type = rpc.pay_type AND pt.status = 1
+WHERE pt.pt_id IS NULL;
+
+-- 1.2 分账时间配置不合法的分账规则
 SELECT *
 FROM revenue_rule
 WHERE settlement_type NOT IN (1, 2)

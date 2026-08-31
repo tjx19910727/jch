@@ -20,6 +20,10 @@ class MachineGoods extends Common
     (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status > 1 AND mc.mg_id = a.mg_id) disabled_stock,
     (SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock,auto_refund,
     standby_stock,machine_id,is_shelf,
+    (SELECT GROUP_CONCAT(mgps.sp_id ORDER BY mgps.sort ASC,mgps.id ASC) FROM machine_goods_payee_strategy mgps WHERE mgps.mg_id = a.mg_id AND mgps.status = 1) sp_ids,
+    (SELECT GROUP_CONCAT(sp.sp_name ORDER BY mgps.sort ASC,mgps.id ASC SEPARATOR '、') FROM machine_goods_payee_strategy mgps INNER JOIN strategy_payee sp ON sp.sp_id = mgps.sp_id WHERE mgps.mg_id = a.mg_id AND mgps.status = 1) sp_names,
+    (SELECT GROUP_CONCAT(sp.payee_type ORDER BY mgps.sort ASC,mgps.id ASC) FROM machine_goods_payee_strategy mgps INNER JOIN strategy_payee sp ON sp.sp_id = mgps.sp_id WHERE mgps.mg_id = a.mg_id AND mgps.status = 1) payee_types,
+    (SELECT MIN(sp.status) FROM machine_goods_payee_strategy mgps INNER JOIN strategy_payee sp ON sp.sp_id = mgps.sp_id WHERE mgps.mg_id = a.mg_id AND mgps.status = 1) strategies_status,
     (select machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name";
     protected $validatePath = VMachineGoods::class;
 
@@ -37,7 +41,7 @@ class MachineGoods extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineGoods->getFind($where, $this->field);
+        return $this->app->machineGoods->getMgFind($where, $this->field);
     }
 
     /**
@@ -107,6 +111,20 @@ class MachineGoods extends Common
         return $this->app->machineGoods->updateMg($postData);
     }
 
+    /**
+     * 查询设备商品所属组织当前可用的收款策略。
+     */
+    public function getOrganizationPayeeStrategies()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.getOrganizationPayeeStrategies');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->getOrganizationPayeeStrategies($postData);
+    }
+
     public function updateMoreByWhere()
     {
         $postData = input();
@@ -114,6 +132,21 @@ class MachineGoods extends Common
         if (!isset($postData['where']) || !$postData['where']) return returnState(100, lang("where_require"));
         if (!isset($postData['update']) || !$postData['update']) return returnState(100, lang("update_require"));
         return $this->app->machineGoods->updateByWhere($postData);
+    }
+
+    /**
+     * 批量将多个设备商品的独立收款策略整体替换为同一策略集合。
+     */
+    public function updatePayeeStrategiesBatch()
+    {
+        $postData = input();
+        if (!array_key_exists('sp_ids', $postData)) return returnValidate('收款策略ID列表必须传入');
+        try {
+            $this->validate($postData, $this->validatePath . '.updatePayeeStrategiesBatch');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->updatePayeeStrategiesBatch($postData);
     }
 
     public function del()

@@ -1,5 +1,5 @@
 -- revenue_pay_channel 切换为 pay_type 触发配置
--- 用途：删除 pay_channel 后，后台新增/修改分账触发配置统一使用 sale_orders.pay_type。
+-- 有历史数据时必须先执行“revenue_pay_channel历史配置安全迁移.sql”完成显式映射。
 
 SET @db = DATABASE();
 
@@ -16,8 +16,15 @@ SET @sql = IF(
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
+SET @unmapped_count := (
+  SELECT COUNT(*)
+  FROM `revenue_pay_channel`
+  WHERE `pay_type` IS NULL
+);
+
+-- 禁止把历史记录统一映射为 pay_type=0；存在未映射数据时停止结构清理。
 SET @sql = IF(
-  EXISTS(
+  @unmapped_count = 0 AND EXISTS(
     SELECT 1
     FROM information_schema.STATISTICS
     WHERE TABLE_SCHEMA = @db
@@ -30,7 +37,7 @@ SET @sql = IF(
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @sql = IF(
-  EXISTS(
+  @unmapped_count = 0 AND EXISTS(
     SELECT 1
     FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = @db
@@ -43,7 +50,7 @@ SET @sql = IF(
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 SET @sql = IF(
-  NOT EXISTS(
+  @unmapped_count = 0 AND NOT EXISTS(
     SELECT 1
     FROM information_schema.STATISTICS
     WHERE TABLE_SCHEMA = @db
@@ -55,9 +62,11 @@ SET @sql = IF(
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-UPDATE `revenue_pay_channel`
-SET `pay_type` = 0
-WHERE `pay_type` IS NULL;
+SET @sql = IF(
+  @unmapped_count = 0,
+  'ALTER TABLE `revenue_pay_channel` MODIFY COLUMN `pay_type` int NOT NULL COMMENT ''订单支付类型，对应 sale_orders.pay_type''',
+  'SELECT ''STOP: revenue_pay_channel has unmapped rows; run explicit history migration first'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-ALTER TABLE `revenue_pay_channel`
-  MODIFY COLUMN `pay_type` int NOT NULL COMMENT '订单支付类型，对应 sale_orders.pay_type';
+SELECT @unmapped_count AS unmapped_count;

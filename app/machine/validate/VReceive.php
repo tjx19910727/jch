@@ -207,6 +207,7 @@ class VReceive extends VCommon
         "playAdv" => ["msg_id","machine_id","timestamp","sign","adv_id","play_time"],
         "reportAdvDownload" => ["msg_id","machine_id","timestamp","sign","adv_id","download_progress"],
         "subCar" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method"],
+        "resolveCartPayTypes" => ["msg_id","machine_id","timestamp","sign","carList"],
 
         "subChannel" => ["msg_id","machine_id","timestamp","sign"],
 
