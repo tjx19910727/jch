@@ -86,20 +86,33 @@ class MachineConfigClient extends ManagementClient
         try {
             foreach ($postData['mcList'] as $key => $value) {
                 validate(VMachineConfig::class)->scene("mcList")->check($value);
+                $oldMc = $this->getMachineConfigFind(
+                    ['m_id' => $value['m_id']],
+                    'machine_id,is_multi_goods'
+                );
+                $oldMc = $oldMc ? $oldMc->toArray() : [];
+                $oldIsMultiGoods = intval($oldMc['is_multi_goods'] ?? 2);
+                $newIsMultiGoods = array_key_exists('is_multi_goods', $value)
+                    ? intval($value['is_multi_goods'])
+                    : null;
+
                 $result = $this->updateMachineConfig($value, ['m_id' => $value['m_id']]);
                 if ($result) {
-                    $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id,is_multi_goods");
-                    $mc = $mc ? $mc->toArray() : [];
-                    $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
+                    $machineId = $oldMc['machine_id'] ?? '';
+                    if (!$machineId) {
+                        $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], 'machine_id');
+                        $mc = $mc ? $mc->toArray() : [];
+                        $machineId = $mc['machine_id'] ?? '';
+                    }
+                    if ($machineId) {
+                        $this->sendToMachine(['machine_id' => $machineId], 'updateMachineConfig');
+                    }
                     // ==================== 单货道多商品相关开始 ====================
                     $closedChannels = [];
-                    if (intval($mc['is_multi_goods'] ?? 2) === 1
-                        && array_key_exists('is_multi_goods', $value)
-                        && intval($value['is_multi_goods']) === 2
-                    ) {
+                    if ($oldIsMultiGoods === 1 && $newIsMultiGoods === 2) {
                         $closedChannels = $this->closeMachineMultiGoods($value['m_id']);
-                        if($closedChannels){
-                            $this->sendClosedMultiGoodsChannelUpdates($mc['machine_id'], $closedChannels);
+                        if ($closedChannels && $machineId) {
+                            $this->sendClosedMultiGoodsChannelUpdates($machineId, $closedChannels);
                         }
                     }
                     // ==================== 单货道多商品相关结束 ====================
