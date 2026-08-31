@@ -748,6 +748,8 @@ sign：A38ECD743D9A70BCE4AC1FC29D8DCCAA</code></pre></table>
                 &quot;ai_status&quot;: &quot;active&quot;,
                 &quot;ai_time&quot;: &quot;2024-08-07 16:36:30&quot;,
                 &quot;oo_status&quot;: &quot;online&quot;,
+                &quot;is_operating&quot;: 1,
+                &quot;is_operating_desc&quot;: &quot;在营&quot;,
                 &quot;country&quot;: &quot;China&quot;,
                 &quot;state&quot;: &quot;Guangdong&quot;,
                 &quot;city&quot;: &quot;Dongguan&quot;,
@@ -775,6 +777,8 @@ sign：A38ECD743D9A70BCE4AC1FC29D8DCCAA</code></pre></table>
                 &quot;ai_status&quot;: &quot;active&quot;,
                 &quot;ai_time&quot;: &quot;2024-07-19 15:38:38&quot;,
                 &quot;oo_status&quot;: &quot;offline&quot;,
+                &quot;is_operating&quot;: 2,
+                &quot;is_operating_desc&quot;: &quot;在库&quot;,
                 &quot;country&quot;: &quot;China&quot;,
                 &quot;state&quot;: &quot;Hebei&quot;,
                 &quot;city&quot;: &quot;Xingtai&quot;,
@@ -917,6 +921,16 @@ sign：A38ECD743D9A70BCE4AC1FC29D8DCCAA</code></pre></table>
 <td style="text-align: left;">oo_status</td>
 <td style="text-align: left;">string</td>
 <td style="text-align: left;">在线/离线状态，online：在线，offline：离线</td>
+</tr>
+<tr>
+<td style="text-align: left;">is_operating</td>
+<td style="text-align: left;">int</td>
+<td style="text-align: left;">设备在营状态，1：在营，2：在库，3：外售</td>
+</tr>
+<tr>
+<td style="text-align: left;">is_operating_desc</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备在营状态中文描述：在营、在库、外售；状态值异常时返回空字符串</td>
 </tr>
 <tr>
 <td style="text-align: left;">current_status</td>
