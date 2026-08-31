@@ -674,15 +674,12 @@ class ApiClient extends ReceiveBaseClient
         if (isset($this->data['mc_id']) && $this->data['mc_id']) $where['mc_id'] = $this->data['mc_id'];
         $channelField = "mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,length,width,width2,height,height2,
         cost_price,market_price,retail_price,gift_points,x_axis,y_axis,shelf_way,cost_points,
-        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status,is_multi_goods,manufacture_time";
+        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status,is_multi_goods,manufacture_time,goods_qrcode";
         $mcList = $this->getMachineChannelList($where, 0, $channelField, 'channel_code asc');
         if ($mcList) {
             $mcList = $mcList->toArray();
-            $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
-            $availableStockMap = $jumpEnabled
-                ? $this->getMachineGoodsAvailableStockMap(array_column($mcList, 'g_id'))
-                : [];
-            // ==================== 单货道多商品相关开始 ====================
+
+            // 单货道多商品：一次查询并按货道归集非队首批次。
             $batchMap = [];
             if ($machineMultiGoodsEnabled && $mcList) {
                 $mcIds = array_values(array_filter(array_map('intval', array_column($mcList, 'mc_id'))));
@@ -705,14 +702,24 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
             }
-            // ==================== 单货道多商品相关结束 ====================
+            // 无库存跳转：一次查询商品可用库存，二维码兜底请求每次接口最多触发一次。
+            $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
+            $availableStockMap = $jumpEnabled
+                ? $this->getMachineGoodsAvailableStockMap(array_column($mcList, 'g_id'))
+                : [];
             $physicalQrRequested = false;
+
             foreach ($mcList as $key => $mc) {
+                $channelMultiGoodsEnabled = $machineMultiGoodsEnabled
+                    && intval($mc['is_multi_goods'] ?? 2) === 1;
+                $mc['is_multi_goods'] = $channelMultiGoodsEnabled ? 1 : 2;
+                $mc['batch_arr'] = $channelMultiGoodsEnabled
+                    ? ($batchMap[intval($mc['mc_id'])] ?? [])
+                    : [];
                 $mc['jump_to_mini_program'] = 0;
                 $mc['goods_qrcode'] = trim(strval($mc['goods_qrcode'] ?? ''));
                 if ($jumpEnabled && $this->hasInsufficientPhysicalGoodsStock([$mc['g_id']], $availableStockMap)) {
                     $mc['jump_to_mini_program'] = 1;
-                    // 售罄时兜底补码；一次设备请求最多调用一次外部接口，失败不影响货道返回。
                     if ($mc['goods_qrcode'] === '' && !$physicalQrRequested) {
                         $qrcodeResult = $this->ensurePhysicalMachineChannelQrCode($mc, 'machine_channel_sold_out');
                         if (!empty($qrcodeResult['requested'])) $physicalQrRequested = true;
@@ -722,14 +729,6 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
 
-                // ==================== 单货道多商品相关开始 ====================
-                $channelMultiGoodsEnabled = $machineMultiGoodsEnabled
-                    && intval($mc['is_multi_goods'] ?? 2) === 1;
-                $mc['is_multi_goods'] = $channelMultiGoodsEnabled ? 1 : 2;
-                $mc['batch_arr'] = $channelMultiGoodsEnabled
-                    ? ($batchMap[intval($mc['mc_id'])] ?? [])
-                    : [];
-                // ==================== 单货道多商品相关结束 ====================
                 $where = [];
                 $where[] = ['gc.start_time', "<=", time()];
                 $where['ag.g_id'] = $mc['g_id'];

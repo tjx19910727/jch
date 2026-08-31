@@ -30,7 +30,7 @@ class MachineChannelClient extends ManagementClient
     const REMOTE_REMOVAL_STATUS_INTERRUPT = 1;
     const REMOTE_REMOVAL_WAIT_REPORT_SECONDS = 1800;
 
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineConfigTrait,MachineInfoTrait,MachineMainRelationTrait,WcBaseTrait;
+    use MachineTrait,MachineChannelTrait,MachineConfigTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait,WcBaseTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
     use RemoteRemovalLogTrait;

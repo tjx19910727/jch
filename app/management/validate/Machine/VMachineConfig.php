@@ -46,16 +46,16 @@ class VMachineConfig extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode", "add_other_org_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
-        "update" => ["mc_id", "online_pay_success_tip", "run_mode", "add_other_org_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+        "add" => ["m_id", "machine_id", "online_pay_success_tip", "add_other_org_goods", "run_mode", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+        "update" => ["mc_id", "online_pay_success_tip", "add_other_org_goods", "run_mode", "is_multi_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
-        "mcList" => ["m_id", "online_pay_success_tip", "run_mode", "add_other_org_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+        "mcList" => ["m_id", "online_pay_success_tip", "add_other_org_goods", "run_mode", "is_multi_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
     ];
 
     public function sceneMcList()
     {
-        return $this->only(['m_id', 'online_pay_success_tip', 'run_mode', 'add_other_org_goods', 'subcar_mix', 'goods_no_stock_jump_to_mini_program', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])
+        return $this->only(['m_id', 'online_pay_success_tip', 'add_other_org_goods', 'run_mode', 'is_multi_goods', 'subcar_mix', 'goods_no_stock_jump_to_mini_program', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])
             ->remove("m_id",'unique');
     }
 
