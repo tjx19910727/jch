@@ -1306,6 +1306,7 @@ class MachineChannelClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             if ($list) {
+                $list = $this->sortMachineChannelListByCode($list);
                 $machine_name = "";
                 foreach ($list as $key => $value) {
                     if (!$machine_name) $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
@@ -1329,6 +1330,40 @@ class MachineChannelClient extends ManagementClient
             }
         }
         return $this->r(100,$this->lang("query_fail"));
+    }
+
+    /**
+     * 导出货道自然排序：字母数字编码、纯数字编码、其他编码。
+     * @param array $list
+     * @return array
+     */
+    private function sortMachineChannelListByCode(array $list)
+    {
+        $buildSortKey = function ($channelCode) {
+            $channelCode = trim((string)$channelCode);
+            if (preg_match('/^([a-zA-Z]+)(\d+)$/', $channelCode, $matches)) {
+                $prefix = strtoupper($matches[1]);
+                return [0, strlen($prefix), $prefix, intval($matches[2]), $channelCode];
+            }
+            if (preg_match('/^\d+$/', $channelCode)) {
+                return [1, 0, '', intval($channelCode), $channelCode];
+            }
+            return [2, 0, '', 0, $channelCode];
+        };
+
+        usort($list, function ($left, $right) use ($buildSortKey) {
+            $leftKey = $buildSortKey($left['channel_code'] ?? '');
+            $rightKey = $buildSortKey($right['channel_code'] ?? '');
+            for ($index = 0; $index < 4; $index++) {
+                if ($leftKey[$index] == $rightKey[$index]) continue;
+                if (is_string($leftKey[$index])) {
+                    return strnatcasecmp($leftKey[$index], $rightKey[$index]);
+                }
+                return $leftKey[$index] <=> $rightKey[$index];
+            }
+            return strnatcasecmp($leftKey[4], $rightKey[4]);
+        });
+        return $list;
     }
 
     /**

@@ -6,12 +6,29 @@ use app\AppFactory\Kernel\Service\WeiCheng\WcOrderSyncRetryService;
 use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\AppFactory\TimeTask\TimeTaskBase;
 
 class WeiChengClient extends TimeTaskBase
 {
     use WcBaseTrait, MachineTrait;
     use FaultReportTrait;
+
+    /**
+     * 投递微程商品全量同步任务，由异步任务消费者执行实际同步。
+     */
+    public function syncGoodsAll()
+    {
+        $result = AsyncTaskProducer::publish('wc_goods_sync', [
+            'request_time' => date('Y-m-d H:i:s'),
+            'source' => 'time_task',
+            'goods_type' => '',
+        ]);
+        if ($result !== 'OK') {
+            return '微程商品全量同步任务提交失败：' . $result;
+        }
+        return '微程商品全量同步任务提交成功';
+    }
 
     public function retryOrderSync()
     {

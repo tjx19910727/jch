@@ -30,6 +30,7 @@ trait MachineConfigTrait
 
     public function addMachineConfig($insert)
     {
+        $insert = $this->normalizeOtherOrgGoodsConfig($insert);
         $insert = $this->normalizeSubCarMixConfig($insert);
         !isset($this->manager['manager_id']) ?: $insert['creator'] = $this->manager['manager_id'];
         $data = MachineConfigModel::create($insert);
@@ -39,6 +40,7 @@ trait MachineConfigTrait
 
     public function updateMachineConfig($update, $where = [], $field = [])
     {
+        $update = $this->normalizeOtherOrgGoodsConfig($update);
         $update = $this->normalizeSubCarMixConfig($update);
         !isset($this->manager['manager_id']) ?: $update['update_id'] = $this->manager['manager_id'];
         $result = MachineConfigModel::update($update, $where, $field);
@@ -161,6 +163,17 @@ trait MachineConfigTrait
             if (array_key_exists($field, $data)) {
                 $data[$field] = SubCarMixPolicy::normalizePayeeIds($data[$field]);
             }
+        }
+        return $data;
+    }
+
+    /**
+     * 跨组织商品开关统一保存为整型枚举值。
+     */
+    protected function normalizeOtherOrgGoodsConfig($data)
+    {
+        if (array_key_exists('add_other_org_goods', $data)) {
+            $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
         }
         return $data;
     }
