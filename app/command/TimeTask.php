@@ -43,6 +43,7 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task weiCheng cleanGoodsSyncLogs     清理24小时前的微程商品同步日志，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task weiCheng repairGoodsQrCodes      补齐线上与实物货道二维码，建议每分钟执行一次
 
+     * php /home/wwwroot/kiosk/think time_task weiCheng syncGoodsAll            投递微程商品全量同步任务，建议每天00:30执行一次
      * 
      * command
      *      php think time_task [moduleType] [actionType]
@@ -78,6 +79,7 @@ class TimeTask extends Command
      *          repairGoodsQrCodes           补齐wc_machine_channel与machine_channel二维码
 
      *          retryOrderSync              微程订单同步失败重试及最终失败公众号通知
+     *          syncGoodsAll                投递微程商品全量同步异步任务
      * @param Input $input
      * @param Output $output
      * @return int|null|void

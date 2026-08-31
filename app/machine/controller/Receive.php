@@ -385,6 +385,20 @@ class Receive extends Common
     }
 
     /**
+     * 按分类获取指定组织核心商品库的已上架商品
+     * @return array|string
+     */
+    public function getOrgGoods()
+    {
+        try {
+            return $this->app->api->getOrgGoods();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取指定商品信息
      * @return array|string
      */

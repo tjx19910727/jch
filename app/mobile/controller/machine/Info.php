@@ -10,6 +10,7 @@ namespace app\mobile\controller\machine;
 
 
 use app\mobile\controller\Common;
+use app\mobile\validate\Machine\VMachineCheck;
 use think\App;
 
 class Info extends Common
@@ -40,5 +41,19 @@ class Info extends Common
         } catch (\Exception $e) {
             return returnTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 统一提交货道库存和备用商品库存盘点
+     */
+    public function newStock()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, VMachineCheck::class . '.newStock');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineCheck->newStock($postData);
     }
 }

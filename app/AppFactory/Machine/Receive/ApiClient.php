@@ -1043,6 +1043,11 @@ class ApiClient extends ReceiveBaseClient
         if (!isset($data['online_pay_success_tip'])) {
             $data['online_pay_success_tip'] = '';
         }
+        if (!isset($data['add_other_org_goods']) || !in_array(intval($data['add_other_org_goods']), [1, 2], true)) {
+            $data['add_other_org_goods'] = 2;
+        } else {
+            $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
+        }
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
             if ($pay_type) {
@@ -1258,6 +1263,48 @@ class ApiClient extends ReceiveBaseClient
         return $this->rQ($goodsList);
     }
 
+
+    /**
+     * 按分类获取指定组织核心商品库的已上架商品。
+     * 请求其他组织时必须由设备配置显式放行。
+     * @return array|string
+     */
+    public function getOrgGoods()
+    {
+        $orgId = intval($this->data['org_id']);
+        if ($orgId !== intval($this->machine['ao_id'])) {
+            $config = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], 'add_other_org_goods');
+            $allowOtherOrgGoods = $config ? intval($config['add_other_org_goods']) : 2;
+            if ($allowOtherOrgGoods !== 1) {
+                return $this->rFail($this->lang('VGetOrgGoods.other_org_goods_forbidden'));
+            }
+        }
+
+        $field = 'g_id,g_name,gc_id,gc_name,g_type,model,pic,banner,sku,sku2,bar_code,manufacturer,service_phone,details_pic,`desc`,performance,sell_channel,exter_url,expire_notice,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,cost_price,market_price,retail_price,intergral_rate,gift_points,cost_points,status,ao_id,update_time';
+        $goodsList = $this->getGoodsList([
+            'ao_id' => $orgId,
+            'status' => 1,
+        ], 0, $field, 'gc_id asc,g_id desc');
+        if (is_string($goodsList)) {
+            return $this->rFail($goodsList);
+        }
+        $goodsList = $goodsList ? $goodsList->toArray() : [];
+
+        $categoryMap = [];
+        foreach ($goodsList as $goods) {
+            $categoryKey = strval(intval($goods['gc_id']));
+            if (!isset($categoryMap[$categoryKey])) {
+                $categoryMap[$categoryKey] = [
+                    'gc_id' => intval($goods['gc_id']),
+                    'gc_name' => $goods['gc_name'],
+                    'goods_list' => [],
+                ];
+            }
+            $categoryMap[$categoryKey]['goods_list'][] = $goods;
+        }
+
+        return $this->rQ(array_values($categoryMap));
+    }
 
     /**
      * 获取指定商品信息
