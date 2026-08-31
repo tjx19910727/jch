@@ -12,9 +12,11 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsSyncLogModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
+use think\facade\Db;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMcSortLogModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMcSortLogDetailModel;
 
@@ -212,6 +214,85 @@ trait WcGoodsTrait
     {
         if (!$outNos) return 0;
         return WcMachineChannelModel::where('out_no', 'in', $outNos)->delete();
+    }
+
+    /**
+     * 物理删除微程未返回商品及其设备关联数据。
+     */
+    public function deleteWcGoodsDataByOutNos(array $outNos)
+    {
+        $outNos = array_values(array_filter(array_unique($outNos)));
+        $summary = [
+            'out_no_count' => count($outNos),
+            'machine_count' => 0,
+            'wc_machine_channel_deleted' => 0,
+            'wc_machine_goods_deleted' => 0,
+            'wc_goods_local_deleted' => 0,
+            'wc_goods_deleted' => 0,
+        ];
+        if (!$outNos) return $summary;
+
+        $machineIds = [];
+        Db::startTrans();
+        try {
+            foreach (array_chunk($outNos, 500) as $chunk) {
+                $machineIds = array_merge($machineIds, WcMachineGoodsModel::where('out_no', 'in', $chunk)->column('machine_id'));
+                $summary['wc_machine_channel_deleted'] += WcMachineChannelModel::where('out_no', 'in', $chunk)->delete();
+                $summary['wc_machine_goods_deleted'] += WcMachineGoodsModel::where('out_no', 'in', $chunk)->delete();
+                $summary['wc_goods_local_deleted'] += WcGoodsLocalModel::where('out_no', 'in', $chunk)->delete();
+                $summary['wc_goods_deleted'] += WcGoodsModel::where('no', 'in', $chunk)->delete();
+            }
+            Db::commit();
+        } catch (\Throwable $e) {
+            Db::rollback();
+            throw $e;
+        }
+        $summary['machine_count'] = count(array_filter(array_unique($machineIds)));
+        return $summary;
+    }
+
+    /**
+     * 删除一个微程父商品详情中已经不存在的旧子商品。
+     */
+    public function deleteWcGoodsLocalMissingNos($outNo, array $currentNos)
+    {
+        $query = WcGoodsLocalModel::where('out_no', '=', $outNo);
+        $currentNos = array_values(array_filter(array_unique($currentNos)));
+        if ($currentNos) $query->where('no', 'not in', $currentNos);
+        return $query->delete();
+    }
+
+    // ========== wc_goods_sync_logs 商品同步日志 ==========
+
+    /**
+     * 写入商品同步日志（保存商品详情接口原始返回）。
+     */
+    public function addWcGoodsSyncLog($goodsNo, $goodsType, $syncBatchNo, $getData)
+    {
+        return WcGoodsSyncLogModel::create([
+            'goods_no'      => $goodsNo,
+            'goods_type'    => intval($goodsType),
+            'sync_batch_no' => $syncBatchNo,
+            'get_data'      => $getData,
+        ]);
+    }
+
+    /**
+     * 获取某商品最新一条同步日志（含 get_data）。
+     */
+    public function getWcGoodsLatestSyncLog($goodsNo)
+    {
+        return WcGoodsSyncLogModel::where('goods_no', '=', $goodsNo)
+            ->order('id', 'desc')
+            ->find();
+    }
+
+    /**
+     * 清理指定时间点之前的同步日志，返回删除条数。
+     */
+    public function deleteWcGoodsSyncLogBefore($deadline)
+    {
+        return WcGoodsSyncLogModel::where('created_at', '<', $deadline)->delete();
     }
 
     public function getWcMachineGoodsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")

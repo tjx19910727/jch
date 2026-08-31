@@ -796,7 +796,7 @@ trait SaleOrdersTrait
                 'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                         cost_price,market_price,is_multi_goods',
-                "stock desc"
+                "stock desc,mc_id asc"
             );
             actionLog($this->getLS(), '【SQL】查询设备货架');
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
@@ -843,6 +843,40 @@ trait SaleOrdersTrait
             $insertSod['discount_price'] = 0;
             $insertSod['retail_price'] = bcdiv($dv['item_price'], 100, 3);
             foreach ($mc as $mck => $mcv) {
+                $lockedMc = Db::name('machine_channel')
+                    ->where([
+                        'mc_id' => $mcv['mc_id'],
+                        'g_id' => $g_id,
+                        'status' => 1,
+                    ])
+                    ->field('mc_id,g_id,is_multi_goods,stock,frozen_stock')
+                    ->lock(true)
+                    ->find();
+                if (!$lockedMc || (int)$lockedMc['stock'] <= 0) continue;
+                $mcv['is_multi_goods'] = (int)($lockedMc['is_multi_goods'] ?? 2);
+                $mcv['stock'] = (int)$lockedMc['stock'];
+                $mcv['frozen_stock'] = (int)$lockedMc['frozen_stock'];
+
+                // 多商品货道与货道快照使用相同的队首批次，并按固定顺序加锁。
+                $mcv['batch_id'] = 0;
+                if ($mcv['is_multi_goods'] === 1) {
+                    $lockedBatch = Db::name('channel_goods_batch')
+                        ->where([
+                            'mc_id' => $mcv['mc_id'],
+                            'g_id' => $lockedMc['g_id'],
+                            'status' => 1,
+                        ])
+                        ->field('batch_id,stock,frozen_stock')
+                        ->lock(true)
+                        ->find();
+                    if (!$lockedBatch || (int)$lockedBatch['stock'] <= 0) continue;
+                    $mcv['batch_id'] = (int)$lockedBatch['batch_id'];
+                    // 两张库存快照不一致时取较小值，避免任意一边出现超卖。
+                    $mcv['stock'] = min((int)$lockedMc['stock'], (int)$lockedBatch['stock']);
+                    $mcv['frozen_stock'] = (int)$lockedBatch['frozen_stock'];
+                    if ($mcv['stock'] <= 0) continue;
+                }
+
                 $insertDetails = array_merge($mcv, $insertSod);
                 unset($insertDetails['frozen_stock'], $insertDetails['stock'], $insertDetails['is_multi_goods']);
                 $totalQuantity = 0;
@@ -869,36 +903,39 @@ trait SaleOrdersTrait
                         $insertDetails['is_gift'] = 1;
                     }
                     $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
-                    //单货道多商品功能开始
-                    $mcv['frozen_stock'] = bcadd($mcv['frozen_stock'], $insertDetails['quantity']);
-                    $mcv['stock'] = bcsub($mcv['stock'], $insertDetails['quantity']);
-                    //单货道多商品功能结束
-                    $updateMc = [
-                        'frozen_stock' => $mcv['frozen_stock'],
-                        'stock' => $mcv['stock'],
-                        "mc_id" => $mcv['mc_id'],
-                    ];
                     $flag[] = $this->addSaleOrdersDetails($insertDetails);
                     actionLog($this->getLS(), '生成订单详情');
-                    $flag[] = $this->updateMachineChannel($updateMc);
-                    //单货道多商品功能开始
-                    if (intval($mcv['is_multi_goods'] ?? 2) === 1 && !empty($mcv['batch_id'])) {
-                        $flag[] = Db::name('channel_goods_batch')
-                            ->where('batch_id', $mcv['batch_id'])
-                            ->update([
-                                'stock' => $mcv['stock'],
-                                'frozen_stock' => $mcv['frozen_stock'],
-                            ]);
-                    }
-                    //单货道多商品功能结束
                     $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
                     $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
                     $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
+                }
+                $flag[] = Db::name('machine_channel')
+                    ->where('mc_id', $mcv['mc_id'])
+                    ->where('stock', '>=', $totalQuantity)
+                    ->update([
+                        'stock' => Db::raw('stock - ' . (int)$totalQuantity),
+                        'frozen_stock' => Db::raw('frozen_stock + ' . (int)$totalQuantity),
+                    ]);
+                if ($mcv['is_multi_goods'] === 1) {
+                    $flag[] = Db::name('channel_goods_batch')
+                        ->where([
+                            'batch_id' => $mcv['batch_id'],
+                            'mc_id' => $mcv['mc_id'],
+                            'status' => 1,
+                        ])
+                        ->where('stock', '>=', $totalQuantity)
+                        ->update([
+                            'stock' => Db::raw('stock - ' . (int)$totalQuantity),
+                            'frozen_stock' => Db::raw('frozen_stock + ' . (int)$totalQuantity),
+                        ]);
                 }
                 //                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)
                     break;
+            }
+            if ((int)$dv['quantity'] > 0) {
+                return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"));
             }
             //            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
             //            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
@@ -995,7 +1032,20 @@ trait SaleOrdersTrait
      */
     public function transactionVideo()
     {
-        if (strstr($this->message['trade_no'], "remote_out_goods")) {
+        $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
+        $videoScene = trim((string)($this->message['video_scene'] ?? ''));
+        $reportedLogId = intval($this->message['log_id'] ?? 0);
+        if ($videoScene === 'remote_action_log' && $reportedLogId > 0) {
+            return $this->saveRemoteActionLogVideo('remote_out_goods_log_' . $reportedLogId, $reportedLogId);
+        }
+        if (preg_match('/^remote_out_goods_log_([1-9]\d*)$/', $tradeNo, $matches)) {
+            return $this->saveRemoteActionLogVideo($tradeNo, intval($matches[1]));
+        }
+        if (strpos($tradeNo, 'remote_out_goods_log_') === 0) {
+            actionLog($this->message, '无订单远程出货视频标识格式无效', 'transactionVideo');
+            return 1;
+        }
+        if (strstr($tradeNo, "remote_out_goods")) {
             actionLog($this->message, "远程出货视频保存地址记录执行");
             $sod_id = str_replace("remote_out_goods_", "", $this->message['trade_no']);
             $sod_id = intval($sod_id);
@@ -1031,7 +1081,123 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 保存设备逐个上报的视频。旧设备未上报 segment_no 时按单视频处理。
+     * 将无订单远程出货视频分段幂等合并到 remote_action_log。
+     */
+    protected function saveRemoteActionLogVideo($tradeNo, $logId = 0)
+    {
+        $logId = intval($logId);
+        $transactionVideo = trim((string)($this->message['transaction_video'] ?? ''));
+        if ($logId <= 0 || $transactionVideo === '' || $transactionVideo === 'no_data') {
+            actionLog($this->message, '无订单远程出货视频回调参数无效', 'transactionVideo');
+            return 1;
+        }
+
+        $host = (string)env('app.host');
+        $storedPath = $host !== '' ? str_replace($host, '', $transactionVideo) : $transactionVideo;
+        $segmentNo = isset($this->message['segment_no'])
+            ? max(0, intval($this->message['segment_no']))
+            : $this->getSaleOrdersVideoSegmentNo($storedPath);
+        $videoTotal = intval($this->message['video_total'] ?? 0);
+        if ($videoTotal < 0) $videoTotal = 0;
+        if ($videoTotal > 127) $videoTotal = 127;
+        if ($segmentNo === 0 && $videoTotal === 0) $videoTotal = 1;
+
+        Db::startTrans();
+        try {
+            $log = Db::name('remote_action_log')->where(['id' => $logId])->lock(true)->find();
+            $machineId = (string)($this->machine['machine_id'] ?? '');
+            $reportedVideoKey = trim((string)($this->message['video_key'] ?? ''));
+            if (!$log
+                || ($log['type'] ?? '') !== 'remoteOutGoods'
+                || intval($log['sod_id'] ?? 0) !== 0
+                || $machineId === ''
+                || (string)$log['machine_id'] !== $machineId
+                || ($reportedVideoKey !== '' && $reportedVideoKey !== $tradeNo)) {
+                Db::rollback();
+                actionLog([
+                    'log_id' => $logId,
+                    'machine_id' => $machineId,
+                ], '无订单远程出货视频与动作日志不匹配', 'transactionVideo');
+                return 1;
+            }
+
+            $payload = json_decode((string)($log['transaction_video'] ?? ''), true);
+            $segments = is_array($payload) && isset($payload['segments']) && is_array($payload['segments'])
+                ? $payload['segments']
+                : [];
+            if (!$segments && !empty($log['transaction_video']) && !is_array($payload)) {
+                $legacyPath = trim((string)$log['transaction_video']);
+                $segments[] = [
+                    'segment_no' => 0,
+                    'url' => $legacyPath,
+                    'hash' => md5($legacyPath),
+                ];
+            }
+
+            $videoHash = md5($storedPath);
+            $merged = [];
+            $mergedHashes = [];
+            foreach ($segments as $segment) {
+                $path = trim((string)($segment['url'] ?? $segment['transaction_video'] ?? ''));
+                if ($path === '') continue;
+                $number = max(0, intval($segment['segment_no'] ?? 0));
+                $hash = (string)($segment['hash'] ?? md5($path));
+                if (isset($mergedHashes[$hash])) continue;
+                $merged[$number] = [
+                    'segment_no' => $number,
+                    'url' => $path,
+                    'hash' => $hash,
+                ];
+                $mergedHashes[$hash] = $number;
+            }
+            // 同一分段重试时以最新成功地址替换，不重复增加 video_count。
+            if (isset($mergedHashes[$videoHash]) && $mergedHashes[$videoHash] !== $segmentNo) {
+                unset($merged[$mergedHashes[$videoHash]]);
+            }
+            $merged[$segmentNo] = [
+                'segment_no' => $segmentNo,
+                'url' => $storedPath,
+                'hash' => $videoHash,
+            ];
+            ksort($merged, SORT_NUMERIC);
+            $segments = array_values($merged);
+            $videoTotal = max($videoTotal, intval($log['video_total'] ?? 0));
+            $videoCount = count($segments);
+            $videoStatus = $videoTotal > 0 && $videoCount >= $videoTotal ? 2 : 1;
+            $videoPayload = [
+                'version' => 1,
+                'video_key' => $tradeNo,
+                'segments' => $segments,
+            ];
+            $encodedVideo = json_encode($videoPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encodedVideo === false) {
+                Db::rollback();
+                actionLog(['log_id' => $logId], '无订单远程出货视频JSON编码失败', 'transactionVideo');
+                return false;
+            }
+
+            $result = Db::name('remote_action_log')->where(['id' => $logId])->update([
+                'transaction_video' => $encodedVideo,
+                'video_total' => $videoTotal,
+                'video_count' => $videoCount,
+                'video_status' => $videoStatus,
+                'video_updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            if ($result === false) {
+                Db::rollback();
+                return false;
+            }
+            Db::commit();
+            return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'transactionVideo');
+            return false;
+        }
+    }
+
+    /**
+     * 保存设备逐个上报的视频。旧设备不带分段后缀时按单视频处理。
      */
     protected function saveSaleOrdersVideo($videoType, $relationId, $tradeNo, $transactionVideo)
     {

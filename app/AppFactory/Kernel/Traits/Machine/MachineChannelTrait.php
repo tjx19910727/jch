@@ -175,6 +175,7 @@ trait MachineChannelTrait
     {
         $channelList = [];
         $flag = [];
+        $qrCodeMcIds = [];
         $this->startTrans();
         try {
             // ==================== 单货道多商品相关开始 ====================
@@ -190,6 +191,8 @@ trait MachineChannelTrait
             }
             if (isset($this->data['mcList'])) {
                 foreach ($mcList as $key => $value) {
+                    // 二维码只允许服务端生成，忽略终端上报值。
+                    unset($value['goods_qrcode']);
                     $whereMc = [];
                     $batchArr = $value['batch_arr'] ?? [];
                     if (is_string($batchArr)) {
@@ -281,7 +284,11 @@ trait MachineChannelTrait
                             }
                         }
                         // ==================== 单货道多商品相关结束 ====================
-                        
+
+                        // 多商品逻辑完成后，按最终队首商品安排二维码同步。
+                        if (intval($mc['g_id'] ?? 0) > 0 && intval($mc['g_id'] ?? 0) !== 9999) {
+                            $qrCodeMcIds[] = intval($mc['mc_id']);
+                        }
                         // 20250604 新增货道，增加“上货”商品变化记录
                         $insertGChange = [
                             "m_id" => $this->machine['m_id'],
@@ -306,6 +313,8 @@ trait MachineChannelTrait
                         $this->addGoodsChange($insertGChange);
                     } else {
                         $mc = $mc->toArray() ?? obj2arr($mc);
+                        // 多商品处理会刷新 $mc 的队首快照，需先保留原商品ID用于二维码变化判断。
+                        $oldGId = intval($mc['g_id'] ?? 0);
                         // ==================== 单货道多商品相关开始 ====================
                         $multiStateChanging = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) !== intval($mc['is_multi_goods'] ?? 2);
                         if (intval($mc['frozen_stock'] ?? 0) > 0 && ($multiStateChanging || !empty($batchArr))) {
@@ -369,6 +378,13 @@ trait MachineChannelTrait
                         }
                         // ==================== 单货道多商品相关结束 ====================
 
+                        // 使用多商品处理后的最终队首商品判断是否需要更新二维码。
+                        $newGId = array_key_exists('g_id', $value) ? intval($value['g_id']) : $oldGId;
+                        if ($newGId !== $oldGId) {
+                            $value['goods_qrcode'] = '';
+                            if ($newGId > 0 && $newGId !== 9999) $qrCodeMcIds[] = intval($mc['mc_id']);
+                        }
+
                         $insertGChange = [
                             "m_id" => $this->machine['m_id'],
                             "machine_id" => $this->machine['machine_id'],
@@ -421,7 +437,20 @@ trait MachineChannelTrait
                     $channelList[] = $mc;
                 }
             }
-            return $this->checkTrans($this->checkFlag($flag));
+            $transactionSuccess = (bool)$this->checkFlag($flag);
+            $transResult = $this->checkTrans($transactionSuccess);
+            if ($transactionSuccess && $qrCodeMcIds && method_exists($this, 'syncPhysicalMachineChannelQrCodes')) {
+                try {
+                    $this->syncPhysicalMachineChannelQrCodes(
+                        [['mc_id', 'in', array_values(array_unique($qrCodeMcIds))]],
+                        1,
+                        'terminal_sub_channel'
+                    );
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'terminalSubChannelQrCode');
+                }
+            }
+            return $transResult;
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);

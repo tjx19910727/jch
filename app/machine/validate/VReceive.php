@@ -69,6 +69,7 @@ class VReceive extends VCommon
         "check_list" => "require|array",
     "maintainer_id" => "require",
         "status" => "integer",
+        "org_id" => "require|integer|gt:0",
         "run_mode" => "require|in:1,2",
         "field" => "require",
         "date" => "require",
@@ -200,6 +201,7 @@ class VReceive extends VCommon
         "reportOtaVersion" => ["msg_id","machine_id","timestamp","sign","ota_version"],
 
         "getGoods" => ["msg_id","machine_id","timestamp","sign"],
+        "getOrgGoods" => ["msg_id","machine_id","timestamp","sign","org_id"],
         "submitRefundGoodsLog" => ["msg_id","machine_id","timestamp","sign","mobile","input_code","pic_out_goods_box","video_out_goods_box","video_refund_goods"],
         "getAdv" => ["msg_id","machine_id","timestamp","sign"],
         "playAdv" => ["msg_id","machine_id","timestamp","sign","adv_id","play_time"],
@@ -286,7 +288,7 @@ class VReceive extends VCommon
         "recycleBoxGoodsChange" => ["msg_id","machine_id","timestamp","sign","operate","type"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
-        "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
+        "sendErro" => ["msg_id","machine_id","timestamp","sign","errorCode"],
 
         "getMaintenanceItems" => ["msg_id","machine_id","timestamp","sign"],
     "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","maintainer_id","check_list"],

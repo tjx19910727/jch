@@ -6,11 +6,28 @@ use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Service\WeiCheng\WcOrderSyncRetryService;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\AppFactory\TimeTask\TimeTaskBase;
 
 class WeiChengClient extends TimeTaskBase
 {
     use WcBaseTrait, MachineTrait;
+
+    /**
+     * 投递微程商品全量同步任务，由异步任务消费者执行实际同步。
+     */
+    public function syncGoodsAll()
+    {
+        $result = AsyncTaskProducer::publish('wc_goods_sync', [
+            'request_time' => date('Y-m-d H:i:s'),
+            'source' => 'time_task',
+            'goods_type' => '',
+        ]);
+        if ($result !== 'OK') {
+            return '微程商品全量同步任务提交失败：' . $result;
+        }
+        return '微程商品全量同步任务提交成功';
+    }
 
     public function retryOrderSync()
     {
@@ -83,4 +100,54 @@ class WeiChengClient extends TimeTaskBase
             actionException($e, 1, 'wcOrderSyncFinalNotice');
         }
     }
+
+    /**
+     * 清理 N 小时前的微程商品同步日志，默认保留 24 小时（每日执行一次）。
+     * 命令：php think time_task weiCheng cleanGoodsSyncLogs
+     */
+    public function cleanGoodsSyncLogs($retainHours = 24)
+    {
+        $retainHours = max(1, intval($retainHours));
+        $deadline = date('Y-m-d H:i:s', time() - $retainHours * 3600);
+        $count = $this->deleteWcGoodsSyncLogBefore($deadline);
+        actionLog(['retain_hours' => $retainHours, 'deadline' => $deadline, 'deleted' => $count], '清理微程商品同步日志', 'wc_goods_sync_log_clean');
+        return "清理完成：删除 {$count} 条微程商品同步日志";
+    }
+
+    /**
+     * 补齐线上与实物货道二维码，建议每分钟执行一次。
+     * 每轮请求数受 limit 限制，内部按微程接口频率串行调用。
+     */
+    public function repairGoodsQrCodes($limit = 20)
+    {
+        $limit = max(1, intval($limit));
+        $wcLimit = max(1, intval(ceil($limit / 2)));
+        $wcResult = $this->syncWcMachineChannelQrCodes([], $wcLimit, 'time_task_repair');
+        $remaining = max(0, $limit - intval($wcResult['requested']));
+
+        $physicalResult = ['total' => 0, 'requested' => 0, 'success' => 0, 'failed' => 0, 'skipped' => 0, 'rate_limited' => false];
+        if ($remaining > 0) {
+            if (intval($wcResult['requested']) > 0) {
+                usleep(1100000);
+            }
+            $physicalResult = $this->syncPhysicalMachineChannelQrCodes([], $remaining, 'time_task_repair');
+        }
+
+        $result = ['wc_machine_channel' => $wcResult, 'machine_channel' => $physicalResult];
+        actionLog($result, '补齐货道商品小程序码', 'wc_goods_qrcode_repair');
+        return '处理完成：' . json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function repairWcMachineChannelQrCodes($limit = 20)
+    {
+        $result = $this->syncWcMachineChannelQrCodes([], $limit, 'time_task_wc_repair');
+        return '处理完成：' . json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
+    public function repairPhysicalMachineChannelQrCodes($limit = 20)
+    {
+        $result = $this->syncPhysicalMachineChannelQrCodes([], $limit, 'time_task_physical_repair');
+        return '处理完成：' . json_encode($result, JSON_UNESCAPED_UNICODE);
+    }
+
 }

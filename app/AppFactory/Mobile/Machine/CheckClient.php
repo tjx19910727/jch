@@ -39,6 +39,155 @@ class CheckClient extends MobileBase
     }
 
     /**
+     * 统一提交货道库存和备用商品库存盘点。
+     * channelList为货道库存，machineGoodsList为备用库存。
+     * @param array $postData
+     * @return array|string
+     */
+    public function newStock($postData)
+    {
+        $this->startTrans();
+        try {
+            $machine = $this->getMachineFind(
+                ['machine_id' => $this->tokenArr['machine_id']],
+                'm_id,machine_id,machine_name,ao_id'
+            );
+            if (!$machine) {
+                $this->rollbackTrans();
+                return $this->r(100, $this->lang("MachineCheck.machine_no_data"));
+            }
+            $machine = $machine->toArray();
+            $channelList = json2arr($postData['channelList'] ?? []);
+            $machineGoodsList = json2arr($postData['machineGoodsList'] ?? []);
+            if (!is_array($channelList) || !is_array($machineGoodsList)) {
+                $this->rollbackTrans();
+                return $this->rValidate($this->lang("MachineCheck.checkList_require"));
+            }
+            if (!$channelList && !$machineGoodsList) {
+                return $this->checkTrans(true);
+            }
+
+            $checkList = [];
+            foreach ($channelList as $channel) {
+                if (!is_array($channel)) {
+                    throw new \InvalidArgumentException($this->lang("MachineCheck.checkList_require"));
+                }
+                $checkList[] = array_merge($channel, ["type" => 1]);
+            }
+            foreach ($machineGoodsList as $machineGoods) {
+                if (!is_array($machineGoods)) {
+                    throw new \InvalidArgumentException($this->lang("MachineCheck.checkList_require"));
+                }
+                $checkList[] = array_merge($machineGoods, ["type" => 2]);
+            }
+
+            $checkBatchNo = 'CS' . date('YmdHis') . '-' . $machine['m_id'] . '-' . bin2hex(random_bytes(4));
+            $insert = [
+                "m_id" => $machine['m_id'],
+                "machine_id" => $machine['machine_id'],
+                "machine_name" => $machine['machine_name'],
+                "check_batch_no" => $checkBatchNo,
+                "ao_id" => $machine['ao_id'],
+                "create_date" => strtotime(date("Y-m-d")),
+                "creator" => $this->tokenArr['manager_id'],
+            ];
+            $insertGChange = [
+                "m_id" => $machine['m_id'],
+                "machine_id" => $machine['machine_id'],
+                "machine_name" => $machine['machine_name'],
+                "ao_id" => $machine['ao_id'],
+            ];
+            $insertAll = [];
+
+            foreach ($checkList as $cv) {
+                $type = intval($cv['type']);
+                validate(VMachineCheck::class)->scene("checkList" . $type)->check($cv);
+                // 盘点明细只接收允许字段，避免请求覆盖设备、批次和审计字段。
+                $insertCs = array_merge($insert, [
+                    "type" => $type,
+                    "check_stock" => $cv['check_stock'],
+                    "status" => $cv['status'],
+                ]);
+
+                if ($type === 1) {
+                    $mc = $this->getMachineChannelFind(
+                        ['mc_id' => $cv['mc_id'], 'm_id' => $machine['m_id']],
+                        'mc_id,channel_code,mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_id,gc_name,stock system_stock'
+                    );
+                    if (!$mc) {
+                        $this->rollbackTrans();
+                        return $this->rFail($this->lang("MachineCheck.mc_no_data"));
+                    }
+                    $mc = $mc->toArray();
+                    $barCode = $mc['bar_code'];
+                    unset($mc['bar_code']);
+                    $insertCs = array_merge($insertCs, $mc);
+                    $this->addGoodsChange(array_merge($insertGChange, [
+                        "mc_id" => $mc['mc_id'],
+                        "channel_code" => $mc['channel_code'],
+                        "mg_id" => $mc['mg_id'],
+                        "g_id" => $mc['g_id'],
+                        "g_name" => $mc['g_name'],
+                        "gc_id" => $mc['gc_id'],
+                        "gc_name" => $mc['gc_name'],
+                        "pic" => $mc['pic'],
+                        "sku" => $mc['sku'],
+                        "bar_code" => $barCode,
+                        "change_value" => bcsub($cv['check_stock'], $mc['system_stock']),
+                        "type" => $cv['status'] == 3 ? 5 : 4,
+                        "desc" => $cv['status'] == 3
+                            ? $this->lang("goodsChange.check_stock_shortage")
+                            : $this->lang("goodsChange.check_stock_surplus"),
+                        "position" => 1,
+                    ]));
+                }
+
+                if ($type === 2) {
+                    $mg = $this->getMachineGoodsFind(
+                        ['mg_id' => $cv['mg_id'], 'm_id' => $machine['m_id']],
+                        'mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_name,standby_stock system_stock'
+                    );
+                    if (!$mg) {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang("MachineCheck.mg_no_data"));
+                    }
+                    $mg = $mg->toArray();
+                    $insertCs = array_merge($insertCs, [
+                        "mc_id" => 0,
+                        "channel_code" => "",
+                    ], $mg);
+                    $this->addGoodsChange(array_merge($insertGChange, [
+                        "mc_id" => 0,
+                        "channel_code" => "",
+                        "mg_id" => $mg['mg_id'],
+                        "g_id" => $mg['g_id'],
+                        "g_name" => $mg['g_name'],
+                        "gc_id" => $mg['gc_id'],
+                        "gc_name" => $mg['gc_name'],
+                        "pic" => $mg['pic'],
+                        "sku" => $mg['sku'],
+                        "bar_code" => $mg['bar_code'],
+                        "change_value" => bcsub($cv['check_stock'], $mg['system_stock']),
+                        "type" => $cv['status'] == 3 ? 5 : 4,
+                        "desc" => $cv['status'] == 3
+                            ? $this->lang("goodsChange.check_stock_shortage")
+                            : $this->lang("goodsChange.check_stock_surplus"),
+                        "position" => 2,
+                    ]));
+                }
+                $insertAll[] = $insertCs;
+            }
+
+            $result = $this->addMachineCheckStockMore($insertAll);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
      * 库存盘点
      * @param $postData
      * @return array|string
@@ -51,12 +200,15 @@ class CheckClient extends MobileBase
             if (!$machine) return $this->r(100, $this->lang("MachineCheck.machine_no_data"));
             $machine = $machine->toArray();
             $checkList = json2arr($postData['checkList']);
+            // 同一次盘点请求的所有明细共用一个批次号，供后台按次汇总。
+            $checkBatchNo = 'CS' . date('YmdHis') . '-' . $machine['m_id'] . '-' . bin2hex(random_bytes(4));
             // 库存盘点基础数据
             $insert = [
                 "m_id" => $machine['m_id'],
                 "machine_id" => $machine['machine_id'],
                 "machine_name" => $machine['machine_name'],
                 "type" => $postData['type'],
+                "check_batch_no" => $checkBatchNo,
                 "ao_id" => $machine['ao_id'],
                 "create_date" => strtotime(date("Y-m-d")),
                 "creator" => $this->tokenArr['manager_id'],

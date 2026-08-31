@@ -62,6 +62,17 @@ class MachineCheckList extends Common
         return $this->app->machineCheckList->updateItem($postData);
     }
 
+    public function del()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, 'app\\management\\validate\\Machine\\VMachineCheckList.del');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineCheckList->delItem($postData);
+    }
+
     /**
      * 启用/禁用检查项
      */

@@ -53,8 +53,9 @@ class AuthManager extends Common
      */
     public function getEnabledManagerList()
     {
+        $where = $this->getWhere(['au.status' => 1],false,[],'');
         return $this->app->authManager->getList(
-            ['au.status' => 1],
+            $where,
             0,
             'au.manager_id,au.nickname',
             'au.manager_id asc'

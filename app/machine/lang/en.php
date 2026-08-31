@@ -1,6 +1,9 @@
 <?php
 
 return [
+    "VGetOrgGoods" => [
+        "other_org_goods_forbidden" => "This machine is not allowed to load goods from other organizations",
+    ],
     'check_sign_fail' => 'Signature verification failed',
     'query_mv_no_data' => 'No device view data found',
     'machine_offline' => 'device offline',
@@ -256,5 +259,8 @@ return [
         "file_ext" => "Unsupported file type for upload",
         "get_image_info_fail" => "Failed to get image information, please ensure the uploaded file is an image",
         "upload_image_success" => "Image uploaded successfully",
+        "multiple_files_limit" => "A maximum of 9 images can be uploaded at once",
+        "image_count_mismatch" => "The number of uploaded images cannot exceed image_count",
+        "single_file_only" => "Only one file is allowed for single-image upload",
     ],
 ];

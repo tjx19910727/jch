@@ -72,6 +72,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\RabbitMq\MqProducer;
 use app\machine\validate\VReceive;
+use think\facade\Cache;
 use think\facade\Db;
 use think\facade\View;
 use app\AppFactory\AppFactory;
@@ -672,11 +673,12 @@ class ApiClient extends ReceiveBaseClient
         if (isset($this->data['mc_id']) && $this->data['mc_id']) $where['mc_id'] = $this->data['mc_id'];
         $channelField = "mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,length,width,width2,height,height2,
         cost_price,market_price,retail_price,gift_points,x_axis,y_axis,shelf_way,cost_points,
-        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status,is_multi_goods,manufacture_time";
+        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status,is_multi_goods,manufacture_time,goods_qrcode";
         $mcList = $this->getMachineChannelList($where, 0, $channelField, 'channel_code asc');
         if ($mcList) {
             $mcList = $mcList->toArray();
-            // ==================== 单货道多商品相关开始 ====================
+
+            // 单货道多商品：一次查询并按货道归集非队首批次。
             $batchMap = [];
             if ($machineMultiGoodsEnabled && $mcList) {
                 $mcIds = array_values(array_filter(array_map('intval', array_column($mcList, 'mc_id'))));
@@ -699,16 +701,35 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
             }
-            // ==================== 单货道多商品相关结束 ====================
+
+            // 无库存跳转：一次查询商品可用库存，二维码兜底请求每次接口最多触发一次。
+            $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
+            $availableStockMap = $jumpEnabled
+                ? $this->getMachineGoodsAvailableStockMap(array_column($mcList, 'g_id'))
+                : [];
+            $physicalQrRequested = false;
+
             foreach ($mcList as $key => $mc) {
-                // ==================== 单货道多商品相关开始 ====================
                 $channelMultiGoodsEnabled = $machineMultiGoodsEnabled
                     && intval($mc['is_multi_goods'] ?? 2) === 1;
                 $mc['is_multi_goods'] = $channelMultiGoodsEnabled ? 1 : 2;
                 $mc['batch_arr'] = $channelMultiGoodsEnabled
                     ? ($batchMap[intval($mc['mc_id'])] ?? [])
                     : [];
-                // ==================== 单货道多商品相关结束 ====================
+
+                $mc['jump_to_mini_program'] = 0;
+                $mc['goods_qrcode'] = trim(strval($mc['goods_qrcode'] ?? ''));
+                if ($jumpEnabled && $this->hasInsufficientPhysicalGoodsStock([$mc['g_id']], $availableStockMap)) {
+                    $mc['jump_to_mini_program'] = 1;
+                    if ($mc['goods_qrcode'] === '' && !$physicalQrRequested) {
+                        $qrcodeResult = $this->ensurePhysicalMachineChannelQrCode($mc, 'machine_channel_sold_out');
+                        if (!empty($qrcodeResult['requested'])) $physicalQrRequested = true;
+                        if (!empty($qrcodeResult['qrcodeUrl'])) {
+                            $mc['goods_qrcode'] = $qrcodeResult['qrcodeUrl'];
+                        }
+                    }
+                }
+
                 $where = [];
                 $where[] = ['gc.start_time', "<=", time()];
                 $where['ag.g_id'] = $mc['g_id'];
@@ -737,6 +758,69 @@ class ApiClient extends ReceiveBaseClient
         }
         actionLog($mcList, '返回的货道数据');
         return $this->r(200, "SUCCESS", $mcList);
+    }
+
+    /**
+     * 当前设备是否启用无库存跳转小程序。
+     * @return bool
+     */
+    protected function isGoodsNoStockJumpToMiniProgramEnabled()
+    {
+        $config = $this->getMachineConfigFind(
+            ['m_id' => $this->machine['m_id']],
+            'goods_no_stock_jump_to_mini_program'
+        );
+        return $config && intval($config['goods_no_stock_jump_to_mini_program'] ?? 2) === 1;
+    }
+
+    /**
+     * 批量获取当前设备的商品可用库存，避免逐商品查询。
+     * @param array $gIds
+     * @return array
+     */
+    protected function getMachineGoodsAvailableStockMap($gIds)
+    {
+        $gIds = array_values(array_unique(array_filter(array_map('intval', (array)$gIds), function ($gId) {
+            return $gId > 0 && $gId !== 9999;
+        })));
+        if (!$gIds) return [];
+
+        $where = ['m_id' => $this->machine['m_id']];
+        $where[] = ['g_id', 'in', $gIds];
+        $rows = $this->getMachineChannelList(
+            $where,
+            0,
+            'g_id,SUM(stock) stock',
+            '',
+            '',
+            'g_id'
+        );
+        if ($rows && is_object($rows)) $rows = $rows->toArray();
+
+        $stockMap = [];
+        foreach ((array)$rows as $row) {
+            $stockMap[intval($row['g_id'])] = floatval($row['stock']);
+        }
+        return $stockMap;
+    }
+
+    /**
+     * 任一有效实物商品无库存记录或可用库存小于等于0，视为库存不足。
+     * @param array $gIds
+     * @param array $availableStockMap
+     * @return bool
+     */
+    protected function hasInsufficientPhysicalGoodsStock($gIds, $availableStockMap)
+    {
+        foreach ((array)$gIds as $gId) {
+            $gId = intval($gId);
+            if ($gId <= 0 || $gId === 9999) continue;
+            if (!array_key_exists($gId, $availableStockMap)
+                || floatval($availableStockMap[$gId]) <= 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -790,6 +874,7 @@ class ApiClient extends ReceiveBaseClient
         try { // 清空旧商品库存，生成退货记录
             $mc = $this->getMachineChannelFind(['mc_id' => $this->data['mc_id']]);
             $mc = obj2arr($mc);
+            $oldGId = intval($mc['g_id'] ?? 0);
             if ($mc['frozen_stock'] > 0) {
                 return $this->rFail($this->lang("VChangeChannelGoods.mg_no_data"));
             }
@@ -932,6 +1017,10 @@ class ApiClient extends ReceiveBaseClient
                 $mc['update_price'] = 2;
             }
             $mc = array_merge($mc, $mg, $g);
+            $newGId = intval($mc['g_id'] ?? 0);
+            if ($newGId !== $oldGId) {
+                $mc['goods_qrcode'] = '';
+            }
             actionLog($mc, '要修改的货架数据');
             if (isset($this->data['quantity']) && $this->data['quantity'] > 0) {
 
@@ -952,6 +1041,13 @@ class ApiClient extends ReceiveBaseClient
             actionLog($this->getLS(), '【SQL】修改货道信息');
             $result = $this->checkFlag($flag);
             $result ? $this->commitTrans() : $this->rollbackTrans();
+            if ($result && $newGId !== $oldGId && $newGId > 0 && $newGId !== 9999) {
+                try {
+                    $this->ensurePhysicalMachineChannelQrCode($mc, 'terminal_change_channel_goods');
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'changeChannelGoodsQrCode');
+                }
+            }
             return $this->rAction($result);
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -969,6 +1065,12 @@ class ApiClient extends ReceiveBaseClient
         $where["m_id"] = $this->machine['m_id'];
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (!isset($data['goods_no_stock_jump_to_mini_program'])
+            || !in_array(intval($data['goods_no_stock_jump_to_mini_program']), [1, 2], true)) {
+            $data['goods_no_stock_jump_to_mini_program'] = 2;
+        } else {
+            $data['goods_no_stock_jump_to_mini_program'] = intval($data['goods_no_stock_jump_to_mini_program']);
+        }
         if (!isset($data['run_mode']) || !in_array(intval($data['run_mode']), [1, 2], true)) {
             $data['run_mode'] = 1;
         } else {
@@ -976,6 +1078,11 @@ class ApiClient extends ReceiveBaseClient
         }
         if (!isset($data['online_pay_success_tip'])) {
             $data['online_pay_success_tip'] = '';
+        }
+        if (!isset($data['add_other_org_goods']) || !in_array(intval($data['add_other_org_goods']), [1, 2], true)) {
+            $data['add_other_org_goods'] = 2;
+        } else {
+            $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
         }
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
@@ -1188,7 +1295,51 @@ class ApiClient extends ReceiveBaseClient
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
         }
+
         return $this->rQ($goodsList);
+    }
+
+
+    /**
+     * 按分类获取指定组织核心商品库的已上架商品。
+     * 请求其他组织时必须由设备配置显式放行。
+     * @return array|string
+     */
+    public function getOrgGoods()
+    {
+        $orgId = intval($this->data['org_id']);
+        if ($orgId !== intval($this->machine['ao_id'])) {
+            $config = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], 'add_other_org_goods');
+            $allowOtherOrgGoods = $config ? intval($config['add_other_org_goods']) : 2;
+            if ($allowOtherOrgGoods !== 1) {
+                return $this->rFail($this->lang('VGetOrgGoods.other_org_goods_forbidden'));
+            }
+        }
+
+        $field = 'g_id,g_name,gc_id,gc_name,g_type,model,pic,banner,sku,sku2,bar_code,manufacturer,service_phone,details_pic,`desc`,performance,sell_channel,exter_url,expire_notice,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,cost_price,market_price,retail_price,intergral_rate,gift_points,cost_points,status,ao_id,update_time';
+        $goodsList = $this->getGoodsList([
+            'ao_id' => $orgId,
+            'status' => 1,
+        ], 0, $field, 'gc_id asc,g_id desc');
+        if (is_string($goodsList)) {
+            return $this->rFail($goodsList);
+        }
+        $goodsList = $goodsList ? $goodsList->toArray() : [];
+
+        $categoryMap = [];
+        foreach ($goodsList as $goods) {
+            $categoryKey = strval(intval($goods['gc_id']));
+            if (!isset($categoryMap[$categoryKey])) {
+                $categoryMap[$categoryKey] = [
+                    'gc_id' => intval($goods['gc_id']),
+                    'gc_name' => $goods['gc_name'],
+                    'goods_list' => [],
+                ];
+            }
+            $categoryMap[$categoryKey]['goods_list'][] = $goods;
+        }
+
+        return $this->rQ(array_values($categoryMap));
     }
 
     /**
@@ -3467,6 +3618,79 @@ class ApiClient extends ReceiveBaseClient
         if ($this->isWcVirtualLoginRequest(true)) {
             return $this->buildWcVirtualLoginResponse();
         }
+
+        // 幂等保护：同一设备+同一验证码在120秒内重复提交（设备HTTP超时重试）时，
+        // 直接返回首次登录结果，避免重复调用微程登录、重复同步卡积分。
+        $idemKey = 'wc_login_idem_' . md5(($this->data['machine_id'] ?? '') . '_' . ($this->data['phone'] ?? '') . '_' . ($this->data['code'] ?? ''));
+        try {
+            $cached = Cache::get($idemKey);
+            if (is_string($cached) && $cached !== '') {
+                $cachedData = json2arr($cached);
+                if (is_array($cachedData)) {
+                    actionLog([
+                        'machine_id' => $this->data['machine_id'] ?? '',
+                        'phone' => $this->data['phone'] ?? '',
+                        'code' => $this->data['code'] ?? '',
+                    ], '命中微程登录幂等缓存，直接返回首次登录结果');
+                    return $this->r(200, 'success', $cachedData);
+                }
+            }
+        } catch (\Throwable $e) {
+            // 缓存故障不影响登录主流程
+            actionException($e, 1);
+        }
+
+        // 第二层兜底：Redis 缓存失效/不可用时，查询 machine_mq_record 数据库
+        // 检查同一设备最近120秒内是否已成功处理过相同手机号+验证码的登录请求。
+        // 若存在则说明是设备超时重试，拒绝重复调用微程，避免重复登录和重复同步卡积分。
+        try {
+            $dupRecord = Db::name('machine_mq_record')
+                ->where('machine_id', $this->machine['machine_id'])
+                ->where('path', '/wcLoginUser')
+                ->where('create_time', '>=', time() - 120)
+                ->where('status', 2)
+                ->where('content', 'like', '%' . $this->data['phone'] . '%')
+                ->where('content', 'like', '%' . $this->data['code'] . '%')
+                ->order('mr_id', 'asc')
+                ->find();
+            if ($dupRecord) {
+                // 尝试从 wc_user_login_info 表取回首次登录完整数据返回，避免用户必须重新获取验证码
+                $loginInfo = $this->getWcUserLoginInfoFind(
+                    [
+                        'machine_id' => $this->machine['machine_id'],
+                        'phone' => $this->data['phone'] ?? '',
+                    ],
+                    'wuli_id,login_data,create_time',
+                    'wuli_id desc'
+                );
+                $cachedLoginData = null;
+                if ($loginInfo) {
+                    $decodedLogin = json_decode($loginInfo['login_data'] ?? '', true);
+                    if (is_array($decodedLogin)) {
+                        $cachedLoginData = $decodedLogin;
+                        $cachedLoginData['from_db_fallback'] = true;
+                    }
+                }
+                actionLog([
+                    'machine_id' => $this->data['machine_id'] ?? '',
+                    'phone' => $this->data['phone'] ?? '',
+                    'code' => $this->data['code'] ?? '',
+                    'dup_mr_id' => $dupRecord['mr_id'] ?? 0,
+                    'from_db_fallback' => $cachedLoginData !== null,
+                ], '检测到重复验证码登录请求（数据库兜底）');
+                if ($cachedLoginData) {
+                    return $this->r(200, 'success', $cachedLoginData);
+                }
+                return $this->r(200, 'failed', [
+                    'success' => false,
+                    'message' => '验证码已使用，请重新获取验证码',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // 数据库查询失败不影响登录主流程
+            actionException($e, 1);
+        }
+
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         // $res['response'] = '{"success":true,"message":"登录成功","token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo3OTYyMjYwfSIsImV4cCI6MTc2ODgyOTIyOCwiaWF0IjoxNzY4ODI4NjI4fQ.LgquQkybzpcmJ1dgjAA3HsL7RA0iwgnV2slr-3C3pOE"}';
         actionLog($res, '登录微程返回内容');
@@ -3487,6 +3711,7 @@ class ApiClient extends ReceiveBaseClient
         if (!$card_lists) {
             $response['card_lists'] = [];
             $response['address_lists'] = $address_lists;
+            $this->cacheWcLoginIdempotentResult($idemKey, $response);
             return $this->r(200, "success", $response);
         }
         $card_lists = $card_lists->toArray();
@@ -3512,7 +3737,22 @@ class ApiClient extends ReceiveBaseClient
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']])->toArray();
         $response['card_lists'] = $card_lists;
         $response['address_lists'] = $address_lists;
+        $this->cacheWcLoginIdempotentResult($idemKey, $response);
         return $this->r(200, "success", $response);
+    }
+
+    /**
+     * 缓存微程登录幂等结果，缓存故障不影响登录主流程。
+     * @param string $idemKey
+     * @param array $response
+     */
+    protected function cacheWcLoginIdempotentResult($idemKey, $response)
+    {
+        try {
+            Cache::set($idemKey, json_encode($response, JSON_UNESCAPED_UNICODE), 120);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+        }
     }
 
     /**
@@ -3742,9 +3982,14 @@ class ApiClient extends ReceiveBaseClient
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        $jumpEnabled = $this->isGoodsNoStockJumpToMiniProgramEnabled();
+        $wcQrRequested = false;
+        $physicalGIds = [];
         foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
+            $v['goods_qrcode'] = $v['goods_qrcode'] ?? '';
+            $v['jump_to_mini_program'] = 0;
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
                 if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
@@ -3752,9 +3997,29 @@ class ApiClient extends ReceiveBaseClient
             $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
             foreach($v['goods_lists'] as &$item){
                 $item['desc'] .= $wc_goods['description'] ?? '';
+                $gId = intval($item['g_id'] ?? 0);
+                if ($gId > 0 && $gId !== 9999) $physicalGIds[] = $gId;
             }
         }
         unset($v, $item);
+
+        if ($jumpEnabled && $physicalGIds) {
+            $availableStockMap = $this->getMachineGoodsAvailableStockMap($physicalGIds);
+            foreach ($wcMachineChannelData as &$v) {
+                $gIds = array_column($v['goods_lists'], 'g_id');
+                if ($this->hasInsufficientPhysicalGoodsStock($gIds, $availableStockMap)) {
+                    $v['jump_to_mini_program'] = 1;
+                    if (trim(strval($v['goods_qrcode'] ?? '')) === '' && !$wcQrRequested) {
+                        $qrcodeResult = $this->ensureWcMachineChannelQrCode($v, 'wc_channel_sold_out');
+                        if (!empty($qrcodeResult['requested'])) $wcQrRequested = true;
+                        if (!empty($qrcodeResult['qrcodeUrl'])) {
+                            $v['goods_qrcode'] = $qrcodeResult['qrcodeUrl'];
+                        }
+                    }
+                }
+            }
+            unset($v);
+        }
         if ($pageNum) $wcMachineChannelLists['data'] = $wcMachineChannelData;
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
@@ -5034,22 +5299,23 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('参数错误');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
-        if (!$order) {
-            return $this->r(100, '单据不存在');
-        }
-
-        $anyDetail = PreReplenishmentDetailModel::where([
-            ['order_id', '=', $order['id']],
-            ['machine_id', '=', $machineId],
-            ['order_count', '>=', 1],
-        ])->find();
-        if ($anyDetail) {
-            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
-        }
-
         $this->startTrans();
         try {
+            $order = PreReplenishmentOrderModel::where(['record_no' => $recordNo])
+                ->field('id,record_no,creator_id')->lock(true)->find();
+            if (!$order) {
+                $this->rollbackTrans();
+                return $this->r(100, '单据不存在');
+            }
+            $anyDetail = PreReplenishmentDetailModel::where([
+                ['order_id', '=', $order['id']],
+                ['machine_id', '=', $machineId],
+                ['order_count', '>=', 1],
+            ])->find();
+            if ($anyDetail) {
+                $this->rollbackTrans();
+                return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+            }
             foreach ($channel as $item) {
                 $mcId     = (int)($item['mc_id'] ?? 0);
                 $quantity = (int)($item['quantity'] ?? 0);

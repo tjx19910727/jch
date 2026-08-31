@@ -409,6 +409,7 @@ return [
 
     "VMachine" => [
         "m_id_require" => "请选择设备",
+        "refunded_sod_remote_out_forbidden" => "该子订单已退款，不能远程出货",
         "machine_id_require" => "设备编号不能为空",
         "machine_id_alphaDash" => "设备编号只能包含字母和数字，'-','_'也可以使用",
         "machine_id_exists" => "设备编号已存在，请勿重复添加",
@@ -464,7 +465,9 @@ return [
         "mcList_require" => "批量配置列表参数不能为空",
         "run_mode_in" => "设备模式参数错误",
         "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
+        "add_other_org_goods_in" => "是否允许设备加载其他组织商品仅支持1或2",
         "subcar_mix_in" => "是否允许混合下单仅支持1或2",
+        "goods_no_stock_jump_to_mini_program_in" => "商品无库存跳转小程序仅支持1或2",
         "subcar_offline_sp_ids_invalid" => "线下商品收款策略ID格式错误",
         "subcar_online_sp_ids_invalid" => "线上商品收款策略ID格式错误",
     ],

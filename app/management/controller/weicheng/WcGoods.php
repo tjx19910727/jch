@@ -11,26 +11,31 @@ namespace app\management\controller\weicheng;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\RabbitMq\AsyncTaskProducer;
+use app\AppFactory\RabbitMq\AsyncTask\WcGoodsSyncLock;
 use app\management\controller\Common;
-use think\facade\Cache;
 
 class WcGoods extends Common
 {
 
     public function syncAll()
     {
-        $cacheKey = 'wc_goods_sync_all_lock';
-        if (Cache::get($cacheKey)) return returnState(100, '10分钟内只能请求一次，请稍后重试');
+        $taskId = AsyncTaskProducer::createTaskId();
+        if (!WcGoodsSyncLock::acquire($taskId)) return returnState(100, '已有微程商品同步任务正在执行，请稍后重试');
 
         $goods_type = input('goods_type') ?? '';
         $res = AsyncTaskProducer::publish('wc_goods_sync', [
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => input('manager_id') ?? 0,
             'goods_type' => $goods_type,
+        ], $taskId);
+        if ($res != 'OK') {
+            WcGoodsSyncLock::release($taskId);
+            return returnState(100, '同步请求提交失败：' . $res);
+        }
+        return returnState(200, 'success', [
+            'task_id' => $taskId,
+            'message' => '同步请求已提交',
         ]);
-        if ($res != 'OK') return returnState(100, '同步请求提交失败：' . $res);
-        Cache::set($cacheKey, 1, 600);
-        return returnState(200, 'success', '同步请求已提交，请10分钟后再刷新页面');
     }
 
     public function sync()

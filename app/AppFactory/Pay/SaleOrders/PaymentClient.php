@@ -152,8 +152,8 @@ class PaymentClient extends PayBaseClient
                 if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
                 if (in_array($this->order['pay_type'], [1, 2, 11, 12, 21, 22], true)) {
                     $expectPayType = $this->order['pay_type'];
-                    if (in_array($expectPayType, [11, 12], true)) $expectPayType = 1;
-                    if (in_array($expectPayType, [21, 22], true)) $expectPayType = 2;
+                    if (in_array($expectPayType, [1, 11, 12], true)) $expectPayType = 1;
+                    if (in_array($expectPayType, [2, 21, 22], true)) $expectPayType = 2;
                     if ($paymentType != $expectPayType) {
                         return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
                     }
@@ -217,7 +217,13 @@ class PaymentClient extends PayBaseClient
                 return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
             }
             if ($this->strategyPayee['payee_type'] == 3) $this->payType = $this->tlPayType[$paymentType];
-            if ($this->strategyPayee['payee_type'] == 4) $this->payType = $this->jdPayType[$paymentType];
+            // 京东收银反扫：仅支持微信(1)→WX、支付宝(2)→ALIPAY，其余（含积分9）格式不正确
+            if ($this->strategyPayee['payee_type'] == 4) {
+                if (!isset($this->jdPayType[$paymentType])) {
+                    return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
+                }
+                $this->payType = $this->jdPayType[$paymentType];
+            }
             actionLog($this->strategyPayee,'收款配置数据');
 
 

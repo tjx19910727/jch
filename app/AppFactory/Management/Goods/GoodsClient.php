@@ -20,7 +20,6 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -35,6 +34,7 @@ class GoodsClient extends ManagementClient
 
     public function addG($postData)
     {
+        unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
         $g_id = $this->addGoods($postData);
         if ($g_id) {
             $insertLang = [
@@ -67,6 +67,15 @@ class GoodsClient extends ManagementClient
     {
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
+        }
+        // 非超管账号按绑定设备过滤（与 getData / getDataV2 一致）；无绑定设备时返回空数据
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            } else {
+                $where[] = ['m_id', '=', 0];
+            }
         }
         $list = $this->queryGoodsRanking($where, 1, 0, 10);
         if ($list) {
@@ -109,6 +118,9 @@ class GoodsClient extends ManagementClient
      */
     public function updateForEdit($postData)
     {
+        if (array_key_exists('stocks', $postData) || array_key_exists('locked_stocks', $postData) || array_key_exists('available_stocks', $postData)) {
+            return $this->r(100, '商品库存不允许通过商品编辑接口修改');
+        }
         $gId = $postData['g_id'] ?? 0;
         if (!$gId) {
             return $this->r(100, '参数有误');
@@ -161,11 +173,10 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        AsyncTaskProducer::publish('goods_update', [
-            'g_id' => $gId,
-            'request_time' => date('Y-m-d H:i:s'),
-            'manager_id' => $this->manager['manager_id'] ?? 0,
-        ]);
+        $this->pushGoodsUpdate($gId);
+        // if ($priceChanged && ($selectedMgIds || $selectedMcIds)) {
+        //     $this->pushGoodsUpdateV2($gId, $selectedMgIds, $selectedMcIds);
+        // }
 
         return $this->r(200, 'success', $result);
     }
@@ -260,6 +271,96 @@ class GoodsClient extends ManagementClient
             return $item !== '';
         });
         return array_values(array_unique($idList));
+    }
+
+    /**
+     * 商品价格覆盖后，将受影响的设备商品和货道放入旧商品同步队列。
+     *
+     * @param int $gId
+     * @param array $mgIds
+     * @param array $mcIds
+     * @return bool
+     */
+    protected function pushGoodsUpdateV2($gId, $mgIds, $mcIds)
+    {
+        $redis = null;
+        try {
+            $task = json_encode([
+                'version' => 2,
+                'type' => 'goods_price_update',
+                'g_id' => (int)$gId,
+                'mg_ids' => array_values($mgIds),
+                'mc_ids' => array_values($mcIds),
+                'request_time' => date('Y-m-d H:i:s'),
+                'manager_id' => $this->manager['manager_id'] ?? 0,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($task === false) {
+                throw new \RuntimeException('Failed to encode goods update V2 task');
+            }
+
+            $redis = new \Redis();
+            $config = config('redis');
+            $redis->connect($config['host'], $config['port'], $config['timeout'], $config['reserved'], $config['retry_interval']);
+            if (isset($config['password']) && $config['password']) {
+                $redis->auth($config['password']);
+            }
+            $result = $redis->lPush('updateGoods', $task);
+            if ($result === false) {
+                throw new \RuntimeException('Failed to push goods update V2 task');
+            }
+            $redis->expire('updateGoods', 300);
+            actionLog($task, '商品价格覆盖写入Redis队列', 'pushGoodsUpdateV2');
+            return true;
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'pushGoodsUpdateV2');
+            return false;
+        } finally {
+            if ($redis) {
+                try {
+                    $redis->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'pushGoodsUpdateV2Close');
+                }
+            }
+        }
+    }
+
+    /**
+     * 商品信息修改后，将商品ID放入同步队列。
+     *
+     * @param int $gId
+     * @return bool
+     */
+    protected function pushGoodsUpdate($gId)
+    {
+        $redis = null;
+        try {
+            $redis = new \Redis();
+            $config = config('redis');
+            $redis->connect($config['host'], $config['port'], $config['timeout'], $config['reserved'], $config['retry_interval']);
+            if (isset($config['password']) && $config['password']) {
+                $redis->auth($config['password']);
+            }
+            $result = $redis->lPush('updateGoods', (int)$gId);
+            if ($result === false) {
+                throw new \RuntimeException('Failed to push goods update task');
+            }
+            $redis->expire('updateGoods', 300);
+            actionLog($gId, '修改的商品ID', 'pushGoodsUpdate');
+            actionLog($redis->lRange('updateGoods', 0, -1), '放入Redis数据', 'pushGoodsUpdate');
+            return true;
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'pushGoodsUpdate');
+            return false;
+        } finally {
+            if ($redis) {
+                try {
+                    $redis->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'pushGoodsUpdateClose');
+                }
+            }
+        }
     }
 
     public function exportRankingList($where)
@@ -702,20 +803,49 @@ class GoodsClient extends ManagementClient
         }
 
         $pageNum = intval($postData['pageNum'] ?? 0);
+        $pageIndex = max(1, intval($postData['page'] ?? 1));
         $query = $this->buildOperatingGoodsQuery($postData);
         $query->orderRaw($this->getOperatingGoodsOrder($postData));
 
         if ($pageNum > 0) {
-            $page = $query->paginate($pageNum, false, ["query" => request()->param()]);
+            $page = $query->paginate([
+                'list_rows' => $pageNum,
+                'page' => $pageIndex,
+                'query' => request()->param(),
+            ], false);
             $result = $page->toArray();
             $rows = $result['data'] ?? [];
             $result['data'] = $this->appendOperatingGoodsDetail($rows, $postData);
+            $result['request_params'] = $this->getOperatingGoodsRequestParams($postData);
             return $this->rQ($result);
         }
 
         $rows = $query->select()->toArray();
         $rows = $this->appendOperatingGoodsDetail($rows, $postData);
         return $this->rQ($rows);
+    }
+
+    /**
+     * 返回已生效的业务查询参数，不回传 token 或未知字段。
+     * @param array $postData
+     * @return array
+     */
+    private function getOperatingGoodsRequestParams($postData)
+    {
+        $params = [];
+        $fields = [
+            'g_id', 'g_name', 'sku', 'm_id', 'machine_id', 'ao_id',
+            'start_time', 'end_time', 'create_time', 'sort_by', 'sort_order',
+        ];
+        foreach ($fields as $field) {
+            if (isset($postData[$field]) && $postData[$field] !== '') {
+                $params[$field] = $postData[$field];
+            }
+        }
+        $params['page'] = max(1, intval($postData['page'] ?? 1));
+        $params['pageNum'] = max(0, intval($postData['pageNum'] ?? 0));
+        $params['is_operating'] = $this->getOperatingGoodsStatus($postData);
+        return $params;
     }
 
     /**
@@ -775,6 +905,7 @@ class GoodsClient extends ManagementClient
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', '>', 0)
+
             ->fieldRaw('
                 mc.g_id,
                 MAX(IFNULL(NULLIF(g.g_name, ""), mc.g_name)) AS g_name,
@@ -798,7 +929,9 @@ class GoodsClient extends ManagementClient
      */
     private function applyOperatingGoodsWhere(&$query, $postData)
     {
-        $query->where('m.is_operating', $this->getOperatingGoodsStatus($postData));
+        if (isset($postData['is_operating']) && $postData['is_operating'] !== '') {
+            $query->where('m.is_operating', '=', intval($postData['is_operating']));
+        }
 
         $permittedMIds = $this->resolveGoodsOperatingPermittedMachineIds();
         if ($permittedMIds !== null) {
@@ -808,6 +941,7 @@ class GoodsClient extends ManagementClient
                 $query->where('mc.m_id', 'in', $permittedMIds);
             }
         }
+
 
         $gIds = $this->parseOperatingGoodsIds($postData['g_id'] ?? []);
         if ($gIds) {
@@ -1005,6 +1139,7 @@ class GoodsClient extends ManagementClient
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', 'in', $gIds)
+
             ->field('mc.mc_id,mc.mg_id,mc.m_id,mc.machine_id,m.machine_name,m.ao_id,mc.g_id,mc.channel_code,mc.channel_name,mc.stock,mc.capacity,mc.frozen_stock,mc.sku')
             ->order('mc.g_id desc,mc.m_id asc,mc.channel_code asc,mc.mc_id asc');
 
@@ -1350,6 +1485,14 @@ class GoodsClient extends ManagementClient
             }
             if ($field == 'g_id') {
                 $query->where('sod.g_id', $op, $value);
+                continue;
+            }
+            if ($field == 'sku') {
+                $query->where('sod.sku', $op, $value);
+                continue;
+            }
+            if ($field == 'g_name') {
+                $query->where('sod.g_name', $op, $value);
                 continue;
             }
         }

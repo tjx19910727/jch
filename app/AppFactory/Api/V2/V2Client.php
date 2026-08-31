@@ -33,6 +33,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
+use app\AppFactory\Kernel\Service\Api\ThirdPartyProductSnapshotService;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -64,15 +65,10 @@ class V2Client extends V2BaseClient
      */
     public function get_goods_lists(){
         try {
-            $field = "g_id product_id,g_name,gc_id,gc_name,desc,cost_price,sku,sku2,bar_code,banner,pic,details_pic,retail_price,market_price,status";
-            if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
-            // $where['status'] = 1;
-            $where['ao_id'] = 17;
-            $data = $this->getGoodsList(
-                $where,
+            $snapshotService = new ThirdPartyProductSnapshotService();
+            $data = $snapshotService->getCoreGoodsList(
+                $this->params['product_id'] ?? 0,
                 ['list_rows' => $this->params['pageNum'] ?? 1, 'page' => $this->params['page'] ?? 1],
-                $field,
-                'product_id desc'
             );
 
             actionLog($this->getLS(),'【SQL】查询主体商品');
@@ -94,35 +90,16 @@ class V2Client extends V2BaseClient
      */
     public function get_inventory_list()
     {
-
-        $machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']])->toArray();
         try {
-            $machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']])->toArray();
-            if($machine['ao_id'] != 17) return $this->returnData(42, $this->lang("msg." . 42));
-            $field = "mc_id,channel_code,
-            (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
-            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,bar_code,cost_price,
-            market_price,frozen_stock reserver_quantity, capacity slot_max_count,status";
-            $where['machine_id'] = $this->params['machine_id'];
-            if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
-            $where[] = ['status', '<>', 2];
-            $data = $this->getMachineChannelList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field, 'stock desc');
-//            actionLog($this->getLS(),'【SQL】查询货道');
-            $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id'], ['sell_channel', 'in', ['1','3']]],'pic,banner,sku2,sku,bar_code,cost_price,`desc`,retail_price,details_pic,gc_id,gc_name');
-                $item['g_retail_price'] = $goods['retail_price'] ?? 0;
-                $item['pic'] = $goods['pic'] ?? '';
-                $item['details_pic'] = $goods['details_pic'] ?? '';
-                $item['banner'] = $goods['banner'] ?? '';
-                $item['sku'] = $goods['sku'] ?? '';
-                $item['sku2'] = $goods['sku2'] ?? '';
-                $item['bar_code'] = $goods['bar_code'] ?? '';
-                $item['cost_price'] = $goods['cost_price'] ?? '';
-                $item['g_desc'] = $goods['desc'] ?? '';
-                $item['gc_id'] = $goods['gc_id'] ?? "";
-                $item['gc_name'] = $goods['gc_name'] ?? "";
-                return $item;
-            });
+            $snapshotService = new ThirdPartyProductSnapshotService();
+            if (!$snapshotService->isCoreMachine($this->params['machine_id'])) {
+                return $this->returnData(42, $this->lang("msg." . 42));
+            }
+            $data = $snapshotService->getMachineInventoryList(
+                $this->params['machine_id'],
+                $this->params['product_id'] ?? 0,
+                ['list_rows' => $this->params['pageNum'], 'page' => $this->params['page']]
+            );
             if ($data) {
 //                actionLog($data,'返回货道');
                 return $this->returnData(0, $this->lang("msg." . 0), $data);
@@ -143,14 +120,19 @@ class V2Client extends V2BaseClient
         try {
             $field = "machine_id,machine_name,machine_type,machine_serial_number extend1,version software_version,
             country_id,state_id,city_id,regions_id,zip_code zip,street,floor building,mac_address mac,lat,lng,scene_id,
-            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,current_status,device_type,factory,inventory_location";
+            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,current_status,device_type,factory,inventory_location,is_operating";
             $where = [];
             if (isset($this->params['machine_id']) && $this->params['machine_id'])
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
             $whereSdc[] = ['create_date', ">=", strtotime("-7 days")];
             $machineList = $this->getMachineList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page'] ?? 1], $field);
 //            actionLog($this->getLS(),'【SQL】查询设备');
-            $machineList = $machineList->each(function ($machine) use ($whereSdc) {
+            $isOperatingDescMap = [
+                1 => "在营",
+                2 => "在库",
+                3 => "外售",
+            ];
+            $machineList = $machineList->each(function ($machine) use ($whereSdc, $isOperatingDescMap) {
                 if (isset($machine['country_id']) && $machine['country_id']) $machine['country'] = $this->getEarthCountriesValue(['id' => $machine['country_id']], 'cname');
                 if (isset($machine['state_id']) && $machine['state_id']) $machine['state'] = $this->getEarthStatesValue(['id' => $machine['state_id']], 'cname');
                 if (isset($machine['city_id']) && $machine['city_id']) $machine['city'] = $this->getEarthCitiesValue(['id' => $machine['city_id']], 'cname');
@@ -161,6 +143,9 @@ class V2Client extends V2BaseClient
                 $machine['oo_status'] = $machine['oo_status'] == 1 ? "online" : "offline";
                 $machine['ai_status'] = $machine['ai_status'] == 1 ? "active" : "maintain";
                 $machine['ai_time'] = date("Y-m-d H:i:s", $machine['ai_time']);
+                // 设备经营状态与在线状态 oo_status 相互独立。
+                $isOperating = intval($machine['is_operating'] ?? 0);
+                $machine['is_operating_desc'] = $isOperatingDescMap[$isOperating] ?? "";
                 if ($machine['logo_url']) $machine['logo_url'] = checkStrDomain($machine['logo_url']);
                 if ($machine['icon_url']) $machine['icon_url'] = checkStrDomain($machine['icon_url']);
                 $whereDailyCount = $whereSdc;
@@ -573,6 +558,14 @@ class V2Client extends V2BaseClient
 
         $updateOrder = [];
         $this->startTrans();
+        $lockedPickCode = Db::name('activity_pick_code')
+            ->where(['apc_id' => $pickCode['apc_id'], 'pick_type' => 3])
+            ->lock(true)
+            ->find();
+        if (!$lockedPickCode || (int)$lockedPickCode['status'] !== 1) {
+            $this->rollbackTrans();
+            return $this->returnData(19, $this->lang("msg.19") . ": " . $this->lang("use_pick_code.status2"));
+        }
         if ($this->order['total_price'] > 0) {
             $flag[] = $this->countIncome();
         }
@@ -622,10 +615,18 @@ class V2Client extends V2BaseClient
                 $whereMc['status'] = 1;
                 foreach ($details as $key => $value) {
                     // 原货道冻结库存释放到正常库存
-                    $flag[] = $this->setMachineChannelInc(['mc_id' => $value['mc_id']], 'stock', $value['quantity']);
-                    actionLog($this->getLS(), '【SQL】增加旧货道库存值');
-                    $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']], 'frozen_stock', $value['quantity']);
-                    actionLog($this->getLS(), '【SQL】减少旧货道冻结库存');
+                    $oldChannelUpdated = Db::name('machine_channel')
+                        ->where('mc_id', $value['mc_id'])
+                        ->where('frozen_stock', '>=', $value['quantity'])
+                        ->update([
+                            'stock' => Db::raw('stock + ' . (int)$value['quantity']),
+                            'frozen_stock' => Db::raw('frozen_stock - ' . (int)$value['quantity']),
+                        ]);
+                    if (!$oldChannelUpdated) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    $flag[] = $oldChannelUpdated;
 
                     // 查询新货道信息
                     $whereMc['g_id'] = $value['g_id'];
@@ -644,7 +645,15 @@ class V2Client extends V2BaseClient
                         return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
                     }
                     // 减新货道库存
-                    $flag[] = $this->setMachineChannelDec(['mc_id' => $mc['mc_id']], 'stock', $value['quantity']);
+                    $newChannelUpdated = Db::name('machine_channel')
+                        ->where('mc_id', $mc['mc_id'])
+                        ->where('stock', '>=', $value['quantity'])
+                        ->dec('stock', $value['quantity'])->update();
+                    if (!$newChannelUpdated) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    $flag[] = $newChannelUpdated;
                     actionLog($this->getLS(), '【SQL】减新货道冻结库存');
                     //单货道多商品功能
                     $this->trySwitchNextBatch($mc['mc_id']);
@@ -662,7 +671,15 @@ class V2Client extends V2BaseClient
             else {
                 // 减货道冻结库存，修改订单详情数据
                 foreach ($details as $key => $value) {
-                    $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']],'frozen_stock',$value['quantity']);
+                    $frozenUpdated = Db::name('machine_channel')
+                        ->where('mc_id', $value['mc_id'])
+                        ->where('frozen_stock', '>=', $value['quantity'])
+                        ->dec('frozen_stock', $value['quantity'])->update();
+                    if (!$frozenUpdated) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    $flag[] = $frozenUpdated;
                     actionLog($this->getLS(),'【SQL】减货道冻结库存');
                     //单货道多商品功能
                     $this->trySwitchNextBatch($value['mc_id']);

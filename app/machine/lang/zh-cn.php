@@ -7,6 +7,9 @@
  */
 
 return [
+    "VGetOrgGoods" => [
+        "other_org_goods_forbidden" => "当前设备禁止加载其他组织商品",
+    ],
     "check_sign_fail" => "验签失败",
     "query_mv_no_data" => "查无设备视图数据",
     "machine_offline" => "设备离线",
@@ -305,5 +308,8 @@ return [
         "file_ext" => "不支持的上传文件类型",
         "get_image_info_fail" => "获取图片信息失败，请确认上传的文件为图片类型",
         "upload_image_success" => "上传图片成功",
+        "multiple_files_limit" => "多图上传最多支持9张图片",
+        "image_count_mismatch" => "实际上传图片数量不能大于image_count",
+        "single_file_only" => "单图上传只允许上传一个文件",
     ],
 ];
