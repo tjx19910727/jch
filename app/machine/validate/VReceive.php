@@ -286,7 +286,7 @@ class VReceive extends VCommon
         "recycleBoxGoodsChange" => ["msg_id","machine_id","timestamp","sign","operate","type"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
-        "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
+        "sendErro" => ["msg_id","machine_id","timestamp","sign","errorCode"],
 
         "getMaintenanceItems" => ["msg_id","machine_id","timestamp","sign"],
     "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","maintainer_id","check_list"],
