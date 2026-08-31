@@ -132,7 +132,7 @@ class RemoteActionLogClient extends ManagementClient
             ral.status,ral.operator_at,ral.manager_id,ral.field,
             ral.video_total,ral.video_count,ral.video_status,ral.transaction_video,
             IFNULL(NULLIF(am.nickname, \'\'), am.account) manager_name,ral.field';
-
+    }
     /**
      * @param array|\think\Model $item
      * @return array|\think\Model
