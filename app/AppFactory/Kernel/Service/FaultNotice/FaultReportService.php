@@ -6,7 +6,6 @@ use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\FaultNotice\FaultNoticeConfig;
 use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
-use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use think\facade\Db;
 
 /**
@@ -17,8 +16,6 @@ use think\facade\Db;
  */
 class FaultReportService
 {
-    use AuthOrganizationTrait;
-
     const OFFLINE_ERROR_CODE = '11103021';
 
     /**
@@ -134,9 +131,6 @@ class FaultReportService
         if ($this->isQuietPeriod($strategy)) {
             return $this->updateEventNotice($meId, 4, 'quiet_period');
         }
-        if (!$this->isFrequencyAllowed($aoId, intval($machine['m_id']), $errorCode, $strategy, $now)) {
-            return $this->updateEventNotice($meId, 4, 'frequency_limited');
-        }
 
         $templateType = strval($rule['template_type'] ?? '');
         $templateConfig = FaultWechatTemplate::find($templateType);
@@ -158,6 +152,19 @@ class FaultReportService
         );
         if (!$receivers) {
             return $this->updateEventNotice($meId, 4, 'no_receiver');
+        }
+        $mId = intval($machine['m_id']);
+        $receivers = array_values(array_filter($receivers, function ($receiver) use ($mId, $errorCode, $strategy, $now) {
+            return $this->isFrequencyAllowed(
+                intval($receiver['manager_id'] ?? 0),
+                $mId,
+                $errorCode,
+                $strategy,
+                $now
+            );
+        }));
+        if (!$receivers) {
+            return $this->updateEventNotice($meId, 4, 'frequency_limited');
         }
 
         $replaceData = $this->buildReplaceData($machine, $message, $rule, $errorCode, $now);
@@ -247,10 +254,10 @@ class FaultReportService
             : ($current >= $start || $current < $end);
     }
 
-    protected function isFrequencyAllowed($aoId, $mId, $errorCode, $strategy, $now)
+    protected function isFrequencyAllowed($managerId, $mId, $errorCode, $strategy, $now)
     {
         $query = Db::name('wx_template_log')->where([
-            'ao_id' => intval($aoId),
+            'manager_id' => intval($managerId),
             'm_id' => intval($mId),
             'error_code' => strval($errorCode),
         ])->whereIn('template_type', FaultWechatTemplate::types())
@@ -276,10 +283,9 @@ class FaultReportService
 
     protected function getMatchedReceivers($aoId, $mId, $categoryId, $errorCode, $wxId, $organizationNotice = false)
     {
-        $rows = Db::name('machine_fault_receiver')
+        $query = Db::name('machine_fault_receiver')
             ->alias('mfr')
             ->join('auth_manager am', 'am.manager_id = mfr.manager_id', 'INNER')
-            ->where('mfr.ao_id', intval($aoId))
             ->where('mfr.status', 1)
             ->where('am.status', 1)
             ->where('am.wx_id', intval($wxId))
@@ -288,17 +294,32 @@ class FaultReportService
             ->field(
                 'mfr.receiver_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope,' .
                 'am.ao_id manager_ao_id,am.pid,am.nickname,am.account,am.openid,am.wx_id'
-            )
+            );
+        if ($organizationNotice) {
+            $query->where('mfr.ao_id', intval($aoId));
+        }
+        $rows = $query
             ->order('mfr.receiver_id asc')
             ->select()
             ->toArray();
-        $matched = [];
-        foreach ($rows as $row) {
-            $parentAoIds = $this->getParentIds(intval($row['manager_ao_id'] ?? 0));
-            if (!in_array(intval($aoId), array_map('intval', $parentAoIds), true)) {
-                continue;
+
+        $permittedManagerIds = [];
+        if (!$organizationNotice && $rows) {
+            $managerIds = array_values(array_unique(array_map('intval', array_column($rows, 'manager_id'))));
+            $permissionRows = Db::name('auth_manager_machine')
+                ->whereIn('manager_id', $managerIds)
+                ->where('m_id', intval($mId))
+                ->column('manager_id');
+            foreach ($permissionRows as $managerId) {
+                $permittedManagerIds[intval($managerId)] = true;
             }
+        }
+
+        $matched = [];
+        $matchedManagerIds = [];
+        foreach ($rows as $row) {
             $receiverId = intval($row['receiver_id']);
+            $managerId = intval($row['manager_id']);
             if ($organizationNotice) {
                 // 组织级预警没有具体设备，只匹配“全部设备”的接收人。
                 if (intval($row['machine_scope']) !== 1
@@ -307,15 +328,11 @@ class FaultReportService
                     continue;
                 }
             } else {
-                if (intval($row['machine_scope']) === 2
-                    && !$this->receiverHasScope($receiverId, 1, strval($mId))) {
+                if (!isset($permittedManagerIds[$managerId])) {
                     continue;
                 }
-                if (intval($row['pid'] ?? 0) > 0
-                    && !Db::name('auth_manager_machine')->where([
-                        'manager_id' => intval($row['manager_id']),
-                        'm_id' => intval($mId),
-                    ])->find()) {
+                if (intval($row['machine_scope']) === 2
+                    && !$this->receiverHasScope($receiverId, 1, strval($mId))) {
                     continue;
                 }
             }
@@ -328,6 +345,10 @@ class FaultReportService
                 && !$this->receiverHasScope($receiverId, 3, strval($errorCode))) {
                 continue;
             }
+            if (isset($matchedManagerIds[$managerId])) {
+                continue;
+            }
+            $matchedManagerIds[$managerId] = true;
             $matched[] = $row;
         }
         return $matched;

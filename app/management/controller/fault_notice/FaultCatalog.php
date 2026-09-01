@@ -17,8 +17,12 @@ class FaultCatalog extends Common
     public function getFaultCodeList()
     {
         $params = input();
-        $pageNum = intval($params['pageNum'] ?? 20);
-        $pageNum = $pageNum > 0 ? min($pageNum, 100) : 20;
+        if (isset($params['pageNum'])) {
+            $pageNum = intval($params['pageNum']);
+            $pageNum = $pageNum > 0 ? min($pageNum, 100) : 20;
+        } else {
+            $pageNum = 200;
+        }
         return $this->app->faultNotice->getCatalogFaultCodeList($params, $pageNum);
     }
 

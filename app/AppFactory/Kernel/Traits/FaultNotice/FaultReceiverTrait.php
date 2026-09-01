@@ -242,23 +242,21 @@ trait FaultReceiverTrait
     protected function validateFaultReceiverMachines($machineIds, $manager)
     {
         $machineIds = array_values(array_unique(array_map('intval', $machineIds)));
-        $query = Db::name('machine')
-            ->where('ao_id', $this->getFaultReceiverAoId())
-            ->whereIn('m_id', $machineIds);
-        $validIds = array_map('intval', $query->column('m_id'));
+        $validIds = Db::name('machine')
+            ->whereIn('m_id', $machineIds)
+            ->column('m_id');
+        $validIds = array_values(array_unique(array_map('intval', $validIds)));
         if (count($validIds) !== count($machineIds)) {
-            throw new \InvalidArgumentException('指定设备不存在或不属于当前组织');
+            throw new \InvalidArgumentException('指定设备不存在');
         }
 
-        if (intval($manager['pid'] ?? 0) > 0) {
-            $authorizedIds = Db::name('auth_manager_machine')
-                ->where('manager_id', intval($manager['manager_id']))
-                ->whereIn('m_id', $machineIds)
-                ->column('m_id');
-            $authorizedIds = array_values(array_unique(array_map('intval', $authorizedIds)));
-            if (count($authorizedIds) !== count($machineIds)) {
-                throw new \InvalidArgumentException('指定设备超出该后台账号的设备权限');
-            }
+        $authorizedIds = Db::name('auth_manager_machine')
+            ->where('manager_id', intval($manager['manager_id']))
+            ->whereIn('m_id', $machineIds)
+            ->column('m_id');
+        $authorizedIds = array_values(array_unique(array_map('intval', $authorizedIds)));
+        if (count($authorizedIds) !== count($machineIds)) {
+            throw new \InvalidArgumentException('指定设备超出该后台账号的设备权限');
         }
     }
 
@@ -317,16 +315,6 @@ trait FaultReceiverTrait
         }
         if (intval($manager['status'] ?? 0) !== 1) {
             throw new \InvalidArgumentException('后台账号已停用');
-        }
-        $parentAoIds = $this->app->authOrganization->getParentIds(
-            intval($manager['ao_id'] ?? 0)
-        );
-        if (!in_array(
-            $this->getFaultReceiverAoId(),
-            array_map('intval', $parentAoIds),
-            true
-        )) {
-            throw new \InvalidArgumentException('后台账号不属于当前组织或下级组织');
         }
         return $manager;
     }
