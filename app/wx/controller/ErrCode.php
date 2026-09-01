@@ -310,11 +310,11 @@ class ErrCode
             ->alias('mec')
             ->leftJoin(
                 'machine_error_code_notice_rule mecnr',
-                'mecnr.ao_id = mec.ao_id AND mecnr.error_code = mec.errorCode'
+                'mecnr.error_code = mec.errorCode'
             )
             ->leftJoin(
                 'machine_fault_category mfc',
-                'mfc.ao_id = mec.ao_id AND mfc.category_id = mec.category_id'
+                'mfc.category_id = mec.category_id'
             )
             ->where('mec.me_id', $meId)
             ->where('mec.m_id', intval($log['m_id'] ?? 0))

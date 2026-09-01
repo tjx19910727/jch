@@ -15,15 +15,13 @@ trait FaultCatalogTrait
      */
     public function getFaultCatalogCategoryListData()
     {
-        $aoId = $this->getFaultCatalogAoId();
         $rows = Db::name('machine_fault_category')
             ->alias('mfc')
-            ->where('mfc.ao_id', $aoId)
             ->field(
                 "mfc.category_id,mfc.category_name,mfc.template_type,mfc.status,mfc.sort," .
                 "mfc.update_time," .
                 "(SELECT COUNT(*) FROM machine_error_code_notice_rule mecnr " .
-                "WHERE mecnr.ao_id = mfc.ao_id AND mecnr.category_id = mfc.category_id) AS fault_count"
+                "WHERE mecnr.category_id = mfc.category_id) AS fault_count"
             )
             ->order('mfc.sort asc,mfc.category_id asc')
             ->select()
@@ -34,9 +32,7 @@ trait FaultCatalogTrait
         }, $rows);
 
         return [
-            'total_fault_count' => intval(Db::name('machine_error_code_notice_rule')
-                ->where('ao_id', $aoId)
-                ->count()),
+            'total_fault_count' => intval(Db::name('machine_error_code_notice_rule')->count()),
             'items' => $items,
         ];
     }
@@ -51,15 +47,13 @@ trait FaultCatalogTrait
     public function getFaultCatalogCodeListData($params, $pageNum = 20)
     {
         $pageNum = max(1, min(intval($pageNum), 100));
-        $aoId = $this->getFaultCatalogAoId();
         $query = Db::name('machine_error_code_notice_rule')
             ->alias('mecnr')
             ->leftJoin(
                 'machine_fault_category mfc',
-                'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id'
+                'mfc.category_id = mecnr.category_id'
             )
             ->leftJoin('machine_fault_level mfl', 'mfl.level = mecnr.level')
-            ->where('mecnr.ao_id', $aoId)
             ->field(
                 "mecnr.error_code,mecnr.error_name,mecnr.wechat_text,mecnr.category_id," .
                 "mecnr.level,mecnr.status,mecnr.notice_enabled,mecnr.update_time," .
@@ -149,10 +143,7 @@ trait FaultCatalogTrait
     {
         $data = $this->normalizeFaultCatalogCategory($params);
         $aoId = $this->getFaultCatalogAoId();
-        if (Db::name('machine_fault_category')->where([
-            'ao_id' => $aoId,
-            'category_name' => $data['category_name'],
-        ])->find()) {
+        if (Db::name('machine_fault_category')->where('category_name', $data['category_name'])->find()) {
             throw new \InvalidArgumentException('故障分类名称已存在');
         }
         $managerId = intval($this->manager['manager_id'] ?? 0);
@@ -178,7 +169,6 @@ trait FaultCatalogTrait
         }
         $data = $this->normalizeFaultCatalogCategory(array_merge($exists, $params));
         $duplicate = Db::name('machine_fault_category')
-            ->where('ao_id', $this->getFaultCatalogAoId())
             ->where('category_name', $data['category_name'])
             ->where('category_id', '<>', $categoryId)
             ->find();
@@ -188,7 +178,6 @@ trait FaultCatalogTrait
         $data['update_id'] = intval($this->manager['manager_id'] ?? 0);
         $data['update_time'] = time();
         Db::name('machine_fault_category')
-            ->where('ao_id', $this->getFaultCatalogAoId())
             ->where('category_id', $categoryId)
             ->update($data);
         return $this->findAndFormatFaultCatalogCategory($categoryId);
@@ -211,7 +200,6 @@ trait FaultCatalogTrait
             'update_time' => time(),
         ];
         Db::name('machine_fault_category')
-            ->where('ao_id', $this->getFaultCatalogAoId())
             ->where('category_id', $categoryId)
             ->update($update);
         return $this->findAndFormatFaultCatalogCategory($categoryId);
@@ -221,10 +209,7 @@ trait FaultCatalogTrait
     {
         $data = $this->normalizeFaultCatalogCode($params, true);
         $aoId = $this->getFaultCatalogAoId();
-        if (Db::name('machine_error_code_notice_rule')->where([
-            'ao_id' => $aoId,
-            'error_code' => $data['error_code'],
-        ])->find()) {
+        if (Db::name('machine_error_code_notice_rule')->where('error_code', $data['error_code'])->find()) {
             throw new \InvalidArgumentException('故障码已存在');
         }
         $managerId = intval($this->manager['manager_id'] ?? 0);
@@ -251,10 +236,7 @@ trait FaultCatalogTrait
         unset($data['error_code'], $data['status'], $data['notice_enabled']);
         $data['update_id'] = intval($this->manager['manager_id'] ?? 0);
         $data['update_time'] = time();
-        Db::name('machine_error_code_notice_rule')->where([
-            'ao_id' => $this->getFaultCatalogAoId(),
-            'error_code' => $errorCode,
-        ])->update($data);
+        Db::name('machine_error_code_notice_rule')->where('error_code', $errorCode)->update($data);
         return $this->findAndFormatFaultCatalogCode($errorCode);
     }
 
@@ -271,10 +253,7 @@ trait FaultCatalogTrait
         if (!$this->findFaultCatalogCode($errorCode)) {
             throw new \InvalidArgumentException('故障码不存在');
         }
-        Db::name('machine_error_code_notice_rule')->where([
-            'ao_id' => $this->getFaultCatalogAoId(),
-            'error_code' => $errorCode,
-        ])->update([
+        Db::name('machine_error_code_notice_rule')->where('error_code', $errorCode)->update([
             $field => $value,
             'update_id' => intval($this->manager['manager_id'] ?? 0),
             'update_time' => time(),
@@ -298,17 +277,13 @@ trait FaultCatalogTrait
                 'mfr.receiver_id = mfrs.receiver_id',
                 'INNER'
             )
-            ->where('mfr.ao_id', $this->getFaultCatalogAoId())
             ->where('mfrs.scope_type', 3)
             ->where('mfrs.target_value', $errorCode)
             ->find();
         if ($referenced) {
             throw new \InvalidArgumentException('该故障码已被通知接收人引用，请先调整接收范围');
         }
-        Db::name('machine_error_code_notice_rule')->where([
-            'ao_id' => $this->getFaultCatalogAoId(),
-            'error_code' => $errorCode,
-        ])->delete();
+        Db::name('machine_error_code_notice_rule')->where('error_code', $errorCode)->delete();
         return ['error_code' => $errorCode];
     }
 
@@ -411,18 +386,16 @@ trait FaultCatalogTrait
         if ($categoryId <= 0) {
             return [];
         }
-        return (array)Db::name('machine_fault_category')->where([
-            'ao_id' => $this->getFaultCatalogAoId(),
-            'category_id' => $categoryId,
-        ])->find();
+        return (array)Db::name('machine_fault_category')
+            ->where('category_id', $categoryId)
+            ->find();
     }
 
     protected function findFaultCatalogCode($errorCode)
     {
-        return (array)Db::name('machine_error_code_notice_rule')->where([
-            'ao_id' => $this->getFaultCatalogAoId(),
-            'error_code' => $errorCode,
-        ])->find();
+        return (array)Db::name('machine_error_code_notice_rule')
+            ->where('error_code', $errorCode)
+            ->find();
     }
 
     protected function findAndFormatFaultCatalogCode($errorCode)
@@ -440,13 +413,12 @@ trait FaultCatalogTrait
     {
         $row = Db::name('machine_fault_category')
             ->alias('mfc')
-            ->where('mfc.ao_id', $this->getFaultCatalogAoId())
             ->where('mfc.category_id', intval($categoryId))
             ->field(
                 "mfc.category_id,mfc.category_name,mfc.template_type,mfc.status,mfc.sort," .
                 "mfc.update_time," .
                 "(SELECT COUNT(*) FROM machine_error_code_notice_rule mecnr " .
-                "WHERE mecnr.ao_id = mfc.ao_id AND mecnr.category_id = mfc.category_id) AS fault_count"
+                "WHERE mecnr.category_id = mfc.category_id) AS fault_count"
             )
             ->find();
         return $row ? $this->formatFaultCatalogCategory($row) : [];

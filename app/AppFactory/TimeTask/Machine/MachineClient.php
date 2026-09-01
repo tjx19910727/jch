@@ -1136,10 +1136,12 @@ class MachineClient extends TimeTaskBase
             $yesterday = strtotime('-1 day', $today);
             $todayKey = date('Ymd', $now);
             $todayEnd = strtotime(date('Y-m-d 23:59:59', $now));
+            $configuredOfflineMinutes = intval(Db::name('machine_fault_notice_config')
+                ->order('create_time asc,ao_id asc')
+                ->value('offline_minutes'));
 
             $query = Db::name('machine')->alias('m')
                 ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
-                ->leftJoin('machine_fault_notice_config mfnc', 'mfnc.ao_id = m.ao_id')
                 ->where('m.is_operating', 1)
                 ->where('m.online', 2)
                 ->where('m.http_online', 2)
@@ -1155,7 +1157,7 @@ class MachineClient extends TimeTaskBase
             }
 
             $list = $query
-                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.is_operating,m.last_online_time,m.ao_id,moo.on_off_machine,mfnc.offline_minutes AS configured_offline_minutes')
+                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.is_operating,m.last_online_time,m.ao_id,moo.on_off_machine')
                 ->order('m.m_id desc')
                 ->select()
                 ->toArray();
@@ -1167,7 +1169,6 @@ class MachineClient extends TimeTaskBase
             $flag = [];
             foreach ($list as $item) {
                 // 先取得组织配置，再计算该设备对应的离线截止时间。
-                $configuredOfflineMinutes = intval($item['configured_offline_minutes'] ?? 0);
                 $offlineMinutes = $configuredOfflineMinutes >= 5 ? $configuredOfflineMinutes : 30;
                 $offlineTimeout = $offlineMinutes * 60;
                 $offlineDeadline = $now - $offlineTimeout;

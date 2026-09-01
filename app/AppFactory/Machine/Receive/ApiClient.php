@@ -801,8 +801,11 @@ class ApiClient extends ReceiveBaseClient
                 "creator_id" => $this->data['creator_id'] ?? 0,
                 "trade_no" => $this->data['trade_no'] ?? ($this->data['order_no'] ?? ""),
             ];
-//            $this->errorCode();
-            $this->reportFaultCode();
+            if ($this->shouldUseLegacyFaultCodeFlow()) {
+                $this->errorCode();
+            } else {
+                $this->reportFaultCode();
+            }
             return $this->r(200, $this->lang("action_success"));
         } catch (\Exception $e) {
             actionException($e, 1);

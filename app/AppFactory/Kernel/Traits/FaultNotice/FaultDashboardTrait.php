@@ -161,20 +161,14 @@ trait FaultDashboardTrait
     /** @return \think\db\Query */
     protected function faultEventQuery()
     {
-        return $this->applyFaultDashboardScope(
-            Db::name('machine_error_code')->alias('mec'),
-            'mec'
-        );
+        return Db::name('machine_error_code')->alias('mec');
     }
 
     /** @return \think\db\Query */
     protected function faultWechatLogQuery()
     {
-        return $this->applyFaultDashboardScope(
-            Db::name('wx_template_log')->alias('wtl')
-                ->whereIn('wtl.template_type', FaultWechatTemplate::types()),
-            'wtl'
-        );
+        return Db::name('wx_template_log')->alias('wtl')
+            ->whereIn('wtl.template_type', FaultWechatTemplate::types());
     }
 
     /**
@@ -183,22 +177,6 @@ trait FaultDashboardTrait
      */
     protected function applyFaultDashboardScope($query, $alias)
     {
-        $aoId = intval($this->manager['ao_id'] ?? 0);
-        if ($aoId > 1) {
-            $query->where($alias . '.ao_id', $aoId);
-        }
-
-        if (intval($this->manager['pid'] ?? 0) > 0) {
-            $managerId = intval($this->manager['manager_id'] ?? 0);
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $managerId], 'm_id');
-            $mIds = array_values(array_unique(array_filter(array_map('intval', (array)$mIds))));
-            if (!$mIds) {
-                $query->where($alias . '.m_id', -1);
-            } else {
-                $query->whereIn($alias . '.m_id', $mIds);
-            }
-        }
-
         return $query;
     }
 
@@ -345,7 +323,7 @@ trait FaultDashboardTrait
     {
         $top = max(1, min(intval($top), 100));
         $query = $this->faultEventQuery()
-            ->leftJoin('machine_error_code_notice_rule mecnr', 'mecnr.ao_id = mec.ao_id AND mecnr.error_code = mec.errorCode')
+            ->leftJoin('machine_error_code_notice_rule mecnr', 'mecnr.error_code = mec.errorCode')
             ->whereBetween('mec.create_time', [intval($startTime), intval($endTime)]);
         $this->applyFaultDashboardLevel($query, $level);
         $rows = $query

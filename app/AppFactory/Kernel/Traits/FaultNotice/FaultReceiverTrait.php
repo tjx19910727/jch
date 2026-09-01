@@ -22,9 +22,8 @@ trait FaultReceiverTrait
             ->leftJoin('auth_organization ao', 'ao.ao_id = am.ao_id')
             ->leftJoin('user u', 'u.user_id = am.user_id')
             ->leftJoin('wx_official wo', 'wo.id = am.wx_id')
-            ->where('mfr.ao_id', $this->getFaultReceiverAoId())
             ->field(
-                "mfr.receiver_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope," .
+                "mfr.receiver_id,mfr.ao_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope," .
                 "mfr.status,mfr.update_time,am.account,am.nickname,am.real_name," .
                 "am.status AS account_status,am.openid,am.wx_id," .
                 "COALESCE(u.mobile,'') AS mobile,COALESCE(ao.organization_name,'') AS organization_name," .
@@ -81,10 +80,7 @@ trait FaultReceiverTrait
     {
         $managerId = intval($params['manager_id'] ?? 0);
         $manager = $this->getAvailableFaultReceiverManager($managerId);
-        if (Db::name('machine_fault_receiver')->where([
-            'ao_id' => $this->getFaultReceiverAoId(),
-            'manager_id' => $managerId,
-        ])->find()) {
+        if (Db::name('machine_fault_receiver')->where('manager_id', $managerId)->find()) {
             throw new \InvalidArgumentException('该后台账号已经配置为通知接收人');
         }
         $this->validateFaultReceiverWechat($manager);
@@ -131,10 +127,7 @@ trait FaultReceiverTrait
             throw new \InvalidArgumentException('接收人状态参数错误');
         }
         $now = time();
-        Db::name('machine_fault_receiver')->where([
-            'receiver_id' => $receiverId,
-            'ao_id' => $this->getFaultReceiverAoId(),
-        ])->update([
+        Db::name('machine_fault_receiver')->where('receiver_id', $receiverId)->update([
             'machine_scope' => $scopeData['machine_scope'],
             'fault_scope' => $scopeData['fault_scope'],
             'status' => $status,
@@ -159,10 +152,7 @@ trait FaultReceiverTrait
         if (!$this->findFaultReceiver($receiverId)) {
             throw new \InvalidArgumentException('通知接收人不存在');
         }
-        Db::name('machine_fault_receiver')->where([
-            'receiver_id' => $receiverId,
-            'ao_id' => $this->getFaultReceiverAoId(),
-        ])->update([
+        Db::name('machine_fault_receiver')->where('receiver_id', $receiverId)->update([
             'status' => $status,
             'update_id' => intval($this->manager['manager_id'] ?? 0),
             'update_time' => time(),
@@ -178,10 +168,7 @@ trait FaultReceiverTrait
             throw new \InvalidArgumentException('通知接收人不存在');
         }
         Db::name('machine_fault_receiver_scope')->where('receiver_id', $receiverId)->delete();
-        Db::name('machine_fault_receiver')->where([
-            'receiver_id' => $receiverId,
-            'ao_id' => $this->getFaultReceiverAoId(),
-        ])->delete();
+        Db::name('machine_fault_receiver')->where('receiver_id', $receiverId)->delete();
         return [
             'receiver_id' => $receiverId,
             'manager_id' => intval($receiver['manager_id']),
@@ -265,7 +252,6 @@ trait FaultReceiverTrait
         $categoryIds = array_values(array_unique(array_map('intval', $categoryIds)));
         $rows = Db::name('machine_fault_category')
             ->alias('mfc')
-            ->where('mfc.ao_id', $this->getFaultReceiverAoId())
             ->where('mfc.status', 1)
             ->whereIn('mfc.template_type', FaultWechatTemplate::types())
             ->whereIn('mfc.category_id', $categoryIds)
@@ -283,10 +269,9 @@ trait FaultReceiverTrait
             ->alias('mecnr')
             ->join(
                 'machine_fault_category mfc',
-                'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id',
+                'mfc.category_id = mecnr.category_id',
                 'INNER'
             )
-            ->where('mecnr.ao_id', $this->getFaultReceiverAoId())
             ->where('mecnr.status', 1)
             ->where('mfc.status', 1)
             ->whereIn('mfc.template_type', FaultWechatTemplate::types())
@@ -373,10 +358,9 @@ trait FaultReceiverTrait
         if ($receiverId <= 0) {
             return [];
         }
-        return (array)Db::name('machine_fault_receiver')->where([
-            'receiver_id' => $receiverId,
-            'ao_id' => $this->getFaultReceiverAoId(),
-        ])->find();
+        return (array)Db::name('machine_fault_receiver')
+            ->where('receiver_id', $receiverId)
+            ->find();
     }
 
     protected function findAndFormatFaultReceiver($receiverId)
@@ -387,10 +371,9 @@ trait FaultReceiverTrait
             ->leftJoin('auth_organization ao', 'ao.ao_id = am.ao_id')
             ->leftJoin('user u', 'u.user_id = am.user_id')
             ->leftJoin('wx_official wo', 'wo.id = am.wx_id')
-            ->where('mfr.ao_id', $this->getFaultReceiverAoId())
             ->where('mfr.receiver_id', intval($receiverId))
             ->field(
-                "mfr.receiver_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope," .
+                "mfr.receiver_id,mfr.ao_id,mfr.manager_id,mfr.machine_scope,mfr.fault_scope," .
                 "mfr.status,mfr.update_time,am.account,am.nickname,am.real_name," .
                 "am.status AS account_status,am.openid,am.wx_id," .
                 "COALESCE(u.mobile,'') AS mobile,COALESCE(ao.organization_name,'') AS organization_name," .
@@ -432,7 +415,6 @@ trait FaultReceiverTrait
         $codeNames = [];
         if ($errorCodes) {
             $codeRows = Db::name('machine_error_code_notice_rule')
-                ->where('ao_id', $this->getFaultReceiverAoId())
                 ->whereIn('error_code', $errorCodes)
                 ->field('error_code,error_name')
                 ->select()
@@ -452,6 +434,7 @@ trait FaultReceiverTrait
         $wechatBound = $openid !== '' && intval($row['wx_id'] ?? 0) > 0 ? 1 : 2;
         return [
             'receiver_id' => $receiverId,
+            'ao_id' => intval($row['ao_id'] ?? 0),
             'manager_id' => intval($row['manager_id'] ?? 0),
             'account' => strval($row['account'] ?? ''),
             'nickname' => strval($row['nickname'] ?: ($row['real_name'] ?? '')),

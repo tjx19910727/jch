@@ -39,9 +39,8 @@ class FaultReportService
             ->alias('mecnr')
             ->leftJoin(
                 'machine_fault_category mfc',
-                'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id'
+                'mfc.category_id = mecnr.category_id'
             )
-            ->where('mecnr.ao_id', $aoId)
             ->where('mecnr.error_code', $errorCode)
             ->field(
                 'mecnr.error_code,mecnr.error_name,mecnr.wechat_text,mecnr.category_id,' .
@@ -108,7 +107,9 @@ class FaultReportService
             return $this->updateEventNotice($meId, 4, 'error_code_unconfigured');
         }
         $aoId = intval($machine['ao_id']);
-        $global = (array)Db::name('machine_fault_notice_config')->where('ao_id', $aoId)->find();
+        $global = (array)Db::name('machine_fault_notice_config')
+            ->order('create_time asc,ao_id asc')
+            ->find();
         if (intval($global['notice_enabled'] ?? 1) !== 1) {
             return $this->updateEventNotice($meId, 4, 'master_disabled');
         }
@@ -127,7 +128,7 @@ class FaultReportService
         }
 
         $level = intval($rule['level'] ?? 2) ?: 2;
-        $strategy = $this->getLevelStrategy($aoId, $level);
+        $strategy = $this->getLevelStrategy($level);
         if ($this->isQuietPeriod($strategy)) {
             return $this->updateEventNotice($meId, 4, 'quiet_period');
         }
@@ -218,7 +219,7 @@ class FaultReportService
         return $this->updateEventNotice($meId, 3, 'wechat_send_failed', $now);
     }
 
-    protected function getLevelStrategy($aoId, $level)
+    protected function getLevelStrategy($level)
     {
         $defaults = FaultNoticeConfig::levelStrategyDefaults();
         $defaults = is_array($defaults) ? $defaults : [];
@@ -230,10 +231,10 @@ class FaultReportService
             'interval_minutes' => 0,
             'day_limit' => 1,
         ];
-        $saved = (array)Db::name('machine_fault_notice_frequency')->where([
-            'ao_id' => intval($aoId),
-            'level' => intval($level),
-        ])->find();
+        $saved = (array)Db::name('machine_fault_notice_frequency')
+            ->where('level', intval($level))
+            ->order('create_time asc,ao_id asc')
+            ->find();
         return $saved ? array_merge($strategy, $saved) : $strategy;
     }
 

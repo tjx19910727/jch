@@ -13,9 +13,8 @@ trait FaultSettingTrait
     /** @return array */
     public function getFaultGlobalSettingData()
     {
-        $aoId = $this->getFaultSettingAoId();
         $row = Db::name('machine_fault_notice_config')
-            ->where('ao_id', $aoId)
+            ->order('create_time asc,ao_id asc')
             ->find();
 
         return $this->formatFaultGlobalSetting($row ?: [], (bool)$row);
@@ -55,10 +54,12 @@ trait FaultSettingTrait
             'update_time' => $now,
         ];
         $exists = Db::name('machine_fault_notice_config')
-            ->where('ao_id', $aoId)
+            ->order('create_time asc,ao_id asc')
             ->find();
         if ($exists) {
-            Db::name('machine_fault_notice_config')->where('ao_id', $aoId)->update($data);
+            Db::name('machine_fault_notice_config')
+                ->where('ao_id', intval($exists['ao_id']))
+                ->update($data);
         } else {
             $data['ao_id'] = $aoId;
             $data['creator'] = $managerId;
@@ -76,12 +77,10 @@ trait FaultSettingTrait
      */
     public function getFaultLevelStrategyListData()
     {
-        $aoId = $this->getFaultSettingAoId();
         $levels = $this->getFaultSettingLevels();
         $defaults = $this->getFaultLevelStrategyDefaults();
         $rows = Db::name('machine_fault_notice_frequency')
-            ->where('ao_id', $aoId)
-            ->order('level asc')
+            ->order('level asc,create_time asc,ao_id asc')
             ->select()
             ->toArray();
 
@@ -94,6 +93,9 @@ trait FaultSettingTrait
         foreach ($rows as $row) {
             $level = intval($row['level'] ?? 0);
             if (!isset($levelMap[$level])) {
+                continue;
+            }
+            if (isset($configuredLevels[$level])) {
                 continue;
             }
             $configuredLevels[$level] = true;
@@ -130,10 +132,7 @@ trait FaultSettingTrait
         if (!$levelRow) {
             throw new \InvalidArgumentException('故障等级参数错误');
         }
-        if (Db::name('machine_fault_notice_frequency')->where([
-            'ao_id' => $aoId,
-            'level' => $level,
-        ])->find()) {
+        if (Db::name('machine_fault_notice_frequency')->where('level', $level)->find()) {
             throw new \InvalidArgumentException('该故障等级的通知策略已存在');
         }
 
@@ -156,16 +155,15 @@ trait FaultSettingTrait
     /** @return array */
     public function updateFaultLevelStrategyData($params)
     {
-        $aoId = $this->getFaultSettingAoId();
         $level = intval($params['level'] ?? 0);
         $levelRow = $this->getFaultSettingLevel($level);
         if (!$levelRow) {
             throw new \InvalidArgumentException('故障等级参数错误');
         }
-        $exists = Db::name('machine_fault_notice_frequency')->where([
-            'ao_id' => $aoId,
-            'level' => $level,
-        ])->find();
+        $exists = Db::name('machine_fault_notice_frequency')
+            ->where('level', $level)
+            ->order('create_time asc,ao_id asc')
+            ->find();
         if (!$exists) {
             throw new \InvalidArgumentException('该故障等级的通知策略不存在');
         }
@@ -175,10 +173,7 @@ trait FaultSettingTrait
             'update_id' => intval($this->manager['manager_id'] ?? 0),
             'update_time' => time(),
         ]);
-        Db::name('machine_fault_notice_frequency')->where([
-            'ao_id' => $aoId,
-            'level' => $level,
-        ])->update($update);
+        Db::name('machine_fault_notice_frequency')->where('level', $level)->update($update);
 
         return $this->formatFaultLevelStrategy(array_merge($exists, $update), $levelRow, true);
     }
@@ -186,16 +181,12 @@ trait FaultSettingTrait
     /** @return array */
     public function deleteFaultLevelStrategyData($level)
     {
-        $aoId = $this->getFaultSettingAoId();
         $level = intval($level);
         $levelRow = $this->getFaultSettingLevel($level);
         if (!$levelRow) {
             throw new \InvalidArgumentException('故障等级参数错误');
         }
-        $deleted = Db::name('machine_fault_notice_frequency')->where([
-            'ao_id' => $aoId,
-            'level' => $level,
-        ])->delete();
+        $deleted = Db::name('machine_fault_notice_frequency')->where('level', $level)->delete();
         if (!$deleted) {
             throw new \InvalidArgumentException('该故障等级的通知策略不存在');
         }
@@ -231,7 +222,6 @@ trait FaultSettingTrait
 
         $paginator = Db::name('auth_manager_log')
             ->alias('aml')
-            ->where('aml.ao_id', $this->getFaultSettingAoId())
             ->whereIn('aml.path', $paths)
             ->whereBetween('aml.create_time', [$startTime, $endTime])
             ->field('aml.ml_id,aml.manager_id,aml.nickname,aml.account,aml.path,aml.params,aml.create_time')

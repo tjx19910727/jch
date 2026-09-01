@@ -125,8 +125,11 @@ class MqClient extends ReceiveBaseClient
                     // 设备协议仍使用msgType=errorCode，仅在入口切换到新故障流程。
                     // 其他历史消息类型继续调用原方法。
                     if ($func_name === 'errorCode') {
-//                        $this->errorCode();
-                        $this->reportFaultCode();
+                        if ($this->shouldUseLegacyFaultCodeFlow()) {
+                            $this->errorCode();
+                        } else {
+                            $this->reportFaultCode();
+                        }
                     } else {
                         $this->$func_name();
                     }

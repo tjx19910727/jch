@@ -104,11 +104,11 @@ trait FaultEventTrait
             ->alias('mec')
             ->leftJoin(
                 'machine_error_code_notice_rule mecnr',
-                'mecnr.ao_id = mec.ao_id AND mecnr.error_code = mec.errorCode'
+                'mecnr.error_code = mec.errorCode'
             )
             ->leftJoin(
                 'machine_fault_category mfc',
-                'mfc.ao_id = mec.ao_id AND mfc.category_id = mec.category_id'
+                'mfc.category_id = mec.category_id'
             )
             ->leftJoin('machine_fault_level mfl', 'mfl.level = mec.level')
             ->leftJoin('auth_manager ham', 'ham.manager_id = mec.handle_manager_id')
@@ -151,21 +151,6 @@ trait FaultEventTrait
 
     protected function applyFaultEventScope($query)
     {
-        $aoId = intval($this->manager['ao_id'] ?? 0);
-        if ($aoId > 1) {
-            $query->where('mec.ao_id', $aoId);
-        }
-
-        if (intval($this->manager['pid'] ?? 0) > 0) {
-            $managerId = intval($this->manager['manager_id'] ?? 0);
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $managerId], 'm_id');
-            $mIds = array_values(array_unique(array_filter(array_map('intval', (array)$mIds))));
-            if ($mIds) {
-                $query->whereIn('mec.m_id', $mIds);
-            } else {
-                $query->where('mec.m_id', -1);
-            }
-        }
     }
 
     /**
@@ -184,25 +169,6 @@ trait FaultEventTrait
      */
     protected function applyFaultEventManagerStartTime($query)
     {
-        $startTime = intval($this->manager['query_start_time'] ?? 0);
-        if ($startTime <= 0) {
-            return;
-        }
-
-        $rawUrls = $this->manager['query_start_urls'] ?? '';
-        if (is_array($rawUrls)) {
-            $urls = $rawUrls;
-        } else {
-            $jsonUrls = json_decode(strval($rawUrls), true);
-            $urls = is_array($jsonUrls)
-                ? $jsonUrls
-                : (preg_split('/[\r\n,]+/', strval($rawUrls)) ?: []);
-        }
-        $urls = array_values(array_filter(array_map('trim', $urls)));
-        $api = request()->baseUrl();
-        if (in_array('*', $urls, true) || in_array($api, $urls, true)) {
-            $query->where('mec.create_time', '>', $startTime);
-        }
     }
 
     protected function applyFaultEventTimeFilter($query, $params)
