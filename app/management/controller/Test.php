@@ -55,6 +55,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersRevenueModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
 use app\AppFactory\Kernel\Model\Trip\TripCityModel;
 use app\AppFactory\Kernel\Model\Trip\TripMultipleMachineModel;
+use app\AppFactory\Kernel\Support\SimiotService\Simiot;
 use app\AppFactory\Kernel\Support\TDESUtil;
 use app\AppFactory\Management\Application;
 use app\BaseController;
@@ -347,6 +348,158 @@ class Test extends BaseController
 //        $int = "3665";
 //        dump(Int2HourMinuteSec($int,3));
 //    }
+
+    /**
+     * 按日期范围同步物联卡每日流量。
+     * 请求参数：start_date、end_date，格式均为 YYYY-MM-DD；iccid 可选。
+     * 第三方接口返回的 usage 单位为 MB，sim_card_machine.usage 的单位为 KB。
+     */
+    public function syncSimCardDayUsageByDateRange()
+    {
+        $startDate = trim(strval(input('start_date', '')));
+        $endDate = trim(strval(input('end_date', '')));
+        $inputIccid = trim(strval(input('iccid', '')));
+
+        if ($startDate === '' || $endDate === '') {
+            return returnState(100, 'start_date和end_date不能为空');
+        }
+        if (!validateDate($startDate, 'Y-m-d') || !validateDate($endDate, 'Y-m-d')) {
+            return returnState(100, '日期格式错误，正确格式为YYYY-MM-DD');
+        }
+        if ($startDate > $endDate) {
+            return returnState(100, 'start_date不能晚于end_date');
+        }
+
+        $query = Db::name('sim_card_machine')
+            ->whereBetween('date', [$startDate, $endDate]);
+        if ($inputIccid !== '') {
+            $query->where('iccid', $inputIccid);
+        }
+
+        $rows = $query
+            ->field('id,iccid,date,usage')
+            ->order('iccid asc,date asc,id asc')
+            ->select()
+            ->toArray();
+
+        $summary = [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'iccid' => $inputIccid,
+            'total' => count($rows),
+            'card_count' => 0,
+            'request_success' => 0,
+            'request_fail' => 0,
+            'matched' => 0,
+            'updated' => 0,
+            'unchanged' => 0,
+            'skipped' => 0,
+            'failed' => 0,
+        ];
+
+        if (!$rows) {
+            return returnState(200, '日期范围内没有物联卡流量数据', $summary);
+        }
+
+        $cardRows = [];
+        foreach ($rows as $row) {
+            $iccid = trim(strval($row['iccid'] ?? ''));
+            if ($iccid === '') {
+                $summary['skipped']++;
+                continue;
+            }
+            $cardRows[$iccid][] = $row;
+        }
+
+        $summary['card_count'] = count($cardRows);
+        $dayBegin = str_replace('-', '', $startDate);
+        $dayEnd = str_replace('-', '', $endDate);
+
+        foreach ($cardRows as $iccid => $records) {
+            try {
+                $resultDay = Simiot::queryDayUsage($iccid, $dayBegin, $dayEnd);
+            } catch (\Throwable $e) {
+                $summary['request_fail']++;
+                $summary['failed'] += count($records);
+                actionException($e, 1, 'syncSimCardDayUsageByDateRange');
+                continue;
+            }
+
+            if (!is_array($resultDay) || intval($resultDay['code'] ?? -1) !== 0) {
+                $summary['request_fail']++;
+                $summary['failed'] += count($records);
+                actionLog([
+                    'iccid' => $iccid,
+                    'result' => $resultDay,
+                ], '查询单卡日期范围日用量失败', 'syncSimCardDayUsageByDateRange');
+                continue;
+            }
+            $summary['request_success']++;
+
+            $dayUsageMap = [];
+            $dayList = $resultDay['result'] ?? [];
+            if (is_array($dayList)) {
+                foreach ($dayList as $dayItem) {
+                    if (!is_array($dayItem)) {
+                        continue;
+                    }
+                    $dayKey = $this->normalizeSimCardUsageDay($dayItem['day'] ?? '');
+                    $usageMb = $dayItem['usage'] ?? null;
+                    if ($dayKey === '' || !is_numeric($usageMb) || $usageMb < 0) {
+                        continue;
+                    }
+                    $dayUsageMap[$dayKey] = bcmul(strval($usageMb), '1024', 2);
+                }
+            }
+
+            foreach ($records as $row) {
+                $rowDate = substr(strval($row['date'] ?? ''), 0, 10);
+                if (!validateDate($rowDate, 'Y-m-d')) {
+                    $summary['skipped']++;
+                    continue;
+                }
+
+                $dayKey = str_replace('-', '', $rowDate);
+                if (!isset($dayUsageMap[$dayKey])) {
+                    $summary['skipped']++;
+                    continue;
+                }
+                $summary['matched']++;
+
+                try {
+                    $affected = Db::name('sim_card_machine')
+                        ->where('id', $row['id'])
+                        ->update(['usage' => $dayUsageMap[$dayKey]]);
+                    if ($affected > 0) {
+                        $summary['updated']++;
+                    } else {
+                        $summary['unchanged']++;
+                    }
+                } catch (\Throwable $e) {
+                    $summary['failed']++;
+                    actionException($e, 1, 'syncSimCardDayUsageByDateRange');
+                }
+            }
+        }
+
+        actionLog($summary, '按日期范围同步物联卡每日流量结果', 'syncSimCardDayUsageByDateRange');
+        return returnState(200, '处理完成', $summary);
+    }
+
+    /**
+     * 将第三方接口日期统一为 YYYYMMDD。
+     */
+    protected function normalizeSimCardUsageDay($day)
+    {
+        $day = trim(strval($day));
+        if (validateDate($day, 'Ymd')) {
+            return $day;
+        }
+        if (validateDate($day, 'Y-m-d')) {
+            return str_replace('-', '', $day);
+        }
+        return '';
+    }
 
     public function changeMachineId()
     {
