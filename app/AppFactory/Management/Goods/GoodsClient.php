@@ -584,8 +584,9 @@ class GoodsClient extends ManagementClient
                 $list,
                 [
                     'imageFields' => ['pic'],
-                    'imageWidth' => 120,
-                    'imageHeight' => 80,
+                    'imageWidth' => 160,
+                    'imageHeight' => 100,
+                    'imageColumnWidth' => 24,
                 ]
             );
             return $result;
