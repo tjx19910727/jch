@@ -491,7 +491,7 @@ class GoodsClient extends ManagementClient
                             if ($goodsName !== '') $update['g_name'] = $goodsName;
                             if ($goodsPic !== '') $update['pic'] = $goodsPic;
                             $updateResult = $this->updateGoods(
-                                $update,
+                                ['g_id' => $gId] + $update,
                                 ['g_id' => $gId],
                                 array_keys($update)
                             );
