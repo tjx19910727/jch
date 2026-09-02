@@ -770,7 +770,8 @@ class MachineClient extends TimeTaskBase
                         'iccid' => $iccid,
                         'date' => $date,
                         'total_usage' => $totalUsage,
-                        'usage' => $usage,
+                        // 'usage' => $usage,
+                        'usage' => 0,//直接设置为0
                         'machine_usage' => 0,
                         'camera_usage' => 0,
                         'remark' => '',
