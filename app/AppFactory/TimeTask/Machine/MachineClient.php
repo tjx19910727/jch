@@ -908,7 +908,8 @@ class MachineClient extends TimeTaskBase
 
                 $dayItem = $dayList[0] ?? [];
                 $day = $dayItem['day'] ?? 0;
-                $usage = $dayItem['usage'] ?? 0;
+                $usageMb = $dayItem['usage'] ?? 0;
+                $usageKb = bcmul(strval($usageMb), '1024', 2);
                 if (!$day) {
                     $skipCount++;
                     continue;
@@ -924,7 +925,7 @@ class MachineClient extends TimeTaskBase
                 if ($exist) {
                     Db::name('sim_card_machine')
                         ->where('id', $exist['id'])
-                        ->update(['usage' => $usage]);
+                        ->update(['usage' => $usageKb]);
                     $updateCount++;
                 } else {
                     $skipCount++;
