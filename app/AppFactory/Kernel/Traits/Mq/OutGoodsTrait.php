@@ -16,12 +16,15 @@ trait OutGoodsTrait
 {
     use ApiOutStatusNotifyTrait;
 
+    protected $outGoodsRefreshMcIds = [];
+
     /**
      * 出货处理
      * @return int
      */
     public function outGoods()
     {
+        $this->outGoodsRefreshMcIds = [];
         $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
         if ($tradeNo === '') {
             actionLog($this->message, 'trade_no为空，拒绝处理', 'OutGoods');
@@ -123,6 +126,17 @@ trait OutGoodsTrait
                 $this->handleTripPayCallback();
                 $this->handleOrderOutStatusCallback();
                 Db::commit();
+                foreach ($this->outGoodsRefreshMcIds as $mcId) {
+                    try {
+                        $this->sendToMachine(
+                            ['machine_id' => $this->machine['machine_id']],
+                            'updateMc',
+                            ['mc_id' => $mcId]
+                        );
+                    } catch (\Throwable $e) {
+                        actionException($e, 1, 'OutGoodsUpdateMc');
+                    }
+                }
             } else {
                 Db::rollback();
             }
@@ -180,7 +194,7 @@ trait OutGoodsTrait
                 $where['channel_code'] = $channel_code;
                 $where['success_quantity'] = 0;
                 $where['fail_quantity'] = 0;
-                $sod = $this->getSaleOrdersDetailsFind($where,'sod_id','sod_id asc');
+                $sod = $this->getSaleOrdersDetailsFind($where,'sod_id,batch_id,quantity','sod_id asc');
                 if (!$sod) continue;
                 if ($sod) {
                     unset($where);
@@ -209,9 +223,41 @@ trait OutGoodsTrait
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
                         $stock = $mc['stock'];
+                        //单货道多商品开始
+                        if (!empty($sod['batch_id'])) {
+                            $batch = Db::name('channel_goods_batch')
+                                ->where('batch_id', $sod['batch_id'])
+                                ->field('batch_id,stock,frozen_stock,sold_quantity')
+                                ->find();
+                            if ($batch) {
+                                $flag[] = Db::name('channel_goods_batch')
+                                    ->where('batch_id', $sod['batch_id'])
+                                    ->update([
+                                        'frozen_stock' => $batch['frozen_stock'] > $success ? bcsub($batch['frozen_stock'], $success) : 0,
+                                        'sold_quantity' => bcadd($batch['sold_quantity'], $success),
+                                    ]);
+                            }
+                        }
+                        //单货道多商品结束
                     } else {
                         $updateMc['stock'] = bcsub($mc['stock'], $success);
                         $stock = $updateMc['stock'];
+                        //单货道多商品开始
+                        if (!empty($sod['batch_id'])) {
+                            $batch = Db::name('channel_goods_batch')
+                                ->where('batch_id', $sod['batch_id'])
+                                ->field('batch_id,stock,frozen_stock,sold_quantity')
+                                ->find();
+                            if ($batch) {
+                                $flag[] = Db::name('channel_goods_batch')
+                                    ->where('batch_id', $sod['batch_id'])
+                                    ->update([
+                                        'stock' => $batch['stock'] > $success ? bcsub($batch['stock'], $success) : 0,
+                                        'sold_quantity' => bcadd($batch['sold_quantity'], $success),
+                                    ]);
+                            }
+                        }
+                        //单货道多商品结束
                     }
                     // 库存达到货道库存预警值
                     actionLog($mc,"货道数据",'OutGoods');
@@ -223,28 +269,21 @@ trait OutGoodsTrait
                     // 发送补货通知
                     if ($stock <= $mc['stock_warning']) {
                         try {
-                            $errorCode = "1000101";
-                            $this->noticeSendData = [
-                                "ao_id" => $this->machine['ao_id'],
-                                "m_id" => $this->machine['m_id'],
-                                "templateType" => "understock",
-                                "replaceData" => [
-                                    "machine_id" => $this->machine['machine_id'],
-                                    "machine_name" => $this->machine['machine_name'],
-                                    "stock" => $stock,
-                                    "channel_code" => $mc['channel_code'],
-                                    "stock_warning" => $mc['stock_warning'] ?? 0,
-                                    "error_code" => $this->lang("deviceErrorCode.".$errorCode),
-                                    "error_time" => date('Y-m-d H:i:s'),
-                                    "error_info" => $mc['channel_code'],
-                                ]
-                            ];
-                            actionLog($this->noticeSendData,'发送补货通知','OutGoods');
-                            $result = $this->noticeSend();
-                            actionLog($result, '发送补货通知结果','OutGoods');
+                            $meId = $this->reportFaultCode($this->machine, [
+                                'errorCode' => '1000101',
+                                'msg' => '货道商品库存不足',
+                                'error_position' => 3,
+                                'channel_code' => $mc['channel_code'] ?? '',
+                            ]);
+                            actionLog([
+                                'me_id' => intval($meId),
+                                'channel_code' => $mc['channel_code'] ?? '',
+                                'stock' => $stock,
+                                'stock_warning' => $mc['stock_warning'] ?? 0,
+                            ], '发送补货故障通知结果', 'OutGoods');
                         } catch (\Exception $e) {
                             actionLog("发送补货通知抛出异常","",'OutGoods');
-                            actionException($e, 1);
+                            actionException($e, 1, 'OutGoodsUnderstockFault');
                         }
                     }
 
@@ -274,34 +313,52 @@ trait OutGoodsTrait
                     $currentStock = isset($updateMc['stock']) ? intval($updateMc['stock']) : intval($mc['stock']);
                     $updateMc['stock'] = max(0, $currentStock - $fail);
                     $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + $fail;
+                    //单货道多商品开始
+                    if (!empty($sod['batch_id'])) {
+                        $batch = Db::name('channel_goods_batch')
+                            ->where('batch_id', $sod['batch_id'])
+                            ->field('batch_id,stock')
+                            ->find();
+                        if ($batch && intval($batch['stock']) > 0) {
+                            $flag[] = Db::name('channel_goods_batch')
+                                ->where('batch_id', $sod['batch_id'])
+                                ->update([
+                                    'stock' => max(0, intval($batch['stock']) - $fail),
+                                ]);
+                        }
+                    }
+                    //单货道多商品结束
 
-                    // 出货失败发送通知
+                    // 出货失败上报新版故障通知
                     try {
-                        $this->noticeSendData = [
-                            "ao_id" => $this->machine['ao_id'],
-                            "m_id" => $this->machine['m_id'],
-                            "templateType" => "tException",
-                            "replaceData" => [
-                                "machine_id" => $this->machine['machine_id'],
-                                "machine_name" => $this->machine['machine_name'],
-                                "now" => date('Y-m-d H:i:s'),
-                                "error_info" => $this->lang("tException.out_fail"),
-                                "error_code" => $channel_code,
-                                "exceptionDeclaration" => $channel_code . $this->lang("tException.out_fail"),
-                            ]
-                        ];
-                        actionLog($this->noticeSendData,'发送出货失败通知');
-                        $result = @$this->noticeSend();
-                        actionLog($result, '发送出货失败通知结果');
+                        $meId = $this->reportFaultCode($this->machine, [
+                            'errorCode' => '1000102',
+                            'msg' => '订单出货失败',
+                            'error_position' => 3,
+                            'trade_no' => $this->order['trade_no'] ?? ($this->message['trade_no'] ?? ''),
+                            'channel_code' => $channel_code,
+                        ]);
+                        actionLog([
+                            'me_id' => intval($meId),
+                            'trade_no' => $this->order['trade_no'] ?? ($this->message['trade_no'] ?? ''),
+                            'channel_code' => $channel_code,
+                            'fail_quantity' => $fail,
+                            'error_code' => '1000102',
+                        ], '发送出货失败故障通知结果', 'OutGoods');
                     } catch (\Exception $e) {
-                        actionLog("发送出货失败抛出异常");
-                        actionException($e, 1);
+                        actionLog('发送出货失败故障通知抛出异常', '', 'OutGoods');
+                        actionException($e, 1, 'OutGoodsShipmentFault');
                     }
                 }
                 if ($updateMc) {
                     $updateMc['mc_id'] = $mc['mc_id'];
                     $flag[] = $this->updateMachineChannel($updateMc);
+                    $this->outGoodsRefreshMcIds[intval($mc['mc_id'])] = intval($mc['mc_id']);
                     actionLog($this->getLS(),'【SQL】修改设备货道','OutGoods');
+                    // 多商品FIFO：出货后尝试切换下一批次
+                    if (method_exists($this, 'trySwitchNextBatch')) {
+                        $this->trySwitchNextBatch($mc['mc_id']);
+                    }
                 }
             }
         }

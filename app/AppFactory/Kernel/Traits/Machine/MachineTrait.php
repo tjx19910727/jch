@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Service\FaultNotice\FaultReportService;
 use app\AppFactory\Kernel\Model\Machine\MachineLangModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Auth\AuthManagerLogModel;
@@ -391,7 +392,7 @@ trait MachineTrait
             $m = $m->toArray();
             // 判断不在线且不处于空闲状态的设备并下发通知
             $unqualified = array_filter($m,function($v , $k){
-                return $v['online']==2||$v['current_status']=!'normal';
+                return $v['online']==2||$v['current_status']!='normal';
             },ARRAY_FILTER_USE_BOTH);
             if(!empty($unqualified)){
                 $unmachine = '';
@@ -1145,6 +1146,8 @@ trait MachineTrait
                 $flag[] = $this->updateMachineChannel($updateMc);
                 if ($changeValue > 0) {
                     $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    //单货道多少功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
                 }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
@@ -1377,6 +1380,8 @@ trait MachineTrait
                 $flag[] = $this->updateMachineChannel($updateMc);
                 if ($changeValue > 0) {
                     $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
                 }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
@@ -1434,26 +1439,18 @@ trait MachineTrait
                 return;
             }
 
-            $errorCode = "1000101";
-            $noticeData = [
-                "ao_id" => $machine['ao_id'],
-                "m_id" => $machineMId,
-                "sendType" => 1,
-                "templateType" => "understock",
-                "replaceData" => [
-                    "machine_id" => $machine['machine_id'] ?? '',
-                    "machine_name" => $machine['machine_name'] ?? '',
-                    "stock" => $stock,
-                    "channel_code" => $mc['channel_code'] ?? '',
-                    "stock_warning" => $stockWarning,
-                    "error_code" => $this->lang("deviceErrorCode.".$errorCode),
-                    "error_time" => date('Y-m-d H:i:s'),
-                    "error_info" => $mc['channel_code'] ?? '',
-                ],
-            ];
-            actionLog($noticeData, '远程出货库存达到预警发送商品不足公众号通知', 'remoteOutGoods');
-            $result = AppFactory::notice($noticeData)->weChat->send();
-            actionLog($result, '远程出货库存达到预警发送商品不足公众号通知结果', 'remoteOutGoods');
+            $meId = (new FaultReportService())->report($machine, [
+                'errorCode' => '1000101',
+                'msg' => '远程出货后货道商品库存不足',
+                'error_position' => 3,
+                'channel_code' => $mc['channel_code'] ?? '',
+            ]);
+            actionLog([
+                'me_id' => intval($meId),
+                'channel_code' => $mc['channel_code'] ?? '',
+                'stock' => $stock,
+                'stock_warning' => $stockWarning,
+            ], '远程出货库存达到预警发送商品不足故障通知结果', 'remoteOutGoods');
         } catch (\Throwable $e) {
             actionException($e, 1, 'remoteOutGoods');
         }
@@ -1541,6 +1538,10 @@ trait MachineTrait
             );
             if (!$mc) {
                 actionLog($whereMc, 'remoteRemovalEnd未找到货道', 'DataUpload');
+                return 1;
+            }
+            if (!method_exists($this, 'addGoodsChange')) {
+                actionLog($mc, '远程下架回收缺少商品变化记录方法', 'remoteRemovalEnd');
                 return 1;
             }
             $mc = $mc->toArray();

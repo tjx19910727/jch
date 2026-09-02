@@ -12,6 +12,7 @@ return [
         'machineReceive' => 'app\command\MachineReceive',
         'time_task' => 'app\command\TimeTask',
         'api' => 'app\command\Api',
+        'third_party_sync' => 'app\command\ThirdPartySync',
         'payment' => 'app\command\Payment',
         'visual_screen_ws' => 'app\command\VisualScreenWs',
     ],

@@ -1,6 +1,9 @@
 <?php
 
 return [
+    "VGetOrgGoods" => [
+        "other_org_goods_forbidden" => "This machine is not allowed to load goods from other organizations",
+    ],
     'check_sign_fail' => 'Signature verification failed',
     'query_mv_no_data' => 'No device view data found',
     'machine_offline' => 'device offline',

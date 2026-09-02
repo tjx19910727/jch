@@ -795,7 +795,7 @@ trait SaleOrdersTrait
                 0,
                 'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
-                        cost_price,market_price',
+                        cost_price,market_price,is_multi_goods',
                 "stock desc,mc_id asc"
             );
             actionLog($this->getLS(), '【SQL】查询设备货架');
@@ -803,6 +803,32 @@ trait SaleOrdersTrait
             if (is_string($mc)) return $this->returnData(10, $this->lang("msg." . 10) . "：" . $mc);
             $mc = $mc->toArray();
             if (!$mc) return $this->returnData(10, $g_id . $this->lang("msg." . 10));
+
+            //单货道多商品功能开始
+            foreach ($mc as $mck => $mcv) {
+                if (intval($mcv['is_multi_goods'] ?? 2) !== 1) {
+                    continue;
+                }
+                $batch = Db::name('channel_goods_batch')
+                    ->where([
+                        'mc_id' => $mcv['mc_id'],
+                        'g_id' => $mcv['g_id'],
+                        'status' => 1,
+                    ])
+                    ->field('batch_id,stock,frozen_stock')
+                    ->find();
+                if (!$batch) {
+                    $mc[$mck]['stock'] = 0;
+                    $mc[$mck]['frozen_stock'] = 0;
+                    $mc[$mck]['batch_id'] = 0;
+                    continue;
+                }
+                $mc[$mck]['stock'] = $batch['stock'];
+                $mc[$mck]['frozen_stock'] = $batch['frozen_stock'];
+                $mc[$mck]['batch_id'] = $batch['batch_id'];
+            }
+            //单货道多商品功能结束
+
             actionLog($mc, "该设备下货架列表数据");
             // 总库存不足
             $totalStock = array_sum(array_column($mc, "stock"));
@@ -818,15 +844,41 @@ trait SaleOrdersTrait
             $insertSod['retail_price'] = bcdiv($dv['item_price'], 100, 3);
             foreach ($mc as $mck => $mcv) {
                 $lockedMc = Db::name('machine_channel')
-                    ->where(['mc_id' => $mcv['mc_id'], 'status' => 1])
-                    ->field('mc_id,stock,frozen_stock')
+                    ->where([
+                        'mc_id' => $mcv['mc_id'],
+                        'g_id' => $g_id,
+                        'status' => 1,
+                    ])
+                    ->field('mc_id,g_id,is_multi_goods,stock,frozen_stock')
                     ->lock(true)
                     ->find();
                 if (!$lockedMc || (int)$lockedMc['stock'] <= 0) continue;
+                $mcv['is_multi_goods'] = (int)($lockedMc['is_multi_goods'] ?? 2);
                 $mcv['stock'] = (int)$lockedMc['stock'];
                 $mcv['frozen_stock'] = (int)$lockedMc['frozen_stock'];
+
+                // 多商品货道与货道快照使用相同的队首批次，并按固定顺序加锁。
+                $mcv['batch_id'] = 0;
+                if ($mcv['is_multi_goods'] === 1) {
+                    $lockedBatch = Db::name('channel_goods_batch')
+                        ->where([
+                            'mc_id' => $mcv['mc_id'],
+                            'g_id' => $lockedMc['g_id'],
+                            'status' => 1,
+                        ])
+                        ->field('batch_id,stock,frozen_stock')
+                        ->lock(true)
+                        ->find();
+                    if (!$lockedBatch || (int)$lockedBatch['stock'] <= 0) continue;
+                    $mcv['batch_id'] = (int)$lockedBatch['batch_id'];
+                    // 两张库存快照不一致时取较小值，避免任意一边出现超卖。
+                    $mcv['stock'] = min((int)$lockedMc['stock'], (int)$lockedBatch['stock']);
+                    $mcv['frozen_stock'] = (int)$lockedBatch['frozen_stock'];
+                    if ($mcv['stock'] <= 0) continue;
+                }
+
                 $insertDetails = array_merge($mcv, $insertSod);
-                unset($insertDetails['frozen_stock'], $insertDetails['stock']);
+                unset($insertDetails['frozen_stock'], $insertDetails['stock'], $insertDetails['is_multi_goods']);
                 $totalQuantity = 0;
                 // 一条货道库存不够
                 if ($dv['quantity'] > $mcv['stock']) {
@@ -841,6 +893,11 @@ trait SaleOrdersTrait
                     $insertDetails['total_sod_price'] = 0;
                     $insertDetails['discount_price'] = 0;
                     $insertDetails['out_port'] = $dv['out_port'] ?? 1;
+                    //单货道多商品功能开始
+                    if (intval($mcv['is_multi_goods'] ?? 2) === 1) {
+                        $insertDetails['batch_id'] = $mcv['batch_id'] ?? 0;
+                    }
+                    //单货道多商品功能结束
                     // 赠品
                     if ($dv['type'] == "gift") {
                         $insertDetails['is_gift'] = 1;
@@ -859,6 +916,19 @@ trait SaleOrdersTrait
                         'stock' => Db::raw('stock - ' . (int)$totalQuantity),
                         'frozen_stock' => Db::raw('frozen_stock + ' . (int)$totalQuantity),
                     ]);
+                if ($mcv['is_multi_goods'] === 1) {
+                    $flag[] = Db::name('channel_goods_batch')
+                        ->where([
+                            'batch_id' => $mcv['batch_id'],
+                            'mc_id' => $mcv['mc_id'],
+                            'status' => 1,
+                        ])
+                        ->where('stock', '>=', $totalQuantity)
+                        ->update([
+                            'stock' => Db::raw('stock - ' . (int)$totalQuantity),
+                            'frozen_stock' => Db::raw('frozen_stock + ' . (int)$totalQuantity),
+                        ]);
+                }
                 //                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)

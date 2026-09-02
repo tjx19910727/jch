@@ -88,26 +88,23 @@ class SaleOrdersClient extends MachineBaseClient
                     $flag[] = $this->setMachineIncField(['m_id' => $order['m_id']], 'recycle_bin_stock', $value['quantity']);
 
                     if ($value['is_claim'] == 2) {
-                        // 未取商品发送通知
+                        // 未取商品上报新版故障通知
                         try {
-                            $this->noticeSendData = [
-                                "ao_id" => $this->machine['ao_id'],
-                                "m_id" => $this->machine['m_id'],
-                                "templateType" => "tException",
-                                "replaceData" => [
-                                    "machine_id" => $this->machine['machine_id'],
-                                    "now" => date('Y-m-d H:i:s'),
-                                    "error_info" => $order['order_id'] . "_" . $d['sod_id'],
-                                    "error_code" => $this->lang("tException.unclaimed"),
-                                    "exceptionDeclaration" => $order['order_id'] . "_" . $d['sod_id'] . $this->lang("tException.unclaimed")
-                                ]
-                            ];
-                            actionLog($this->noticeSendData, '发送通知');
-                            $result = @$this->noticeSend();
-                            actionLog($result, '发送结果');
+                            $meId = $this->reportFaultCode($this->machine, [
+                                'errorCode' => '1200001',
+                                'msg' => '订单有商品未取',
+                                'error_position' => 3,
+                                'trade_no' => $order['trade_no'] ?? '',
+                                'channel_code' => $d['channel_code'] ?? '',
+                            ]);
+                            actionLog([
+                                'me_id' => intval($meId),
+                                'trade_no' => $order['trade_no'] ?? '',
+                                'channel_code' => $d['channel_code'] ?? '',
+                            ], '发送未取商品故障通知结果', 'Unclaimed');
                         } catch (\Exception $e) {
                             actionLog("发送交易异常抛出异常");
-                            actionException($e, 1);
+                            actionException($e, 1, 'UnclaimedFault');
                         }
                     }
                     $outStatus = 1;

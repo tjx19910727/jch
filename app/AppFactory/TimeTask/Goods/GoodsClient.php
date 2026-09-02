@@ -9,7 +9,7 @@
 namespace app\AppFactory\TimeTask\Goods;
 
 
-use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
@@ -25,6 +25,7 @@ class GoodsClient extends TimeTaskBase
     use GoodsTrait,GoodsCategoryTrait;
     use SaleOrdersTrait;
     use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
+    use FaultReportTrait;
 
     /**
      * 修改商品库后，同步修改设备商品库、设备货道，这两个位置修改后会自动触发下发通知设备更新数据
@@ -391,43 +392,40 @@ class GoodsClient extends TimeTaskBase
                 continue;
             }
 
-            $machineName = $this->getMachineValue(['m_id' => $mc['m_id']], 'machine_name') ?? $mc['machine_id'];
-            $aoId = $this->getMachineValue(['m_id' => $mc['m_id']], 'ao_id') ?? 0;
+            $machine = $this->getMachineFind(
+                ['m_id' => $mc['m_id']],
+                'm_id,machine_id,machine_name,address,ao_id'
+            );
+            if (!$machine) {
+                actionLog($mc, '商品过期通知未找到设备，跳过', 'checkGoodsExpiry');
+                continue;
+            }
+            $machine = is_object($machine) ? $machine->toArray() : (array)$machine;
 
             if ($isExpired) {
-                $errorCode = '货道商品已过期';
-                $errorInfo = 11102012;
-                $exceptionDeclaration = '货道商品已过期，请及时处理';
+                $errorCode = '1000110';
+                $errorMessage = '货道商品已过期，请及时处理';
             } else {
                 $remainDays = ceil(($mc['expire_time'] - $now) / 86400);
-                $errorCode = '货道商品即将过期';
-                $errorInfo = 11102013;
-                $exceptionDeclaration = "货道商品将于{$remainDays}天后过期";
+                $errorCode = '1000111';
+                $errorMessage = "货道商品将于{$remainDays}天后过期";
             }
 
-            $this->noticeSendData = [
-                'ao_id'        => $aoId,
-                'm_id'         => $mc['m_id'],
-                'templateType' => 'mFault',
-                'replaceData'  => [
-                    'errorCode'             => $errorCode,
-                    'error_code'            => $errorCode,
-                    'error_time'            => date('Y-m-d H:i:s'),
-                    'error_info'            => $errorInfo,
-                    'date'                  => date('Y年m月d日'),
-                    'exceptionDeclaration'  => $exceptionDeclaration,
-                    'machine_id'            => $mc['machine_id'],
-                    'machine_name'          => mb_substr($machineName, 0, 20, 'UTF-8'),
-                    'channel_code'          => $mc['channel_code'],
-                    'g_name'                => $mc['g_name'],
-                ],
-            ];
-
-            $this->noticeSend();
+            $meId = $this->reportFaultCode($machine, [
+                'errorCode' => $errorCode,
+                'msg' => $errorMessage,
+                'error_position' => 3,
+                'channel_code' => $mc['channel_code'] ?? '',
+            ]);
             Cache::set($cacheKey, 1, $tomorrowStart - $now);
             $sendCount++;
 
-            actionLog($mc, $isExpired ? '发送过期通知' : '发送快到期通知', 'checkGoodsExpiry');
+            actionLog([
+                'me_id' => intval($meId),
+                'error_code' => $errorCode,
+                'channel_code' => $mc['channel_code'] ?? '',
+                'g_name' => $mc['g_name'] ?? '',
+            ], $isExpired ? '发送过期故障通知' : '发送快到期故障通知', 'checkGoodsExpiry');
         }
 
         return "处理完成，发送通知数：{$sendCount}";

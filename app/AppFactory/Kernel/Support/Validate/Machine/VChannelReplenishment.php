@@ -25,5 +25,6 @@ class VChannelReplenishment extends SupportValidate
 
     protected $scene = [
         "replenishment" => ["mc_id","quantity"],
+        "repList" => ["mc_id","quantity"],
     ];
 }

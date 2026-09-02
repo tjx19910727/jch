@@ -46,18 +46,18 @@ trait MachineErrorCodeTrait
             if ($len == 9) $position = 2;
             if ($len == 7) $position = 3;
         }
-        // 同一设备同一错误码30秒内不重复插入
+        // 同一设备同一错误码300秒内不重复插入
         $recentEc = MachineErrorCodeModel::getCount([
             'm_id' => $this->machine['m_id'],
             'errorCode' => $this->message['errorCode'],
-            ['create_time','>=',time() - 30]
+            ['create_time','>=',time() - 300]
         ]);
         if ($recentEc) return 1;
-        //虽然下一层做了通知频率的限制，但这里60秒内也只触发一次相同故障码，防止通知过于频繁
+        //虽然下一层做了通知频率的限制，但这里600秒内也只触发一次相同故障码，防止通知过于频繁
         $lastEc = $this->getMachineErrorCodeFind([
             'm_id' => $this->machine['m_id'],
             'errorCode' => $this->message['errorCode'],
-            ['create_time','>=',time() - 60 ]
+            ['create_time','>=',time() - 600 ]
         ],'me_id','me_id desc');
         $insert = [
             "m_id" => $this->machine['m_id'],
