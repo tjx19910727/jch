@@ -5518,6 +5518,9 @@ class ApiClient extends ReceiveBaseClient
 
         $mcIds = array_values(array_unique(array_map('intval', array_column($details, 'mc_id'))));
         $channelRows = $this->getMachineChannelList([['mc_id', 'in', $mcIds]]);
+        if (is_object($channelRows)) {
+            $channelRows = $channelRows->toArray();
+        }
         $channelMap = array_column($channelRows, null, 'mc_id');
 
         $goodsIds = [];
