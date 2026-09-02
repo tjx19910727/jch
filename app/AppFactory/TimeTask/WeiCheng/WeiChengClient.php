@@ -2,8 +2,8 @@
 
 namespace app\AppFactory\TimeTask\WeiCheng;
 
-use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Service\WeiCheng\WcOrderSyncRetryService;
+use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\RabbitMq\AsyncTaskProducer;
@@ -12,6 +12,7 @@ use app\AppFactory\TimeTask\TimeTaskBase;
 class WeiChengClient extends TimeTaskBase
 {
     use WcBaseTrait, MachineTrait;
+    use FaultReportTrait;
 
     /**
      * 投递微程商品全量同步任务，由异步任务消费者执行实际同步。
@@ -75,26 +76,26 @@ class WeiChengClient extends TimeTaskBase
         if (!$task || !$service->lockFinalNotice($task['wcst_id'])) return;
         $machine = $this->getMachineFind(['m_id' => intval($task['m_id'] ?? 0)]);
         $machine = $machine && is_object($machine) ? $machine->toArray() : (array)$machine;
-        $error = mb_substr((string)($task['last_error'] ?? '未知错误'), 0, 100, 'UTF-8');
-        $notice = [
-            'sendType' => 1,
-            'ao_id' => intval($task['ao_id'] ?? ($machine['ao_id'] ?? 0)),
+        $machine = array_merge([
             'm_id' => intval($task['m_id'] ?? 0),
-            'templateType' => 'mFault',
-            'replaceData' => [
-                'errorCode' => '微程订单同步失败',
-                'error_code' => 'WC_ORDER_SYNC_FAIL',
-                'error_info' => 'WC_ORDER_SYNC_FAIL',
-                'error_time' => date('Y-m-d H:i:s'),
-                'date' => date('Y年m月d日'),
-                'exceptionDeclaration' => '订单' . ($task['trade_no'] ?? '') . '商品' . ($task['g_name'] ?? '') . '同步失败：' . $error,
-                'machine_id' => $task['machine_id'] ?? ($machine['machine_id'] ?? ''),
-                'machine_name' => mb_substr((string)($machine['machine_name'] ?? ($task['machine_id'] ?? '')), 0, 20, 'UTF-8'),
-            ],
-        ];
+            'machine_id' => strval($task['machine_id'] ?? ''),
+            'machine_name' => strval($task['machine_id'] ?? ''),
+            'ao_id' => intval($task['ao_id'] ?? 0),
+        ], $machine);
+        $error = mb_substr((string)($task['last_error'] ?? '未知错误'), 0, 100, 'UTF-8');
         try {
-            $sendResult = AppFactory::notice($notice)->weChat->send();
-            $service->markNoticeResult($task['wcst_id'], $sendResult !== false);
+            $meId = $this->reportFaultCode($machine, [
+                'errorCode' => '1500001',
+                'msg' => '订单' . ($task['trade_no'] ?? '') . '商品' . ($task['g_name'] ?? '') . '同步失败：' . $error,
+                'error_position' => 4,
+                'trade_no' => $task['trade_no'] ?? '',
+            ]);
+            $service->markNoticeResult($task['wcst_id'], intval($meId) > 0);
+            actionLog([
+                'me_id' => intval($meId),
+                'wcst_id' => intval($task['wcst_id']),
+                'trade_no' => $task['trade_no'] ?? '',
+            ], '发送微程订单同步失败故障通知结果', 'wcOrderSyncFinalNotice');
         } catch (\Throwable $e) {
             $service->markNoticeResult($task['wcst_id'], false);
             actionException($e, 1, 'wcOrderSyncFinalNotice');

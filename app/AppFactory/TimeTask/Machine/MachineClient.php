@@ -11,6 +11,7 @@ namespace app\AppFactory\TimeTask\Machine;
 
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
@@ -39,6 +40,7 @@ class MachineClient extends TimeTaskBase
     use ActivityCouponUsedTrait;
     use SimCardInfoTrait;
     use ToManagerTrait;
+    use FaultReportTrait;
 
     public $machine = [];
     public $message = [];
@@ -317,33 +319,8 @@ class MachineClient extends TimeTaskBase
                     $flag[] = $this->updateMachine($upData);
                     actionLog($this->getLS(),'修改设备在线状态','checkOffline');
 
-                    /** 发送离线通知 开始 **/
-                    $machine = $this->getMachineFind(['m_id' => $value['m_id']], 'm_id,machine_id,machine_name,last_online_time,ao_id');
-                    if ($machine) {
-                        $machine = $machine->toArray();
-                        $machine['online'] = "offline";
-                        $this->noticeSendData = [
-                            "ao_id" => $machine['ao_id'],
-                            "m_id" => $machine['m_id'],
-                            "templateType" => "online",
-                            "replaceData" => $machine,
-                        ];
-                        // $machine['errorCode'] = '在营设备离线';
-                        // $machine['date'] = date("Y年m月d日");
-                        // $machine['exceptionDeclaration'] = '在营设备离线';
-                        // $machine['error_code'] = '在营设备离线';
-                        // $machine['error_time'] = date('Y-m-d H:i:s');
-                        // $machine['error_info'] = 11103021; // 在营设备离线
-                        // $this->noticeSendData = [
-                        //     "ao_id" => $machine['ao_id'],
-                        //     "m_id" => $machine['m_id'],
-                        //     "templateType" => "mFault",
-                        //     "replaceData" => $machine,
-                        // ];
-
-                        $this->noticeSend();
-                    }
-                    /** 发送离线通知 结束 **/
+                    // online模板不存在，此处只更新设备离线状态；
+                    // 在营设备离线通知由checkOperatingOffline按配置时长统一发送。
                 }
                 $this->commitTrans();
                 //            sleep(10);
@@ -550,7 +527,7 @@ class MachineClient extends TimeTaskBase
                         'msg' => '设备超过计划开机时间仍未开机',
                         'error_position' => 3,
                     ];
-                    $flag[] = $this->errorCode();
+                    $flag[] = $this->reportFaultCode();
                     //当前阶段的通知发送成功后，更新已发送阶段数缓存，过期时间为当天23:59:59
                     Cache::set($stageCacheKey, $currentStage, $ttl > 0 ? $ttl : 60);
                     actionLog([
@@ -1114,7 +1091,8 @@ class MachineClient extends TimeTaskBase
                     'msg' => '设备超过计划关机时间30分钟仍在线',
                     'error_position' => 3,
                 ];
-                $flag[] = $this->errorCode();
+//                $flag[] = $this->errorCode();
+                $flag[] = $this->reportFaultCode();
                 Cache::set($sentCacheKey, 1, $ttl > 0 ? $ttl : 60);
                 actionLog([
                     'm_id' => $item['m_id'],
@@ -1135,7 +1113,8 @@ class MachineClient extends TimeTaskBase
     }
 
     /**
-     * 定时任务-建议每15分钟执行一次，检查最近5天内上线过且在开机营业时间内持续离线超过30分钟的在营设备。
+     * 定时任务-建议每15分钟执行一次，检查最近5天内上线过且在开机营业时间内持续离线超过组织配置时长的在营设备。
+     * 未配置或配置小于5分钟时按30分钟处理。
      * 每天00:00-05:59为静默时段，不发送离线通知。
      * 同一设备每个自然日最多发送1次。
      * 命令示例：php think time_task machine checkOperatingOffline
@@ -1146,7 +1125,6 @@ class MachineClient extends TimeTaskBase
     {
         try {
             $now = time();
-            $offlineTimeout = 1800;
             $recentOnlineWindow = 5 * 86400;
             $hour = intval(date('H', $now));
             if ($hour < 6) {
@@ -1158,6 +1136,9 @@ class MachineClient extends TimeTaskBase
             $yesterday = strtotime('-1 day', $today);
             $todayKey = date('Ymd', $now);
             $todayEnd = strtotime(date('Y-m-d 23:59:59', $now));
+            $configuredOfflineMinutes = intval(Db::name('machine_fault_notice_config')
+                ->order('create_time asc,ao_id asc')
+                ->value('offline_minutes'));
 
             $query = Db::name('machine')->alias('m')
                 ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
@@ -1165,7 +1146,6 @@ class MachineClient extends TimeTaskBase
                 ->where('m.online', 2)
                 ->where('m.http_online', 2)
                 ->where('m.last_online_time', '>=', $now - $recentOnlineWindow)
-                ->where('m.last_online_time', '<=', $now - $offlineTimeout)
                 ->whereNotNull('moo.on_off_machine')
                 ->where('moo.on_off_machine', '<>', '')
                 ->where('moo.on_off_machine', '<>', '{}')
@@ -1188,6 +1168,11 @@ class MachineClient extends TimeTaskBase
 
             $flag = [];
             foreach ($list as $item) {
+                // 先取得组织配置，再计算该设备对应的离线截止时间。
+                $offlineMinutes = $configuredOfflineMinutes >= 5 ? $configuredOfflineMinutes : 30;
+                $offlineTimeout = $offlineMinutes * 60;
+                $offlineDeadline = $now - $offlineTimeout;
+
                 $onOffMachine = $item['on_off_machine'];
                 if (is_string($onOffMachine)) {
                     $onOffMachine = json_decode($onOffMachine, true);
@@ -1243,7 +1228,7 @@ class MachineClient extends TimeTaskBase
                 // 如果设备在开机前已经离线，从本次开机时间开始计算，避免刚开机就立即提醒。
                 $lastOnlineTime = intval($item['last_online_time']);
                 $offlineStart = max($lastOnlineTime, $businessWindow['start']);
-                if ($now - $offlineStart < $offlineTimeout) {
+                if ($offlineStart > $offlineDeadline) {
                     continue;
                 }
 
@@ -1256,14 +1241,17 @@ class MachineClient extends TimeTaskBase
                 }
 
                 $item['offline_time'] = date('Y-m-d H:i:s', $lastOnlineTime);
-                $item['offline_minutes'] = intval(floor(($now - $offlineStart) / 60));
+                $item['offline_minutes'] = $offlineMinutes;
                 $this->machine = $item;
                 $this->message = [
                     'errorCode' => '11103021',
-                    'msg' => '在营设备离线超过30分钟',
+                    'msg' => "在营设备离线超过{$offlineMinutes}分钟",
+                    'event_remark' => "在营设备离线超过{$offlineMinutes}分钟",
                     'error_position' => 3,
+                    'last_online_time' => $lastOnlineTime,
+                    'offline_minutes' => $offlineMinutes,
                 ];
-                $flag[] = $this->errorCode();
+                $flag[] = $this->reportFaultCode();
 
                 $dailyCacheTtl = max($todayEnd - $now, 60);
                 Cache::set($dailyNoticeCacheKey, 1, $dailyCacheTtl);
@@ -1274,6 +1262,9 @@ class MachineClient extends TimeTaskBase
                     'offline_start' => date('Y-m-d H:i:s', $offlineStart),
                     'business_start' => date('Y-m-d H:i:s', $businessWindow['start']),
                     'business_end' => date('Y-m-d H:i:s', $businessWindow['end']),
+                    'configured_offline_minutes' => $configuredOfflineMinutes,
+                    'effective_offline_minutes' => $offlineMinutes,
+                    'actual_offline_minutes' => intval(floor(($now - $offlineStart) / 60)),
                     'daily_sent_count' => 1,
                 ], '发送在营设备持续离线提醒', 'checkOperatingOffline');
             }

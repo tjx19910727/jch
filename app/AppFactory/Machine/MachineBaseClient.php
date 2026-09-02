@@ -16,11 +16,13 @@ use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
+use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 
 class MachineBaseClient extends BaseClient
 {
     use MachineTrait,MachineMqRecordTrait,MachineInfoTrait;
     use ToManagerTrait,MachineErrorCodeTrait;
+    use FaultReportTrait;
 
     public $machine;
     public $data;

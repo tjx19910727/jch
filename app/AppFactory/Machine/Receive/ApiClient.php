@@ -835,8 +835,13 @@ class ApiClient extends ReceiveBaseClient
                 "msg" => $this->data['msg'] ?? "",
                 "error_position" => $this->data['error_position'] ?? "",
                 "creator_id" => $this->data['creator_id'] ?? 0,
+                "trade_no" => $this->data['trade_no'] ?? ($this->data['order_no'] ?? ""),
             ];
-            $this->errorCode();
+            if ($this->shouldUseLegacyFaultCodeFlow()) {
+                $this->errorCode();
+            } else {
+                $this->reportFaultCode();
+            }
             return $this->r(200, $this->lang("action_success"));
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -1403,7 +1408,7 @@ class ApiClient extends ReceiveBaseClient
                 "msg" => '',
                 "error_position" => '',
             ];
-            $this->errorCode();
+            $this->reportFaultCode();
         } catch (\Exception $e) {
             actionException($e, 1);
         }

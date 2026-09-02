@@ -122,8 +122,17 @@ class MqClient extends ReceiveBaseClient
                         actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
                         throw new \InvalidArgumentException('数据格式错误', 0, $e);
                     }
-                    // 历史处理方法返回值不统一，运输层只以是否抛出异常判断成败。
-                    $this->$func_name();
+                    // 设备协议仍使用msgType=errorCode，仅在入口切换到新故障流程。
+                    // 其他历史消息类型继续调用原方法。
+                    if ($func_name === 'errorCode') {
+                        if ($this->shouldUseLegacyFaultCodeFlow()) {
+                            $this->errorCode();
+                        } else {
+                            $this->reportFaultCode();
+                        }
+                    } else {
+                        $this->$func_name();
+                    }
                     return true;
                 }
                 actionLog($this->message,'没有对应的消息类型');
