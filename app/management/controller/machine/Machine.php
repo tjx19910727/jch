@@ -41,7 +41,8 @@ class Machine extends Common
         $field = $this->field;
         $order = $this->buildMachineListOrder($postData, $field);
         $isOnOff = $postData['is_on_off'] ?? 0;
-        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order'],$postData['is_on_off']);
+        $lowSignal = isset($postData['low_signal']) && $postData['low_signal'] == 1;
+        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order'],$postData['is_on_off'],$postData['low_signal']);
         // 提取 online 参数，单独处理：1=在线(http_online或online为1)，2=离线(http_online和online都为2)
         $onlineValue = null;
         if (isset($postData['online']) && $postData['online'] !== '') {
@@ -68,6 +69,10 @@ class Machine extends Common
                 $where[] = ['http_online', '=', 2];
                 $where[] = ['online', '=', 2];
             }
+        }
+        if ($lowSignal) {
+            $lowSignalWhere = '(SELECT ssl.rsrp_level FROM sim_signal_log ssl WHERE ssl.m_id = a.m_id ORDER BY ssl.id DESC LIMIT 1) < 2';
+            $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . $lowSignalWhere;
         }
         return $this->app->machine->getMList($where,$pageNum,$field,$order);
     }
