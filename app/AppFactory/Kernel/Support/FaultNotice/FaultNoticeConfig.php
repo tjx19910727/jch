@@ -17,7 +17,7 @@ class FaultNoticeConfig
                 'template_name' => '设备异常提醒',
                 'display_name' => '设备异常提醒（通用模板）',
                 'template_no' => '43033',
-                'template_id' => 'frqumju8oA7N8msUrhliHpDd18j2le-DxLGlz5jWz8g',
+                'template_id' => 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g',
                 'test_template_id' => 'wpz0FL-2vY4biBErkD39WUGKIzMbkPmZPBHr2Beo9Go',
                 'body' => [
                     ['设备编码' => ['value' => '{{machine_id}}', 'field' => 'character_string16']],

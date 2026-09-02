@@ -400,13 +400,26 @@ trait FaultCatalogTrait
 
     protected function findAndFormatFaultCatalogCode($errorCode)
     {
-        $data = $this->getFaultCatalogCodeListData(['keyword' => $errorCode]);
-        foreach ($data['items'] as $item) {
-            if ($item['error_code'] === $errorCode) {
-                return $item;
-            }
-        }
-        return [];
+        $row = Db::name('machine_error_code_notice_rule')
+            ->alias('mecnr')
+            ->leftJoin(
+                'machine_fault_category mfc',
+                'mfc.category_id = mecnr.category_id'
+            )
+            ->leftJoin('machine_fault_level mfl', 'mfl.level = mecnr.level')
+            ->where('mecnr.error_code', $errorCode)
+            ->field(
+                "mecnr.error_code,mecnr.error_name,mecnr.wechat_text,mecnr.category_id," .
+                "mecnr.level,mecnr.status,mecnr.notice_enabled,mecnr.update_time," .
+                "COALESCE(mfc.category_name,'') AS category_name," .
+                "COALESCE(mfc.status,0) AS category_status," .
+                "COALESCE(mfc.template_type,'') AS template_type," .
+                "COALESCE(mfl.grade,mecnr.level) AS grade," .
+                "COALESCE(mfl.level_name,'') AS level_name,COALESCE(mfl.color,'') AS color"
+            )
+            ->find();
+
+        return $row ? $this->formatFaultCatalogCode($row) : [];
     }
 
     protected function findAndFormatFaultCatalogCategory($categoryId)
