@@ -27,6 +27,8 @@ class VMachineConfig extends VCommon
         "goods_no_stock_jump_to_mini_program" => "in:1,2",
         "subcar_offline_sp_ids" => "checkPayeeIds",
         "subcar_online_sp_ids" => "checkPayeeIds",
+        "currency_code" => "require|regex:^[A-Za-z]{3}$",
+        "m_ids" => "require",
     ];
 
     protected $message = [
@@ -43,6 +45,8 @@ class VMachineConfig extends VCommon
         "goods_no_stock_jump_to_mini_program.in" => "VMachineConfig.goods_no_stock_jump_to_mini_program_in",
         "subcar_offline_sp_ids.checkPayeeIds" => "VMachineConfig.subcar_offline_sp_ids_invalid",
         "subcar_online_sp_ids.checkPayeeIds" => "VMachineConfig.subcar_online_sp_ids_invalid",
+        "currency_code.require" => "币种代码不能为空",
+        "m_ids.require" => "请选择设备",
     ];
 
     protected $scene = [
@@ -51,6 +55,8 @@ class VMachineConfig extends VCommon
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
         "mcList" => ["m_id", "online_pay_success_tip", "add_other_org_goods", "run_mode", "is_multi_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
+        "currencySwitch" => ["m_id", "currency_code"],
+        "currencySwitchBatch" => ["m_ids", "currency_code"],
     ];
 
     public function sceneMcList()

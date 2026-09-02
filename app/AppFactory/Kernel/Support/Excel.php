@@ -16,6 +16,34 @@ class Excel
 {
 
     /**
+     * 按首行标题识别字段，允许列顺序调整并忽略未知列。
+     */
+    public static function importExcelByHeader($filePath, array $headerMap, $other = [], $startRow = 2, $imageFields = null)
+    {
+        if (!file_exists($filePath)) return [];
+        require_once root_path() . '/extend/PHPExcel/PHPExcel.php';
+        require_once root_path() . '/extend/PHPExcel/PHPExcel/Writer/Excel2007.php';
+        $reader = new \PHPExcel_Reader_Excel2007();
+        $excel = $reader->load($filePath, 'utf-8');
+        $sheet = $excel->getSheet(0);
+        $highestColumn = \PHPExcel_Cell::columnIndexFromString($sheet->getHighestColumn());
+        $fields = [];
+        for ($index = 0; $index < $highestColumn; $index++) {
+            $header = trim((string)$sheet->getCellByColumnAndRow($index, 1)->getValue());
+            $fields[] = isset($headerMap[$header]) ? $headerMap[$header] : '__ignore_' . $index;
+        }
+        $rows = self::importExcel($filePath, $fields, $other, $startRow, $imageFields);
+        if (!is_array($rows)) return $rows;
+        foreach ($rows as &$row) {
+            foreach (array_keys($row) as $field) {
+                if (strpos($field, '__ignore_') === 0) unset($row[$field]);
+            }
+        }
+        unset($row);
+        return $rows;
+    }
+
+    /**
      * 功能：导入excel表格
      * @param $filePath
      * @param array $list

@@ -13,6 +13,8 @@ use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
+use app\AppFactory\Kernel\Service\Currency\GoodsCurrencyPriceService;
+use app\AppFactory\Kernel\Support\Currency\CurrencyPriceSupport;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -35,8 +37,16 @@ class GoodsClient extends ManagementClient
     public function addG($postData)
     {
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
-        $g_id = $this->addGoods($postData);
-        if ($g_id) {
+        try {
+            $priceService = new GoodsCurrencyPriceService();
+            $currencyPrices = $this->extractCurrencyPrices($postData, true);
+            $cnyPrice = CurrencyPriceSupport::normalizePriceRow($currencyPrices['CNY']);
+            $postData = array_merge($postData, $cnyPrice);
+            Db::startTrans();
+            $g_id = $this->addGoods($postData);
+            if (!$g_id) {
+                throw new \RuntimeException('新增商品失败');
+            }
             $insertLang = [
                 "g_id" => $g_id,
                 "g_name" => $postData['g_name'] ?? "",
@@ -48,8 +58,38 @@ class GoodsClient extends ManagementClient
                 "lang" => "zh-cn",
             ];
             $this->addGoodsLang($insertLang);
+            $priceService->savePrices($g_id, $currencyPrices, intval($this->manager['manager_id'] ?? 0), true, false);
+            Db::commit();
+            return $this->rA($g_id);
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'addGoodsCurrencyPrice');
+            return $this->rValidate($e->getMessage());
         }
-        return $this->rA($g_id);
+    }
+
+    public function getListWithCurrencyPrices($where, $pageNum, $field, $order, $hasCostPriceAuth = true)
+    {
+        $data = $this->getGoodsList($where, $pageNum, $field, $order);
+        return $this->rQ($this->appendCurrencyPrices($data, $hasCostPriceAuth));
+    }
+
+    public function getFindWithCurrencyPrices($where, $field, $hasCostPriceAuth = true)
+    {
+        $data = $this->getGoodsFind($where, $field);
+        if (!$data) {
+            return $this->rQ($data);
+        }
+        $gId = intval($data['g_id']);
+        $prices = (new GoodsCurrencyPriceService())->getPrices($gId);
+        if (!$hasCostPriceAuth) {
+            foreach ($prices as &$price) {
+                $price['cost_price'] = '';
+            }
+            unset($price);
+        }
+        $data['currency_prices'] = $prices;
+        return $this->rQ($data);
     }
 
     public function getPageList($where, $pageNum = 0, $field = "*", $order = "")
@@ -89,7 +129,7 @@ class GoodsClient extends ManagementClient
         return $this->rQ($list);
     }
 
-    public function getAuthList($where,$pageNum,$field,$order,$input){
+    public function getAuthList($where,$pageNum,$field,$order,$input,$hasCostPriceAuth = true){
         $whereG = [];
         if(!empty($input['machine_id'])) $whereG[] = ['machine_id','in',$input['machine_id']];
         if($input['sale_check']){
@@ -106,13 +146,12 @@ class GoodsClient extends ManagementClient
         }
         
         $where[] = ['g_id','in',$g_id];
-        $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        $result = $this->getListWithCurrencyPrices($where,$pageNum,$field,'g_id desc',$hasCostPriceAuth);
         return $result;
     }
 
     /**
-     * 商品编辑：主表价格正常更新，设备商品/货道价格仅按传入的 mg_id、mc_id 覆盖
-     * 不走通用 update 入口，控制器直接调用本方法。
+     * 商品编辑只维护核心商品与核心币种价，设备商品/货道必须走人工同步接口。
      * @param array $postData
      * @return mixed
      */
@@ -126,59 +165,42 @@ class GoodsClient extends ManagementClient
             return $this->r(100, '参数有误');
         }
 
-        $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
+        $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id');
         if (!$oldGoods) {
             return $this->r(100, '商品不存在');
         }
-        $oldGoods = $oldGoods->toArray();
-
         $selectedMgIds = $this->parseIds($postData['mg_id'] ?? []);
         $selectedMcIds = $this->parseIds($postData['mc_id'] ?? []);
         unset($postData['mg_id'], $postData['mc_id']);
-
-        $priceChanged = false;
-        foreach ($this->priceFields as $fieldName) {
-            if (array_key_exists($fieldName, $postData) && (string)$postData[$fieldName] !== (string)$oldGoods[$fieldName]) {
-                $priceChanged = true;
-                break;
+        if ($selectedMgIds || $selectedMcIds) {
+            return $this->r(100, '商品编辑不再隐式覆盖设备商品或货道价格，请使用对应的一键同步接口');
+        }
+        try {
+            $currencyPrices = $this->extractCurrencyPrices($postData, false);
+            foreach (array_merge($this->priceFields, ['cny_cost_price', 'cny_market_price', 'cny_retail_price', 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price']) as $field) {
+                unset($postData[$field]);
             }
-        }
-
-        $result = $this->updateGoods($postData, ['g_id' => $gId]);
-        if (!$result) {
-            return $this->r(100, '更新失败');
-        }
-
-        if ($priceChanged) {
-            $priceUpdate = [];
-            foreach ($this->priceFields as $fieldName) {
-                if (array_key_exists($fieldName, $postData)) {
-                    $priceUpdate[$fieldName] = $postData[$fieldName];
+            Db::startTrans();
+            $result = true;
+            $updateData = $postData;
+            unset($updateData['g_id']);
+            if ($updateData) {
+                $result = $this->updateGoods($updateData, ['g_id' => $gId]);
+                if (!$result) {
+                    throw new \RuntimeException('更新商品失败');
                 }
             }
-
-            if ($priceUpdate) {
-                if ($selectedMgIds) {
-                    $whereMg = [];
-                    $whereMg[] = ['g_id', '=', $gId];
-                    $whereMg[] = ['mg_id', 'in', $selectedMgIds];
-                    $this->updateMachineGoods($priceUpdate, $whereMg, array_keys($priceUpdate));
-                }
-                if ($selectedMcIds) {
-                    $whereMc = [];
-                    $whereMc[] = ['g_id', '=', $gId];
-                    $whereMc[] = ['mc_id', 'in', $selectedMcIds];
-                    $this->updateMachineChannel($priceUpdate, $whereMc, array_keys($priceUpdate));
-                }
+            if ($currencyPrices) {
+                (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
             }
+            Db::commit();
+            $this->pushGoodsUpdate($gId);
+            return $this->r(200, 'success', $result);
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'updateGoodsCurrencyPrice');
+            return $this->rValidate($e->getMessage());
         }
-
-        $this->pushGoodsUpdate($gId);
-        // if ($priceChanged && ($selectedMgIds || $selectedMcIds)) {
-        //     $this->pushGoodsUpdateV2($gId, $selectedMgIds, $selectedMcIds);
-        // }
-
-        return $this->r(200, 'success', $result);
     }
 
     /**
@@ -193,25 +215,36 @@ class GoodsClient extends ManagementClient
             return $this->rFail($this->lang('VGoods.g_id_require'));
         }
 
-        $goods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
-        if (!$goods) {
+        try {
+            $currencyCode = CurrencyPriceSupport::normalizeCurrencyCode($postData['currency_code'] ?? 'CNY');
+        } catch (\InvalidArgumentException $e) {
+            return $this->rValidate($e->getMessage());
+        }
+        $priceService = new GoodsCurrencyPriceService();
+        $prices = $priceService->getPrices($gId);
+        $goodsPrice = null;
+        foreach ($prices as $price) {
+            if ($price['currency_code'] === $currencyCode) {
+                $goodsPrice = $price;
+                break;
+            }
+        }
+        if (!$goodsPrice) {
             return $this->rFail($this->lang('goods_no_data'));
         }
-        $goods = $goods->toArray();
-
-        $latestCost = $postData['cost_price'] ?? $goods['cost_price'];
-        $latestMarket = $postData['market_price'] ?? $goods['market_price'];
-        $latestRetail = $postData['retail_price'] ?? $goods['retail_price'];
+        $latestCost = $postData['cost_price'] ?? $goodsPrice['cost_price'];
+        $latestMarket = $postData['market_price'] ?? $goodsPrice['market_price'];
+        $latestRetail = $postData['retail_price'] ?? $goodsPrice['retail_price'];
 
         $mgDiff = Db::name('machine_goods')->alias('mg')
             ->join('machine m', 'm.m_id = mg.m_id')
+            ->leftJoin('machine_goods_currency_price p', 'p.mg_id=mg.mg_id AND p.currency_code="' . $currencyCode . '"')
             ->where('mg.g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
-                $query->where('mg.cost_price', '<>', $latestCost)
-                    ->whereOr('mg.market_price', '<>', $latestMarket)
-                    ->whereOr('mg.retail_price', '<>', $latestRetail);
+                $query->whereNull('p.mgcp_id')->whereOr('p.cost_price', '<>', $latestCost)
+                    ->whereOr('p.market_price', '<>', $latestMarket)->whereOr('p.retail_price', '<>', $latestRetail);
             })
-            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,mg.cost_price,mg.market_price,mg.retail_price')
+            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,p.cost_price,p.market_price,p.retail_price,p.updated_at')
             ->order('mg.mg_id desc')
             ->limit(200)
             ->select()
@@ -229,13 +262,13 @@ class GoodsClient extends ManagementClient
 
         $mcDiff = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
+            ->leftJoin('machine_channel_currency_price p', 'p.mc_id=mc.mc_id AND p.currency_code="' . $currencyCode . '"')
             ->where('mc.g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
-                $query->where('mc.cost_price', '<>', $latestCost)
-                    ->whereOr('mc.market_price', '<>', $latestMarket)
-                    ->whereOr('mc.retail_price', '<>', $latestRetail);
+                $query->whereNull('p.mccp_id')->whereOr('p.cost_price', '<>', $latestCost)
+                    ->whereOr('p.market_price', '<>', $latestMarket)->whereOr('p.retail_price', '<>', $latestRetail);
             })
-            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,mc.cost_price,mc.market_price,mc.retail_price,mc.update_price as update_status')
+            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,p.cost_price,p.market_price,p.retail_price,p.updated_at,mc.update_price as update_status')
             ->order('mc.mc_id desc')
             ->limit(200)
             ->select()
@@ -252,6 +285,7 @@ class GoodsClient extends ManagementClient
         }
 
         return $this->r(200, 'success', [
+            'currency_code' => $currencyCode,
             'mg_diff_list' => $mgDiff,
             'mc_diff_list' => $mcDiff,
             'mg_diff_count' => count($mgDiff),
@@ -271,6 +305,71 @@ class GoodsClient extends ManagementClient
             return $item !== '';
         });
         return array_values(array_unique($idList));
+    }
+
+    protected function appendCurrencyPrices($data, $hasCostPriceAuth)
+    {
+        if (!$data) {
+            return $data;
+        }
+        $gIds = [];
+        foreach ($data as $item) {
+            $gIds[] = intval($item['g_id']);
+        }
+        $priceMap = (new GoodsCurrencyPriceService())->getPriceMapByGoodsIds($gIds);
+        return $data->each(function ($item) use ($priceMap, $hasCostPriceAuth) {
+            $prices = isset($priceMap[intval($item['g_id'])]) ? $priceMap[intval($item['g_id'])] : [];
+            if (!$hasCostPriceAuth) {
+                foreach ($prices as &$price) {
+                    $price['cost_price'] = '';
+                }
+                unset($price);
+            }
+            $item['currency_prices'] = $prices;
+            return $item;
+        });
+    }
+
+    /**
+     * currency_prices 承载任意启用币种；CNY/HKD 平面字段仅用于兼容现有表单和 Excel 模板。
+     */
+    protected function extractCurrencyPrices(array &$postData, $requireCny)
+    {
+        $prices = [];
+        if (isset($postData['currency_prices'])) {
+            $prices = (new GoodsCurrencyPriceService())->normalizePriceCollection($postData['currency_prices']);
+            unset($postData['currency_prices']);
+        }
+        $flatCny = [];
+        foreach ($this->priceFields as $field) {
+            if (array_key_exists($field, $postData)) {
+                $flatCny[$field] = $postData[$field];
+            }
+            $named = 'cny_' . $field;
+            if (array_key_exists($named, $postData) && $postData[$named] !== '') {
+                $flatCny[$field] = $postData[$named];
+            }
+        }
+        if ($flatCny) {
+            $prices['CNY'] = array_merge($flatCny, isset($prices['CNY']) ? $prices['CNY'] : []);
+        }
+        $flatHkd = [];
+        foreach ($this->priceFields as $field) {
+            $named = 'hkd_' . $field;
+            if (array_key_exists($named, $postData) && $postData[$named] !== '') {
+                $flatHkd[$field] = $postData[$named];
+            }
+        }
+        if ($flatHkd) {
+            $prices['HKD'] = array_merge($flatHkd, isset($prices['HKD']) ? $prices['HKD'] : []);
+        }
+        foreach (['cny_cost_price', 'cny_market_price', 'cny_retail_price', 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price'] as $field) {
+            unset($postData[$field]);
+        }
+        if ($requireCny && !isset($prices['CNY'])) {
+            throw new \InvalidArgumentException('新商品必须配置CNY三价');
+        }
+        return $prices;
     }
 
     /**
@@ -458,14 +557,22 @@ class GoodsClient extends ManagementClient
      * @param $data
      * @return array|string
      */
-    public function importExcelV2($data)
+    public function importExcelV2($data, $hasCostPriceAuth = true)
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height',"g_id"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
-            $goods = Excel::importExcel($path, $title, $other, 2, ['pic']);
+            $goods = Excel::importExcelByHeader($path, $this->getGoodsImportHeaderMap(), $other, 2, ['pic']);
             if (is_object($goods)) return $goods;
+            if (!$hasCostPriceAuth) {
+                foreach ($goods as $row) {
+                    foreach (['cost_price', 'cny_cost_price', 'hkd_cost_price'] as $costField) {
+                        if (isset($row[$costField]) && trim((string)$row[$costField]) !== '') {
+                            return $this->r(100, '当前账号无成本价权限，请清空人民币/港币成本价列后重试');
+                        }
+                    }
+                }
+            }
             actionLog($goods, '导入的商品数据');
             if ($goods) {
                 $insertGoods = [];
@@ -479,16 +586,25 @@ class GoodsClient extends ManagementClient
                     'insert_fail_list' => [],
                 ];
                 foreach ($goods as $key => $value) {
+                    $value = $this->normalizeGoodsImportRow($value);
                     $gId = intval($value['g_id'] ?? 0);
                     if ($gId > 0) {
                         $goodsFind = $this->getGoodsFind(['g_id' => $gId], 'g_id');
                         if ($goodsFind) {
-                            $update = ['bar_code' => trim($value['bar_code'] ?? '')];
-                            $updateResult = $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
-                            if ($updateResult) {
+                            try {
+                                $currencyPrices = $this->extractCurrencyPrices($value, false);
+                                $update = ['bar_code' => trim(isset($value['bar_code']) ? $value['bar_code'] : '')];
+                                Db::startTrans();
+                                $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
+                                if ($currencyPrices) {
+                                    (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
+                                }
+                                Db::commit();
                                 $resultData['update_success']++;
-                            } else {
+                            } catch (\Exception $e) {
+                                Db::rollback();
                                 $resultData['update_fail']++;
+                                $resultData['insert_fail_list'][] = ['row' => $key + 2, 'error' => $e->getMessage()];
                             }
                             continue;
                         }
@@ -504,18 +620,31 @@ class GoodsClient extends ManagementClient
                         ];
                         continue;
                     }
-                    $insertGoods[] = $value;
-                }
-
-                $resultData['insert_total'] = count($insertGoods);
-                if ($insertGoods) {
-                    $insertResult = $this->addMoreGoods($insertGoods);
-                    if ($insertResult) {
-                        $resultData['insert_success'] = count($insertGoods);
-                    } else {
-                        $resultData['insert_fail'] += count($insertGoods);
+                    try {
+                        $currencyPrices = $this->extractCurrencyPrices($value, true);
+                        $value = array_merge($value, CurrencyPriceSupport::normalizePriceRow($currencyPrices['CNY']));
+                        Db::startTrans();
+                        $gId = $this->addGoods($value);
+                        if (!$gId) throw new \RuntimeException('新增商品失败');
+                        $this->addGoodsLang([
+                            'g_id' => $gId,
+                            'g_name' => isset($value['g_name']) ? $value['g_name'] : '',
+                            'gc_id' => isset($value['gc_id']) ? $value['gc_id'] : 0,
+                            'gc_name' => isset($value['gc_name']) ? $value['gc_name'] : '',
+                            'manufacturer' => isset($value['manufacturer']) ? $value['manufacturer'] : '',
+                            'lang' => 'zh-cn',
+                        ]);
+                        (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), true, false);
+                        Db::commit();
+                        $resultData['insert_success']++;
+                    } catch (\Exception $e) {
+                        Db::rollback();
+                        $resultData['insert_fail']++;
+                        $resultData['insert_fail_list'][] = ['row' => $key + 2, 'error' => $e->getMessage()];
                     }
                 }
+
+                $resultData['insert_total'] = $resultData['insert_success'] + $resultData['insert_fail'];
 
                 return $this->r(200, '导入完成', $resultData);
             }
@@ -526,6 +655,29 @@ class GoodsClient extends ManagementClient
         }
     }
 
+    protected function getGoodsImportHeaderMap()
+    {
+        return [
+            '商品名称' => 'g_name', '分类ID' => 'gc_id', '商品分类' => 'gc_name', '型号' => 'model',
+            'SKU' => 'sku', 'SKU2' => 'sku2', '图片' => 'pic', '条形码' => 'bar_code',
+            '人民币成本价' => 'cny_cost_price', '人民币市场价' => 'cny_market_price', '人民币零售价' => 'cny_retail_price',
+            '港币成本价' => 'hkd_cost_price', '港币市场价' => 'hkd_market_price', '港币零售价' => 'hkd_retail_price',
+            '成本价' => 'cost_price', '市场价' => 'market_price', '零售价' => 'retail_price', '售卖价' => 'retail_price',
+            '生产厂家' => 'manufacturer', '售后电话' => 'service_phone', '状态' => 'status',
+            '长' => 'length', '宽' => 'width', '高' => 'height', '商品ID' => 'g_id', 'g_id' => 'g_id',
+        ];
+    }
+
+    protected function normalizeGoodsImportRow(array $row)
+    {
+        if (isset($row['status']) && !is_numeric($row['status'])) {
+            $statusText = trim((string)$row['status']);
+            if (in_array($statusText, ['启用', '正常', '上架'], true)) $row['status'] = 1;
+            if (in_array($statusText, ['停用', '禁用', '下架'], true)) $row['status'] = 2;
+        }
+        return $row;
+    }
+
     /**
      * 导出商品
      * @param $where
@@ -533,38 +685,34 @@ class GoodsClient extends ManagementClient
      */
     public function exportExcel($where, $hasCostPriceAuth = true)
     {
-        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
         $field = 'g_id,g_name,gc_name,gift_points,cost_points,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
-            model,sku,bar_code,' . $costPriceField . ',market_price,retail_price';
+            model,sku,bar_code';
         $list = $this->getGoodsList($where, 0,
             $field);
         if ($list) {
             $list = $list->toArray();
+            $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
             $title = [
-                'g_id' => $this->lang("export.g_id"),
                 'g_name' => $this->lang("export.g_name") ,
                 'g_type' => $this->lang("export.g_type"),
                 'gc_name' => $this->lang("export.gc_name"),
                 'model' => $this->lang("export.model"),
                 'sku' => $this->lang("export.sku"),
                 'bar_code' => $this->lang("export.bar_code"),
-                'market_price' => $this->lang("export.market_price"),
-                'retail_price' => $this->lang("export.retail_price"),
+                'cny_cost_price' => '人民币成本价',
+                'cny_market_price' => '人民币市场价',
+                'cny_retail_price' => '人民币零售价',
+                'hkd_cost_price' => '港币成本价',
+                'hkd_market_price' => '港币市场价',
+                'hkd_retail_price' => '港币零售价',
                 'gift_points' => $this->lang("export.gift_points"),
                 'cost_points' => $this->lang("export.cost_points"),
+                'g_id' => 'g_id',
             ];
-            if ($hasCostPriceAuth) {
-                $title['cost_price'] = $this->lang("export.cost_price");
-                // $title = array_merge(
-                //     array_slice($title, 0, 7, true),
-                //     ['cost_price' => $this->lang("export.cost_price")],
-                //     array_slice($title, 7, null, true)
-                // );
-            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
@@ -579,8 +727,7 @@ class GoodsClient extends ManagementClient
      */
     public function exportAllGoodsToExcel($where, $hasCostPriceAuth = true)
     {
-        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
-        $field = 'g_id,g_name,gc_name,
+        $field = 'g_id,g_name,gc_id,gc_name,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
@@ -588,42 +735,45 @@ class GoodsClient extends ManagementClient
             (case status when 1 THEN "' . $this->lang("export.status1") .
             '" WHEN 2 THEN "' . $this->lang("export.status2") .
             '" END) status,
-            model,bar_code,sku,pic,' . $costPriceField . ',market_price,retail_price,manufacturer,service_phone,length,width,height';
-        $list = $this->getGoodsList([], 0,
+            model,bar_code,sku,sku2,pic,manufacturer,service_phone,length,width,height';
+        $list = $this->getGoodsList($where, 0,
             $field);
         if ($list) {
             $list = $list->toArray();
+            $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
             $title = [
-                'g_id' => $this->lang("export.g_id"),
-                'g_name' => $this->lang("export.g_name") ,
-                'g_type' => $this->lang("export.g_type"),
-                'gc_name' => $this->lang("export.gc_name"),
-                'model' => $this->lang("export.model"),
-                'bar_code' => $this->lang("export.bar_code"),
-                'sku' => $this->lang("export.sku"),
-                'pic' => $this->lang("export.pic"),
-                'market_price' => $this->lang("export.market_price"),
-                'retail_price' => $this->lang("export.retail_price"),
-                'status' => $this->lang("export.status"),
-                'manufacturer' => $this->lang("export.manufacturer"),
-                'service_phone' => $this->lang("export.service_phone"),
-                'length' => $this->lang("export.length"),
-                'width' => $this->lang("export.width"),
-                'height' => $this->lang("export.height"),
+                'g_name' => '商品名称', 'gc_id' => '分类ID', 'gc_name' => '商品分类',
+                'model' => '型号', 'sku' => 'SKU', 'sku2' => 'SKU2', 'pic' => '图片', 'bar_code' => '条形码',
+                'cny_cost_price' => '人民币成本价', 'cny_market_price' => '人民币市场价', 'cny_retail_price' => '人民币零售价',
+                'hkd_cost_price' => '港币成本价', 'hkd_market_price' => '港币市场价', 'hkd_retail_price' => '港币零售价',
+                'manufacturer' => '生产厂家', 'service_phone' => '售后电话', 'status' => '状态',
+                'length' => '长', 'width' => '宽', 'height' => '高', 'g_id' => 'g_id',
             ];
-            if ($hasCostPriceAuth) {
-                $title['cost_price'] = $this->lang("export.cost_price");
-                // $title = array_merge(
-                //     array_slice($title, 0, 8, true),
-                //     ['cost_price' => $this->lang("export.cost_price")],
-                //     array_slice($title, 8, null, true)
-                // );
-            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));
+    }
+
+    protected function appendCurrencyPriceExportColumns(array $list, $hasCostPriceAuth)
+    {
+        $gIds = array_values(array_unique(array_filter(array_map('intval', array_column($list, 'g_id')))));
+        $priceMap = (new GoodsCurrencyPriceService())->getPriceMapByGoodsIds($gIds);
+        foreach ($list as &$row) {
+            $byCode = [];
+            foreach (isset($priceMap[intval($row['g_id'])]) ? $priceMap[intval($row['g_id'])] : [] as $price) {
+                $byCode[$price['currency_code']] = $price;
+            }
+            foreach (['CNY' => 'cny', 'HKD' => 'hkd'] as $code => $prefix) {
+                foreach ($this->priceFields as $field) {
+                    $row[$prefix . '_' . $field] = isset($byCode[$code][$field]) ? $byCode[$code][$field] : '';
+                }
+                if (!$hasCostPriceAuth) $row[$prefix . '_cost_price'] = '';
+            }
+        }
+        unset($row);
+        return $list;
     }
 
     

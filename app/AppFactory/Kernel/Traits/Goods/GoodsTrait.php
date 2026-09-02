@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Model\Activity\ActivityGoodsModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
+use think\facade\Db;
 
 trait GoodsTrait
 {
@@ -85,6 +86,9 @@ trait GoodsTrait
 
     public function delGoods($where)
     {
-        return GoodsModel::destroy($where);
+        $gIds = GoodsModel::where($where)->column('g_id');
+        $result = GoodsModel::destroy($where);
+        if ($result && $gIds) Db::name('goods_currency_price')->whereIn('g_id', $gIds)->delete();
+        return $result;
     }
 }

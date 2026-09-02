@@ -87,6 +87,8 @@ use app\AppFactory\Kernel\Model\Payment\PayTypeModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencySwitchService;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -1101,6 +1103,46 @@ class ApiClient extends ReceiveBaseClient
             $data['cart_num_limit'] = $data['limit_quantity'];
         }
         return $this->rQ($data);
+    }
+
+    public function currencySnapshot()
+    {
+        try {
+            return $this->rQ((new MachineCurrencySwitchService())->getActiveSnapshot($this->machine['m_id']));
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    public function reportCurrencySwitchState()
+    {
+        try {
+            $state = (new MachineCurrencySwitchService())->reportDeviceState($this->machine['m_id'], $this->data);
+            return $this->r(200, $this->lang('action_success'), $state);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    public function updateMachineGoodsCurrencyPrice()
+    {
+        try {
+            $service = new MachineCurrencyPriceService();
+            $config = $service->getMachineCurrency($this->machine['m_id']);
+            if (isset($this->data['currency_code']) && strtoupper(trim($this->data['currency_code'])) !== $config['currency_code']) {
+                throw new \InvalidArgumentException('设备只能修改当前配置币种的商品价格');
+            }
+            $result = $service->saveMachineGoodsPrice(
+                $this->machine['m_id'],
+                intval($this->data['mg_id']),
+                $config['currency_code'],
+                $this->data,
+                0
+            );
+            return $this->r(200, $this->lang('update_success'), $result);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
     }
 
     /**

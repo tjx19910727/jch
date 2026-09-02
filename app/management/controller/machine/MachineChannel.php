@@ -27,14 +27,16 @@ class MachineChannel extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
         //return $this->app->machineChannel->getList($where,$pageNum,$this->field);
-        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field,'',$hasCostPriceAuth);
+        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field,'',$hasCostPriceAuth,$postData['currency_code'] ?? '');
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineChannel->getMcFind($where,$this->field);
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
+        return $this->app->machineChannel->getMcFind($where,$field,$postData['currency_code'] ?? '',$hasCostPriceAuth);
     }
 
     public function add()
@@ -209,6 +211,24 @@ class MachineChannel extends Common
         }
         $where = $this->getWhere(['m_id'=>$postData['m_id']], false, []);
         return $this->app->machineChannel->batchRestoreMc($postData, $where);
+    }
+
+    public function synchronizationMachineGoodsPrice()
+    {
+        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价同步权限');
+        return $this->app->machineChannel->synchronizationMachineGoodsPrice(input());
+    }
+
+    public function saveCurrencyPrice()
+    {
+        $postData = input();
+        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价修改权限');
+        try {
+            $this->validate($postData, $this->validatePath . '.currencyPrice');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineChannel->saveCurrencyPrice($postData);
     }
 
     /**

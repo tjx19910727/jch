@@ -76,4 +76,37 @@ class MachineConfig extends Common
         }
         return $this->app->machineConfig->del($postData);
     }
+
+    public function currencyReadiness()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.currencySwitch');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineConfig->currencyReadiness($postData);
+    }
+
+    public function switchCurrency()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.currencySwitch');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineConfig->switchCurrency($postData);
+    }
+
+    public function switchCurrencyBatch()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.currencySwitchBatch');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineConfig->switchCurrencyBatch($postData);
+    }
 }

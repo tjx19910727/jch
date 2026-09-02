@@ -162,7 +162,9 @@ trait MachineChannelTrait
 
     public function delMachineChannel($where)
     {
+        $mcIds = MachineChannelModel::where($where)->column('mc_id');
         $result = MachineChannelModel::whereDel($where);
+        if ($result && $mcIds) Db::name('machine_channel_currency_price')->whereIn('mc_id', $mcIds)->delete();
         return $result;
     }
 

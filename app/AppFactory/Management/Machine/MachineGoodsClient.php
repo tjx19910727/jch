@@ -11,19 +11,25 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Support\Tree;
+use app\AppFactory\Kernel\Service\Currency\GoodsCurrencyPriceService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyAccessService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
+use app\AppFactory\Kernel\Support\Currency\CurrencyPriceSupport;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineGoodsClient extends ManagementClient
 {
     use MachineGoodsTrait;
     use MachineChannelTrait;
+    use MachineTrait;
     use GoodsCategoryTrait,GoodsTrait;
 
-    public function getMgList($where, $pageNum = 0, $field = "*", $order = "")
+    public function getMgList($where, $pageNum = 0, $field = "*", $order = "", $currencyCode = '', $hasCostPriceAuth = true)
     {
         $data = $this->getMachineGoodsList($where, $pageNum, $field, $order);
         if ($pageNum) {
@@ -52,6 +58,7 @@ class MachineGoodsClient extends ManagementClient
                 $data = $this->getMachineGoodsList($where, $pageNum, $field, $order);
             }
         }
+        $data = $this->appendCurrencyPrice($data, $currencyCode, $hasCostPriceAuth);
         return $this->r(200, $this->lang("query_success"), $data);
     }
 
@@ -88,17 +95,67 @@ class MachineGoodsClient extends ManagementClient
 
     public function addMg($postData)
     {
-        $mg_id = $this->addMachineGoods($postData);
-        if ($mg_id) {
+        try {
+            (new MachineCurrencyAccessService())->assertManagementAccess($postData['m_id'], $this->manager);
+            $currencyCode = $this->resolveCurrencyCode(intval($postData['m_id']), isset($postData['currency_code']) ? $postData['currency_code'] : '');
+            unset($postData['currency_code']);
+            $this->startTrans();
+            $mg_id = $this->addMachineGoods($postData);
+            if (!$mg_id) {
+                throw new \RuntimeException($this->lang('add_fail'));
+            }
+            $sync = (new MachineCurrencyPriceService())->syncMachineGoods(
+                intval($postData['m_id']),
+                $currencyCode,
+                [$mg_id],
+                intval($this->manager['manager_id'] ?? 0),
+                false
+            );
+            $this->commitTrans();
             $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id], 'mg_id,machine_id');
             $this->afterMgInsert($mg);
-            return $this->r(200, $this->lang("add_success"));
+            $this->notifyCurrencySnapshot($sync);
+            return $this->r(200, $this->lang("add_success"), ['mg_id' => $mg_id, 'currency' => $sync]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1, 'addMachineGoodsCurrency');
+            return $this->rValidate($e->getMessage());
         }
-        return $this->r(100, $this->lang("add_fail"));
+    }
+
+    public function getMgFindCurrency($where, $field = '*', $currencyCode = '', $hasCostPriceAuth = true)
+    {
+        try {
+            $item = $this->getMachineGoodsFind($where, $field);
+            if (!$item) return $this->rNoData();
+            $currencyCode = $this->resolveCurrencyCode(intval($item['m_id']), $currencyCode);
+            $machineMap = (new MachineCurrencyPriceService())->getMachineGoodsPriceMap([intval($item['mg_id'])], $currencyCode);
+            $goodsRows = (new GoodsCurrencyPriceService())->getPriceMapByGoodsIds([intval($item['g_id'])]);
+            $machinePrice = isset($machineMap[intval($item['mg_id'])]) ? $machineMap[intval($item['mg_id'])] : null;
+            $goodsPrice = null;
+            foreach (isset($goodsRows[intval($item['g_id'])]) ? $goodsRows[intval($item['g_id'])] : [] as $price) {
+                if ($price['currency_code'] === $currencyCode) $goodsPrice = $price;
+            }
+            if (!$hasCostPriceAuth) {
+                if ($machinePrice) $machinePrice['cost_price'] = '';
+                if ($goodsPrice) $goodsPrice['cost_price'] = '';
+            }
+            $item['target_currency_code'] = $currencyCode;
+            $item['currency_price'] = $machinePrice;
+            $item['goods_currency_price'] = $goodsPrice;
+            return $this->rQ($item);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
     }
 
     public function updateMg($postData)
     {
+        foreach (CurrencyPriceSupport::PRICE_FIELDS as $field) {
+            if (array_key_exists($field, $postData)) {
+                return $this->r(100, '设备商品价格请使用目标币种改价接口');
+            }
+        }
         $result = $this->updateMachineGoods($postData);
         if ($result) {
             $mg_id = $this->getMachineGoodsValue($postData, 'mg_id');
@@ -179,27 +236,109 @@ class MachineGoodsClient extends ManagementClient
      */
     public function synchronizationGoodsPrice($postData)
     {
-        $where = [];
-        if (isset($postData['mg_id']) && $postData['mg_id']) $where['mg_id'] = $postData['mg_id'];
-        if (isset($postData['m_id']) && $postData['m_id'])  $where['m_id'] = $postData['m_id'];
-
-        $mg = $this->getMachineGoodsList($where,0,'mg_id,g_id,cost_price,market_price,retail_price');
-        if (!$mg) return $this->r(100,$this->lang("VMachineGoods.mg_id_require"));
-        $mg = $mg->toArray();
-        if ($mg) {
-            foreach ($mg as $key => $value) {
-                $goods = $this->getGoodsFind(['g_id' => $value['g_id']], 'cost_price,market_price,retail_price');
-                if (!$goods) continue;
-                $goods = $goods->toArray();
-                if ($value['cost_price'] != $goods['cost_price'] || $value['market_price'] != $goods['market_price'] || $value['retail_price'] != $goods['retail_price']) {
-                    $value = array_merge($value, $goods);
-                    $result = $this->updateMachineGoods($value);
-                    if ($result) {
-                        $this->afterMgUpdate($value['mg_id']);
-                    }
-                }
+        try {
+            $mId = intval($postData['m_id'] ?? 0);
+            if ($mId <= 0) {
+                throw new \InvalidArgumentException($this->lang('VMachineGoods.m_id_require'));
             }
+            (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
+            $ids = $postData['mg_ids'] ?? ($postData['mg_id'] ?? []);
+            $currencyCode = $this->resolveCurrencyCode($mId, $postData['currency_code'] ?? '');
+            $result = (new MachineCurrencyPriceService())->syncMachineGoods($mId, $currencyCode, $ids, intval($this->manager['manager_id'] ?? 0));
+            $this->notifyCurrencySnapshot($result);
+            return $this->r(200, $this->lang('action_success'), $result);
+        } catch (\Exception $e) {
+            actionException($e, 1, 'syncMachineGoodsCurrency');
+            return $this->rValidate($e->getMessage());
         }
-        return $this->r(200, $this->lang("action_success"));
+    }
+
+    public function saveCurrencyPrice($postData)
+    {
+        try {
+            $mId = intval($postData['m_id'] ?? 0);
+            $mgId = intval($postData['mg_id'] ?? 0);
+            (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
+            $currencyCode = $this->resolveCurrencyCode($mId, $postData['currency_code'] ?? '');
+            $result = (new MachineCurrencyPriceService())->saveMachineGoodsPrice(
+                $mId,
+                $mgId,
+                $currencyCode,
+                $postData,
+                intval($this->manager['manager_id'] ?? 0)
+            );
+            $this->notifyCurrencySnapshot($result);
+            return $this->r(200, $this->lang('update_success'), $result);
+        } catch (\Exception $e) {
+            actionException($e, 1, 'saveMachineGoodsCurrencyPrice');
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    protected function appendCurrencyPrice($data, $currencyCode, $hasCostPriceAuth)
+    {
+        if (!$data) {
+            return $data;
+        }
+        $rows = [];
+        foreach ($data as $item) {
+            $rows[] = $item;
+        }
+        if (!$rows) {
+            return $data;
+        }
+        $mgIds = array_map(function ($item) { return intval($item['mg_id']); }, $rows);
+        $gIds = array_map(function ($item) { return intval($item['g_id']); }, $rows);
+        $targetCodeMap = [];
+        $idsByCode = [];
+        foreach ($rows as $row) {
+            $targetCode = $this->resolveCurrencyCode(intval($row['m_id']), $currencyCode);
+            $targetCodeMap[intval($row['mg_id'])] = $targetCode;
+            $idsByCode[$targetCode][] = intval($row['mg_id']);
+        }
+        $machineMap = [];
+        $priceService = new MachineCurrencyPriceService();
+        foreach ($idsByCode as $targetCode => $ids) {
+            $machineMap += $priceService->getMachineGoodsPriceMap($ids, $targetCode);
+        }
+        $goodsRows = (new GoodsCurrencyPriceService())->getPriceMapByGoodsIds($gIds);
+        return $data->each(function ($item) use ($targetCodeMap, $machineMap, $goodsRows, $hasCostPriceAuth) {
+            $currencyCode = $targetCodeMap[intval($item['mg_id'])];
+            $machinePrice = $machineMap[intval($item['mg_id'])] ?? null;
+            $goodsPrice = null;
+            foreach (isset($goodsRows[intval($item['g_id'])]) ? $goodsRows[intval($item['g_id'])] : [] as $price) {
+                if ($price['currency_code'] === $currencyCode) $goodsPrice = $price;
+            }
+            if (!$hasCostPriceAuth) {
+                if ($machinePrice) $machinePrice['cost_price'] = '';
+                if ($goodsPrice) $goodsPrice['cost_price'] = '';
+            }
+            $item['target_currency_code'] = $currencyCode;
+            $item['currency_price'] = $machinePrice;
+            $item['goods_currency_price'] = $goodsPrice;
+            $item['price_diff_status'] = !$machinePrice ? 0 : ($goodsPrice && CurrencyPriceSupport::pricesEqual($machinePrice, $goodsPrice) ? 1 : 2);
+            return $item;
+        });
+    }
+
+    protected function resolveCurrencyCode($mId, $currencyCode)
+    {
+        if ($currencyCode) {
+            return CurrencyPriceSupport::normalizeCurrencyCode($currencyCode);
+        }
+        return (new MachineCurrencyPriceService())->getMachineCurrency($mId)['currency_code'];
+    }
+
+    protected function notifyCurrencySnapshot(array $result)
+    {
+        // 预配置非当前币种不会改变售卖快照，因此无需通知设备刷新。
+        if (intval($result['active_snapshot_changed'] ?? 0) !== 1) {
+            return;
+        }
+        $this->sendToMachine(
+            ['machine_id' => $result['machine_id']],
+            'currencySnapshotUpdated',
+            ['currency_code' => $result['active_currency_code'], 'currency_version' => intval($result['currency_version'])]
+        );
     }
 }

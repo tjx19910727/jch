@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Providers\Management\AuthProvider;
 use app\AppFactory\Kernel\Providers\Management\CardProvider;
 use app\AppFactory\Kernel\Providers\Management\CommonProvider;
 use app\AppFactory\Kernel\Providers\Management\ConfigProvider;
+use app\AppFactory\Kernel\Providers\Management\CurrencyProvider;
 use app\AppFactory\Kernel\Providers\Management\EarthProvider;
 use app\AppFactory\Kernel\Providers\Management\EmailProvider;
 use app\AppFactory\Kernel\Providers\Management\ExportProvider;
@@ -81,6 +82,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Config\ConfigSceneClient               $configScene            场景管理
  * @property Config\ConfigLangClient                $configLang             语言管理
  * @property Config\ConfigPerformanceClient         $configPerformance      性能参数配置
+ * @property Currency\CurrencyClient                $currency               币种管理
  *
  * @property Earth\EarthClient                      $earth                  全球地区信息与时区
  *
@@ -197,6 +199,7 @@ class Application extends ServiceContainer
         IndexProvider::class,
         CommonProvider::class,
         ConfigProvider::class,
+        CurrencyProvider::class,
         EarthProvider::class,
         EmailProvider::class,
         ExportProvider::class,

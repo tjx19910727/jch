@@ -29,7 +29,7 @@ class Goods extends Common
         $postData = input();
         $where = $this->getWhere($postData);
         $this->field .= ",`desc`,details_pic";
-        $result = $this->app->goods->getFind($where,$this->field);
+        $result = $this->app->goods->getFindWithCurrencyPrices($where, $this->field, $this->hasCostPriceAuth());
         return $result;
     }
 
@@ -52,10 +52,10 @@ class Goods extends Common
             }
         }
         if(!empty($postData['machine_id'])||!empty($postData['sale_check'])){
-            $result = $this->app->goods->getAuthList($where,$pageNum,$field,'g_id desc',$postData);
+            $result = $this->app->goods->getAuthList($where,$pageNum,$field,'g_id desc',$postData,$hasCostPriceAuth);
             return $result;
         }
-        $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        $result = $this->app->goods->getListWithCurrencyPrices($where, $pageNum, $field, 'g_id desc', $hasCostPriceAuth);
         return $result;
     }
 
@@ -93,7 +93,7 @@ class Goods extends Common
             }
         }
 
-        return $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        return $this->app->goods->getListWithCurrencyPrices($where,$pageNum,$field,'g_id desc',$hasCostPriceAuth);
     }
 
     /**
@@ -123,6 +123,9 @@ class Goods extends Common
     public function add()
     {
         $postData = input();
+        if (!$this->hasCostPriceAuth() && $this->containsCurrencyCostPrice($postData)) {
+            return returnState(100, '当前账号无成本价修改权限');
+        }
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
         try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->addG($postData);
@@ -136,6 +139,9 @@ class Goods extends Common
     public function update()
     {
         $postData = input();
+        if (!$this->hasCostPriceAuth() && $this->containsCurrencyCostPrice($postData)) {
+            return returnState(100, '当前账号无成本价修改权限');
+        }
         //'商品库存不允许通过商品编辑接口修改'
         if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
         if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);
@@ -144,6 +150,18 @@ class Goods extends Common
         $result = $this->app->goods->updateForEdit($postData);
         //$result = $this->app->goods->update($postData);
         return $result;
+    }
+
+    private function containsCurrencyCostPrice($postData)
+    {
+        foreach (['cost_price', 'cny_cost_price', 'hkd_cost_price'] as $field) {
+            if (isset($postData[$field]) && trim((string)$postData[$field]) !== '') return true;
+        }
+        $prices = isset($postData['currency_prices']) ? json2arr($postData['currency_prices']) : [];
+        foreach ((array)$prices as $price) {
+            if (is_array($price) && isset($price['cost_price']) && trim((string)$price['cost_price']) !== '') return true;
+        }
+        return false;
     }
 
     /**
@@ -182,7 +200,7 @@ class Goods extends Common
     public function importExcel()
     {
         $postData = input();
-        return $this->app->goods->importExcelV2($postData);
+        return $this->app->goods->importExcelV2($postData, $this->hasCostPriceAuth());
     }
 
     /**

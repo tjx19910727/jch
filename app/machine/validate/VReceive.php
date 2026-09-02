@@ -83,6 +83,13 @@ class VReceive extends VCommon
         "operate" => "require|in:1,2,3",
         "type" => "require|in:1,2,3,4",
         "goods_info" => "require",
+        "can_switch_currency" => "require|in:0,1",
+        "supported_currency_codes" => "require",
+        "mg_id" => "require|integer|gt:0",
+        "currency_code" => "regex:^[A-Za-z]{3}$",
+        "cost_price" => "require|float|egt:0",
+        "market_price" => "require|float|egt:0",
+        "retail_price" => "require|float|egt:0",
     ];
 
     protected $message = [
@@ -184,6 +191,9 @@ class VReceive extends VCommon
         "getMachineGoods" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfig" => ["msg_id","machine_id","timestamp","sign"],
+        "getCurrencySnapshot" => ["msg_id","machine_id","timestamp","sign"],
+        "reportCurrencySwitchState" => ["msg_id","machine_id","timestamp","sign","can_switch_currency","supported_currency_codes"],
+        "updateMachineGoodsCurrencyPrice" => ["msg_id","machine_id","timestamp","sign","mg_id","currency_code","cost_price","market_price","retail_price"],
         "reportMachineRunMode" => ["msg_id","machine_id","timestamp","sign","run_mode"],
         "getPayTypeList" => ["msg_id","machine_id","timestamp","sign"],
         "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],
