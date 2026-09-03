@@ -2,12 +2,16 @@
 
 namespace app\management\service;
 
+use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Management\Application;
 use app\AppFactory\RabbitMq\MqProducer;
 use think\facade\Db;
 
 class MachineTargetService
 {
+    const IMPORT_MAX_FILE_SIZE = 10485760;
+    const IMPORT_MAX_DATA_ROWS = 5000;
+
     /** @var Application */
     protected $app;
 
@@ -180,6 +184,405 @@ class MachineTargetService
     {
         // 月表与默认目标表不再通过group id关联，修改与新增使用相同的按设备覆盖逻辑。
         return $this->add($ctx);
+    }
+
+    /**
+     * 导入设备目标值。
+     *
+     * 月度目标只覆盖 Excel 中出现的设备月份；同一设备填写多个默认目标时，
+     * 仅采用已填写默认目标数据中目标月份最早的一条，其余自动过滤。
+     *
+     * @param array{file_path:mixed,auth_where?:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function import(array $ctx): array
+    {
+        $pathResult = $this->resolveImportFilePath($ctx['file_path'] ?? '');
+        if (($pathResult['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => strval($pathResult['msg'] ?? '导入文件无效'), 'data' => []];
+        }
+
+        $fields = [
+            'machine_id',
+            'machine_name',
+            'month',
+            'monthly_target_amount',
+            'default_target_amount',
+            'manager_account',
+        ];
+        $rawRows = Excel::importExcel(strval($pathResult['path']), $fields, [], 2);
+        if (!is_array($rawRows)) {
+            return ['state' => 100, 'msg' => 'Excel读取失败，请确认文件与模板格式正确', 'data' => []];
+        }
+
+        $errors = [];
+        $deviceGroups = [];
+        $total = 0;
+        $currentMonth = date('Y-m');
+        $keyOf = function ($value) {
+            $value = trim((string) $value);
+            return $value === '' ? '' : strtolower($value);
+        };
+        $cellText = function ($value) {
+            if ($value instanceof \PHPExcel_RichText) {
+                $value = $value->getPlainText();
+            }
+            if ($value === null) {
+                return '';
+            }
+            if (is_float($value) && floor($value) === $value) {
+                return sprintf('%.0f', $value);
+            }
+            return is_scalar($value) ? trim((string) $value) : '';
+        };
+        $addError = function ($row, $field, $value, $message) use (&$errors) {
+            $errors[] = [
+                'row' => intval($row),
+                'field' => strval($field),
+                'value' => is_scalar($value) ? strval($value) : '',
+                'message' => strval($message),
+            ];
+        };
+
+        // 一次扫描完成空行过滤、基础校验、月份去重、负责人一致性检查和设备分组。
+        foreach ($rawRows as $index => $rawRow) {
+            $excelRow = intval($index) + 2;
+            $machineId = $cellText($rawRow['machine_id'] ?? '');
+            $machineName = $cellText($rawRow['machine_name'] ?? '');
+            $month = $cellText($rawRow['month'] ?? '');
+            $monthlyRaw = $cellText($rawRow['monthly_target_amount'] ?? '');
+            $defaultRaw = $cellText($rawRow['default_target_amount'] ?? '');
+            $managerAccount = $cellText($rawRow['manager_account'] ?? '');
+
+            if (
+                $machineId === ''
+                && $machineName === ''
+                && $month === ''
+                && $monthlyRaw === ''
+                && $defaultRaw === ''
+                && $managerAccount === ''
+            ) {
+                continue;
+            }
+
+            $total++;
+            if ($total > self::IMPORT_MAX_DATA_ROWS) {
+                return [
+                    'state' => 100,
+                    'msg' => '单次最多导入' . self::IMPORT_MAX_DATA_ROWS . '条数据',
+                    'data' => ['total' => $total],
+                ];
+            }
+
+            $rowHasError = false;
+            if ($machineId === '') {
+                $addError($excelRow, '设备编号', '', '设备编号不能为空');
+                $rowHasError = true;
+            }
+            if (preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month) !== 1) {
+                $addError($excelRow, '目标月份', $month, '目标月份格式应为YYYY-MM');
+                $rowHasError = true;
+            } elseif ($month < $currentMonth) {
+                $addError($excelRow, '目标月份', $month, '不允许导入历史月份');
+                $rowHasError = true;
+            }
+
+            $monthlyResult = $this->parseImportAmount($monthlyRaw, '月目标金额');
+            if (($monthlyResult['state'] ?? 100) !== 200) {
+                $addError(
+                    $excelRow,
+                    '月目标金额',
+                    $monthlyRaw,
+                    strval($monthlyResult['msg'] ?? '月目标金额格式错误')
+                );
+                $rowHasError = true;
+            }
+            if ($rowHasError) {
+                continue;
+            }
+
+            $deviceKey = $keyOf($machineId);
+            if (!isset($deviceGroups[$deviceKey])) {
+                $deviceGroups[$deviceKey] = [
+                    'machine_id' => $machineId,
+                    'first_row' => $excelRow,
+                    'manager_account' => $managerAccount,
+                    'months' => [],
+                    'default' => null,
+                    'default_count' => 0,
+                ];
+            }
+
+            if (isset($deviceGroups[$deviceKey]['months'][$month])) {
+                $addError($excelRow, '目标月份', $month, '同一设备的目标月份重复');
+                continue;
+            }
+            if ($deviceGroups[$deviceKey]['manager_account'] !== $managerAccount) {
+                $addError($excelRow, '负责人账号', $managerAccount, '同一设备各行的负责人账号必须保持一致');
+                continue;
+            }
+
+            $deviceGroups[$deviceKey]['months'][$month] = round((float) $monthlyResult['amount'], 2);
+            if ($defaultRaw !== '') {
+                $deviceGroups[$deviceKey]['default_count']++;
+                $currentDefault = $deviceGroups[$deviceKey]['default'];
+                if ($currentDefault === null || $month < $currentDefault['month']) {
+                    $deviceGroups[$deviceKey]['default'] = [
+                        'month' => $month,
+                        'amount_raw' => $defaultRaw,
+                        'row' => $excelRow,
+                    ];
+                }
+            }
+        }
+
+        if ($total === 0) {
+            return ['state' => 100, 'msg' => 'Excel中没有可导入的数据', 'data' => []];
+        }
+        if ($errors !== []) {
+            return [
+                'state' => 100,
+                'msg' => '导入数据校验失败',
+                'data' => ['error_count' => count($errors), 'errors' => $errors],
+            ];
+        }
+
+        $deviceIds = array_column($deviceGroups, 'machine_id');
+        $managerAccounts = array_values(array_unique(array_filter(
+            array_column($deviceGroups, 'manager_account'),
+            function ($account) {
+                return $account !== '';
+            }
+        )));
+
+        $transactionStarted = false;
+        try {
+            $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+            $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+            $allowedMidMap = array_fill_keys(array_map('intval', $allowedMids), true);
+
+            $machineMap = Db::name('machine')
+                ->whereIn('machine_id', $deviceIds)
+                ->column('m_id', 'machine_id');
+            $machineMap = array_change_key_case($machineMap, CASE_LOWER);
+
+            $managerMap = [];
+            if ($managerAccounts !== []) {
+                $managerMap = Db::name('auth_manager')
+                    ->whereIn('account', $managerAccounts)
+                    ->where('status', '=', 1)
+                    ->column('manager_id', 'account');
+                $managerMap = array_change_key_case($managerMap, CASE_LOWER);
+            }
+
+            $monthlyRows = [];
+            $defaultRows = [];
+            $targetManagerRows = [];
+            $deleteMonthsByMid = [];
+            $filteredDefaultCount = 0;
+            $now = time();
+            $operatorId = intval($this->manager['manager_id'] ?? 0);
+
+            // 一次设备扫描完成设备/负责人校验，并生成全部待写入数据。
+            foreach ($deviceGroups as $deviceKey => $group) {
+                $filteredDefaultCount += max(intval($group['default_count']) - 1, 0);
+                if ($group['default'] !== null) {
+                    $defaultResult = $this->parseImportAmount(
+                        $group['default']['amount_raw'],
+                        '默认目标金额'
+                    );
+                    if (($defaultResult['state'] ?? 100) !== 200) {
+                        $addError(
+                            $group['default']['row'],
+                            '默认目标金额',
+                            $group['default']['amount_raw'],
+                            strval($defaultResult['msg'] ?? '默认目标金额格式错误')
+                        );
+                        continue;
+                    }
+                    $group['default']['amount'] = round((float) $defaultResult['amount'], 2);
+                }
+
+                $mid = intval($machineMap[$deviceKey] ?? 0);
+                if ($mid <= 0 || !isset($allowedMidMap[$mid])) {
+                    $addError(
+                        $group['first_row'],
+                        '设备编号',
+                        $group['machine_id'],
+                        '设备不存在或不在当前账号可操作范围内'
+                    );
+                    continue;
+                }
+
+                $managerId = 0;
+                if ($group['manager_account'] !== '') {
+                    $managerId = intval($managerMap[$keyOf($group['manager_account'])] ?? 0);
+                    if ($managerId <= 0) {
+                        $addError(
+                            $group['first_row'],
+                            '负责人账号',
+                            $group['manager_account'],
+                            '负责人账号不存在或已禁用'
+                        );
+                        continue;
+                    }
+                }
+
+                foreach ($group['months'] as $month => $amount) {
+                    $bounds = $this->monthBounds($month);
+                    $monthlyRows[] = [
+                        'target_group_id' => 0,
+                        'm_id' => $mid,
+                        'month' => $month,
+                        'start_time' => $bounds['start'],
+                        'end_time' => $bounds['end'],
+                        'target_amount' => $amount,
+                    ];
+                    $deleteMonthsByMid[$mid][] = $month;
+                }
+
+                if ($group['default'] !== null) {
+                    $defaultRows[] = [
+                        'm_id' => $mid,
+                        'months' => $group['default']['month'],
+                        'target_amount' => $group['default']['amount'],
+                        'create_time' => $now,
+                    ];
+                }
+
+                $targetManagerRows[] = [
+                    'm_id' => $mid,
+                    'manager_id' => $managerId,
+                    'create_time' => $now,
+                    'update_time' => $now,
+                    'update_manager_id' => $operatorId,
+                ];
+            }
+
+            if ($errors !== []) {
+                return [
+                    'state' => 100,
+                    'msg' => '导入数据校验失败',
+                    'data' => ['error_count' => count($errors), 'errors' => $errors],
+                ];
+            }
+
+            Db::startTrans();
+            $transactionStarted = true;
+
+            // 只清除本次 Excel 中存在的设备月份，未导入月份保持不变。
+            foreach ($deleteMonthsByMid as $mid => $months) {
+                Db::name('machine_target_monthly')
+                    ->where('m_id', '=', intval($mid))
+                    ->whereIn('month', array_values(array_unique($months)))
+                    ->delete();
+            }
+            if ($monthlyRows !== []) {
+                Db::name('machine_target_monthly')->insertAll($monthlyRows);
+            }
+            if ($defaultRows !== []) {
+                Db::name('machine_target_group')
+                    ->duplicate(['target_amount', 'create_time'])
+                    ->insertAll($defaultRows);
+            }
+            if ($targetManagerRows !== []) {
+                Db::name('machine_target_manager')
+                    ->duplicate(['manager_id', 'update_time', 'update_manager_id'])
+                    ->insertAll($targetManagerRows);
+            }
+
+            Db::commit();
+            $transactionStarted = false;
+
+            return [
+                'state' => 200,
+                'msg' => '导入成功',
+                'data' => [
+                    'total' => $total,
+                    'device_count' => count($deviceGroups),
+                    'monthly_count' => count($monthlyRows),
+                    'default_count' => count($defaultRows),
+                    'filtered_default_count' => $filteredDefaultCount,
+                    'manager_count' => count($targetManagerRows),
+                ],
+            ];
+        } catch (\Throwable $e) {
+            if ($transactionStarted) {
+                Db::rollback();
+            }
+            actionException($e, 1);
+            return ['state' => 100, 'msg' => '导入失败：' . $e->getMessage(), 'data' => []];
+        }
+    }
+
+    /**
+     * @param mixed $rawPath
+     * @return array<string,mixed>
+     */
+    protected function resolveImportFilePath($rawPath): array
+    {
+        if (is_array($rawPath) || is_object($rawPath)) {
+            return ['state' => 100, 'msg' => '导入文件路径格式错误'];
+        }
+        $value = trim((string) $rawPath);
+        if ($value === '' || strpos($value, "\0") !== false) {
+            return ['state' => 100, 'msg' => '请先上传导入文件'];
+        }
+
+        $urlPath = parse_url($value, PHP_URL_PATH);
+        $urlPath = is_string($urlPath) && $urlPath !== '' ? rawurldecode($urlPath) : $value;
+        $relativePath = ltrim(str_replace('\\', '/', $urlPath), '/');
+        if (strpos($relativePath, 'uploads/') !== 0 || preg_match('#(^|/)\.\.(/|$)#', $relativePath)) {
+            return ['state' => 100, 'msg' => '导入文件路径不合法'];
+        }
+
+        $uploadsRoot = realpath(root_path() . 'public/uploads');
+        $realPath = realpath(root_path() . 'public/' . $relativePath);
+        if ($uploadsRoot === false || $realPath === false || !is_file($realPath) || !is_readable($realPath)) {
+            return ['state' => 100, 'msg' => '导入文件不存在或不可读取'];
+        }
+
+        $normalizedRoot = rtrim(str_replace('\\', '/', $uploadsRoot), '/') . '/';
+        $normalizedReal = str_replace('\\', '/', $realPath);
+        if (strncasecmp($normalizedReal, $normalizedRoot, strlen($normalizedRoot)) !== 0) {
+            return ['state' => 100, 'msg' => '导入文件路径不合法'];
+        }
+        if (strtolower(pathinfo($realPath, PATHINFO_EXTENSION)) !== 'xlsx') {
+            return ['state' => 100, 'msg' => '仅支持xlsx格式的导入文件'];
+        }
+
+        $fileSize = filesize($realPath);
+        if ($fileSize === false || $fileSize <= 0 || $fileSize > self::IMPORT_MAX_FILE_SIZE) {
+            return ['state' => 100, 'msg' => '导入文件为空或超过10MB'];
+        }
+        return ['state' => 200, 'path' => $realPath];
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array<string,mixed>
+     */
+    protected function parseImportAmount($raw, string $fieldName): array
+    {
+        if (is_array($raw) || is_object($raw)) {
+            return ['state' => 100, 'msg' => $fieldName . '格式错误'];
+        }
+        $value = str_replace([',', '，'], '', trim((string) $raw));
+        if ($value === '') {
+            return ['state' => 100, 'msg' => $fieldName . '不能为空'];
+        }
+        if (preg_match('/^\d+(?:\.\d{1,2})?$/', $value) !== 1) {
+            return ['state' => 100, 'msg' => $fieldName . '必须是最多两位小数的数字'];
+        }
+
+        $amount = round((float) $value, 2);
+        if ($amount <= 0) {
+            return ['state' => 100, 'msg' => $fieldName . '必须大于0'];
+        }
+        if ($amount > 9999999999.99) {
+            return ['state' => 100, 'msg' => $fieldName . '超出允许范围'];
+        }
+        return ['state' => 200, 'amount' => $amount];
     }
 
     /**
