@@ -18,7 +18,7 @@ class VMachineChannel extends VCommon
         "m_id" => "require",
         "machine_id" => "require",
         "channel_code" => "require",
-        "mc_ids" => "require",
+        "mc_ids" => "require|array",
     ];
 
     protected $message = [
@@ -27,6 +27,7 @@ class VMachineChannel extends VCommon
         "machine_id.require" => "VMachineChannel.machine_id_require",
         "channel_code.require" => "VMachineChannel.channel_code_require",
         "mc_ids.require" => "VMachineChannel.mc_id_require",
+        "mc_ids.array" => "货道ID必须是数组",
     ];
 
     protected $scene = [

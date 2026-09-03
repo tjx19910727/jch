@@ -353,12 +353,44 @@ trait SaleOrdersTrait
     public function addSaleOrders($insert)
     {
         $insert = $this->appendSaleOrderRunMode($insert);
+        $insert = $this->appendSaleOrderCurrencySnapshot($insert);
         $insert = $this->normalizeSaleOrderNonNegativeFields($insert);
         $insert = $this->appendRevenueCouponCode($insert);
         $order = SaleOrdersModel::create($insert);
         actionLog($this->getLS(), '生成订单SQL');
         actionLog($order, '生成订单结果');
         return $order->order_id;
+    }
+
+    /**
+     * 下单币种以后端设备当前快照为准；旧设备可不传，新设备传入时必须一致。
+     */
+    protected function appendSaleOrderCurrencySnapshot(array $order)
+    {
+        $where = [];
+        if (!empty($order['m_id'])) {
+            $where['m_id'] = intval($order['m_id']);
+        } elseif (!empty($order['machine_id'])) {
+            $where['machine_id'] = $order['machine_id'];
+        }
+        if (!$where) {
+            if (!isset($order['currency_code'])) $order['currency_code'] = 'CNY';
+            if (!isset($order['currency_version'])) $order['currency_version'] = 1;
+            return $order;
+        }
+        $config = Db::name('machine_config')->where($where)->field('currency_code,currency_version')->find();
+        if (!$config) throw new \InvalidArgumentException('设备币种配置不存在');
+        $currencyCode = strtoupper(trim($config['currency_code'] ?: 'CNY'));
+        $currencyVersion = max(1, intval($config['currency_version']));
+        if (isset($order['currency_code']) && strtoupper(trim($order['currency_code'])) !== $currencyCode) {
+            throw new \InvalidArgumentException('订单币种与设备当前币种不一致，请刷新商品数据');
+        }
+        if (isset($order['currency_version']) && intval($order['currency_version']) !== $currencyVersion) {
+            throw new \InvalidArgumentException('订单币种版本已过期，请刷新商品数据');
+        }
+        $order['currency_code'] = $currencyCode;
+        $order['currency_version'] = $currencyVersion;
+        return $order;
     }
 
     /**
@@ -657,6 +689,10 @@ trait SaleOrdersTrait
      */
     public function addSaleOrdersDetails($insert)
     {
+        if (!empty($insert['order_id'])) {
+            $orderCurrencyCode = Db::name('sale_orders')->where('order_id', intval($insert['order_id']))->value('currency_code');
+            if ($orderCurrencyCode) $insert['currency_code'] = strtoupper(trim($orderCurrencyCode));
+        }
         $insert = $this->normalizeSaleOrderDetailNonNegativeFields($insert);
         if (!isset($insert['sod_ao_id']) || intval($insert['sod_ao_id']) <= 0) {
             $insert['sod_ao_id'] = $this->resolveSaleOrderDetailAoId($insert);

@@ -96,7 +96,7 @@ trait MachineChannelTrait
      */
     public function getMachineChannelFind($where, $field = "*", $order = "")
     {
-        return MachineChannelModel::getFind($where, $field, $order);
+        return MachineChannelModel::alias("a")->where(MachineChannelModel::stripWhereAliasPrefix($where))->field($field)->order($order)->find();
     }
 
     public function getMachineChannelList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = '')
@@ -162,7 +162,9 @@ trait MachineChannelTrait
 
     public function delMachineChannel($where)
     {
+        $mcIds = MachineChannelModel::where($where)->column('mc_id');
         $result = MachineChannelModel::whereDel($where);
+        if ($result && $mcIds) Db::name('machine_channel_currency_price')->whereIn('mc_id', $mcIds)->delete();
         return $result;
     }
 

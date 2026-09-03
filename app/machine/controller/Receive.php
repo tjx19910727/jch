@@ -258,6 +258,36 @@ class Receive extends Common
         }
     }
 
+    public function getCurrencySnapshot()
+    {
+        try {
+            return $this->app->api->currencySnapshot();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    public function reportCurrencySwitchState()
+    {
+        return $this->app->api->reportCurrencySwitchState();
+    }
+
+    public function updateMachineGoodsCurrencyPrice()
+    {
+        return $this->app->api->updateMachineGoodsCurrencyPrice();
+    }
+
+    public function switchCurrency()
+    {
+        try {
+            return $this->app->api->switchCurrency();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     /**
      * 设备上报修改自身运行模式
      * @return array|string

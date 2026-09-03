@@ -8,7 +8,6 @@
 
 namespace app\management\controller\machine;
 
-
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineGoods;
 
@@ -30,14 +29,16 @@ class MachineGoods extends Common
         $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->getMgList($where, $pageNum, $field);
+        return $this->app->machineGoods->getMgList($where, $pageNum, $field, '', '', $hasCostPriceAuth);
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineGoods->getFind($where, $this->field);
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
+        return $this->app->machineGoods->getMgFindCurrency($where, $field, '', $hasCostPriceAuth);
     }
 
     /**
@@ -140,12 +141,15 @@ class MachineGoods extends Common
     }
 
     /**
-     * 设备商品库同步商品库价格
+     * 设备商品库同步核心商品币种价格（支持一次多个币种，含 HKD）。
+     * 请求参数：m_id + mg_ids[] + currency_codes[]。
      * @return array|\think\response\Json
      */
     public function synchronizationGoods()
     {
         $postData = input();
+        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价同步权限');
         return $this->app->machineGoods->synchronizationGoodsPrice($postData);
     }
+
 }
