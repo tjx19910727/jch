@@ -23,20 +23,10 @@ class FaultNoticeClient extends ManagementClient
     use FaultCatalogTrait;
     use FaultReceiverTrait;
 
-    public function getOverview()
+    public function getOverview($params = [])
     {
         try {
-            return $this->r(200, '查询成功', $this->getFaultOverviewData());
-        } catch (\Throwable $e) {
-            actionException($e, 1, 'faultDashboard');
-            return $this->rTryCatch($e->getMessage());
-        }
-    }
-
-    public function getTrend($level = 0)
-    {
-        try {
-            return $this->r(200, '查询成功', $this->getFaultTrendData($level));
+            return $this->r(200, '查询成功', $this->getFaultOverviewData($params));
         } catch (\InvalidArgumentException $e) {
             return $this->rValidate($e->getMessage());
         } catch (\Throwable $e) {
@@ -45,10 +35,10 @@ class FaultNoticeClient extends ManagementClient
         }
     }
 
-    public function getTopRanking($top = 10, $level = 0)
+    public function getTrend($level = 0, $params = [])
     {
         try {
-            return $this->r(200, '查询成功', $this->getFaultTopRankingData($top, $level));
+            return $this->r(200, '查询成功', $this->getFaultTrendData($level, $params));
         } catch (\InvalidArgumentException $e) {
             return $this->rValidate($e->getMessage());
         } catch (\Throwable $e) {
@@ -57,10 +47,22 @@ class FaultNoticeClient extends ManagementClient
         }
     }
 
-    public function getMachineTopRanking($top = 10, $level = 0)
+    public function getTopRanking($top = 10, $level = 0, $params = [])
     {
         try {
-            return $this->r(200, '查询成功', $this->getMachineTopRankingData($top, $level));
+            return $this->r(200, '查询成功', $this->getFaultTopRankingData($top, $level, $params));
+        } catch (\InvalidArgumentException $e) {
+            return $this->rValidate($e->getMessage());
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'faultDashboard');
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    public function getMachineTopRanking($top = 10, $level = 0, $params = [])
+    {
+        try {
+            return $this->r(200, '查询成功', $this->getMachineTopRankingData($top, $level, $params));
         } catch (\InvalidArgumentException $e) {
             return $this->rValidate($e->getMessage());
         } catch (\Throwable $e) {

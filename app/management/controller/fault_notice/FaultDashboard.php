@@ -14,7 +14,7 @@ class FaultDashboard extends Common
      */
     public function getOverview()
     {
-        return $this->app->faultNotice->getOverview();
+        return $this->app->faultNotice->getOverview(input());
     }
 
     /**
@@ -24,7 +24,7 @@ class FaultDashboard extends Common
     {
         $postData = input();
         $level = intval($postData['level'] ?? 0);
-        return $this->app->faultNotice->getTrend($level);
+        return $this->app->faultNotice->getTrend($level, $postData);
     }
 
     /**
@@ -37,7 +37,7 @@ class FaultDashboard extends Common
         $top = intval($postData['top'] ?? 10);
         $top = $top > 0 ? min($top, 100) : 10;
         $level = intval($postData['level'] ?? 0);
-        return $this->app->faultNotice->getTopRanking($top, $level);
+        return $this->app->faultNotice->getTopRanking($top, $level, $postData);
     }
 
     /**
@@ -50,6 +50,6 @@ class FaultDashboard extends Common
         $top = intval($postData['top'] ?? 10);
         $top = $top > 0 ? min($top, 100) : 10;
         $level = intval($postData['level'] ?? 0);
-        return $this->app->faultNotice->getMachineTopRanking($top, $level);
+        return $this->app->faultNotice->getMachineTopRanking($top, $level, $postData);
     }
 }

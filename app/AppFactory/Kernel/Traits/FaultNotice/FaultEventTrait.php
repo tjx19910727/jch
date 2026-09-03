@@ -11,6 +11,8 @@ use think\facade\Db;
 trait FaultEventTrait
 {
     /**
+     * 未传时间范围时默认查询最近3个月。
+     *
      * @param array $params
      * @param int $pageNum 每页条数，沿用后台现有pageNum语义
      * @return mixed
@@ -18,6 +20,11 @@ trait FaultEventTrait
     public function getFaultEventList($params = [], $pageNum = 20)
     {
         $pageNum = max(1, min(intval($pageNum), 100));
+        if (!$this->hasFaultEventTimeFilter($params)) {
+            $now = time();
+            $params['start_time'] = strtotime(date('Y-m-d 00:00:00', strtotime('-3 months', $now)));
+            $params['end_time'] = $now;
+        }
         $paginator = $this->buildFaultEventQuery($params)
             ->order('mec.create_time desc,mec.me_id desc')
             ->paginate($pageNum, false, ['query' => request()->param()]);

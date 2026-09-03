@@ -11,18 +11,19 @@ use think\facade\Db;
 trait FaultDashboardTrait
 {
     /**
-     * 顶部指标统计今天并与昨天对比；分布图统计包含今天的近7个自然日。
+     * 顶部指标固定统计今天并与昨天对比；等级分布支持自定义时间范围，默认近7天。
      *
      * @return array
      */
-    public function getFaultOverviewData()
+    public function getFaultOverviewData($params = [])
     {
-        $period = $this->getFaultDashboardPeriod();
+        $period = $this->getFaultDashboardPeriod($params);
         $now = $period['now'];
         $todayStart = $period['today_start'];
         $yesterdayStart = $period['yesterday_start'];
         $yesterdayEnd = $period['yesterday_end'];
-        $sevenDayStart = $period['seven_day_start'];
+        $rangeStart = $period['range_start'];
+        $rangeEnd = $period['range_end'];
 
         $todayFaultCount = $this->countFaultEvents($todayStart, $now);
         $yesterdayFaultCount = $this->countFaultEvents($yesterdayStart, $yesterdayEnd);
@@ -45,23 +46,23 @@ trait FaultDashboardTrait
                 'notice_sent_total' => $this->buildCountMetric($todayNoticeCount, $yesterdayNoticeCount),
                 'notice_success_rate' => $this->buildRateMetric($todaySuccessRate, $yesterdaySuccessRate),
             ],
-            'level_distribution' => $this->getLevelDistribution($sevenDayStart, $now, $levels),
+            'level_distribution' => $this->getLevelDistribution($rangeStart, $rangeEnd, $levels),
         ];
     }
 
     /**
-     * 近7日故障等级趋势，供曲线图独立加载。
+     * 故障等级趋势，支持自定义时间范围，默认近7天。
      *
      * @return array
      */
-    public function getFaultTrendData($level = 0)
+    public function getFaultTrendData($level = 0, $params = [])
     {
         $level = $this->normalizeFaultDashboardLevel($level);
-        $period = $this->getFaultDashboardPeriod();
+        $period = $this->getFaultDashboardPeriod($params);
         $levels = $this->filterFaultDashboardLevels($this->getFaultLevels(), $level);
         $trend = $this->getLevelTrend(
-            $period['seven_day_start'],
-            $period['now'],
+            $period['range_start'],
+            $period['range_end'],
             $levels,
             $level
         );
@@ -69,8 +70,8 @@ trait FaultDashboardTrait
         return [
             'refresh_time' => date('Y-m-d H:i:s', $period['now']),
             'stat_period' => [
-                'start' => date('Y-m-d', $period['seven_day_start']),
-                'end' => date('Y-m-d', $period['now']),
+                'start' => date('Y-m-d H:i:s', $period['range_start']),
+                'end' => date('Y-m-d H:i:s', $period['range_end']),
             ],
             'level' => $level,
             'dates' => $trend['dates'],
@@ -80,24 +81,24 @@ trait FaultDashboardTrait
     }
 
     /**
-     * 近7日故障排行，默认TOP10；详情页可通过top指定返回数量。
+     * 故障排行默认TOP10，支持自定义时间范围；详情页可通过top指定返回数量。
      *
      * @param int $top
      * @return array
      */
-    public function getFaultTopRankingData($top = 10, $level = 0)
+    public function getFaultTopRankingData($top = 10, $level = 0, $params = [])
     {
         $level = $this->normalizeFaultDashboardLevel($level);
         $top = intval($top);
         $top = $top > 0 ? min($top, 100) : 10;
-        $period = $this->getFaultDashboardPeriod();
-        $items = $this->getTopFaults($period['seven_day_start'], $period['now'], $top, $level);
+        $period = $this->getFaultDashboardPeriod($params);
+        $items = $this->getTopFaults($period['range_start'], $period['range_end'], $top, $level);
 
         return [
             'refresh_time' => date('Y-m-d H:i:s', $period['now']),
             'stat_period' => [
-                'start' => date('Y-m-d', $period['seven_day_start']),
-                'end' => date('Y-m-d', $period['now']),
+                'start' => date('Y-m-d H:i:s', $period['range_start']),
+                'end' => date('Y-m-d H:i:s', $period['range_end']),
             ],
             'top' => $top,
             'level' => $level,
@@ -107,25 +108,25 @@ trait FaultDashboardTrait
     }
 
     /**
-     * 近7日设备故障排行，默认TOP10；支持按故障等级筛选。
+     * 设备故障排行默认TOP10，支持自定义时间范围及故障等级筛选。
      *
      * @param int $top
      * @param int $level 0-全部，1-紧急，2-一般，3-提示
      * @return array
      */
-    public function getMachineTopRankingData($top = 10, $level = 0)
+    public function getMachineTopRankingData($top = 10, $level = 0, $params = [])
     {
         $level = $this->normalizeFaultDashboardLevel($level);
         $top = intval($top);
         $top = $top > 0 ? min($top, 100) : 10;
-        $period = $this->getFaultDashboardPeriod();
-        $items = $this->getTopMachines($period['seven_day_start'], $period['now'], $top, $level);
+        $period = $this->getFaultDashboardPeriod($params);
+        $items = $this->getTopMachines($period['range_start'], $period['range_end'], $top, $level);
 
         return [
             'refresh_time' => date('Y-m-d H:i:s', $period['now']),
             'stat_period' => [
-                'start' => date('Y-m-d', $period['seven_day_start']),
-                'end' => date('Y-m-d', $period['now']),
+                'start' => date('Y-m-d H:i:s', $period['range_start']),
+                'end' => date('Y-m-d H:i:s', $period['range_end']),
             ],
             'top' => $top,
             'level' => $level,
@@ -134,17 +135,25 @@ trait FaultDashboardTrait
         ];
     }
 
-    protected function getFaultDashboardPeriod()
+    protected function getFaultDashboardPeriod($params = [])
     {
         $now = time();
         $todayStart = strtotime(date('Y-m-d 00:00:00', $now));
+        $defaultStart = strtotime('-6 days', $todayStart);
+        list($rangeStart, $rangeEnd) = $this->parseFaultDashboardTimeRange(
+            $params,
+            $defaultStart,
+            $now
+        );
 
         return [
             'now' => $now,
             'today_start' => $todayStart,
             'yesterday_start' => strtotime('-1 day', $todayStart),
             'yesterday_end' => $todayStart - 1,
-            'seven_day_start' => strtotime('-6 days', $todayStart),
+            'seven_day_start' => $rangeStart,
+            'range_start' => $rangeStart,
+            'range_end' => $rangeEnd,
         ];
     }
 
@@ -154,8 +163,56 @@ trait FaultDashboardTrait
             'today' => date('Y-m-d', $period['now']),
             'yesterday' => date('Y-m-d', $period['yesterday_start']),
             'last_7_days_start' => date('Y-m-d', $period['seven_day_start']),
-            'last_7_days_end' => date('Y-m-d', $period['now']),
+            'last_7_days_end' => date('Y-m-d', $period['range_end']),
+            'start_time' => date('Y-m-d H:i:s', $period['range_start']),
+            'end_time' => date('Y-m-d H:i:s', $period['range_end']),
         ];
+    }
+
+    protected function parseFaultDashboardTimeRange($params, $defaultStart, $defaultEnd)
+    {
+        $startValue = $params['start_time'] ?? '';
+        $endValue = $params['end_time'] ?? '';
+        $range = trim(strval($params['time_range'] ?? ''));
+        if ($range !== '' && strpos($range, '~') !== false) {
+            list($startValue, $endValue) = explode('~', $range, 2);
+        }
+
+        $hasStart = $startValue !== '' && $startValue !== null;
+        $hasEnd = $endValue !== '' && $endValue !== null;
+        $start = $hasStart
+            ? $this->parseFaultDashboardTime($startValue, false)
+            : intval($defaultStart);
+        $end = $hasEnd
+            ? $this->parseFaultDashboardTime($endValue, true)
+            : intval($defaultEnd);
+
+        if (($hasStart && $start === null) || ($hasEnd && $end === null)) {
+            throw new \InvalidArgumentException('时间范围格式错误');
+        }
+        if ($start > $end) {
+            $temp = $start;
+            $start = $end;
+            $end = $temp;
+        }
+        return [$start, $end];
+    }
+
+    protected function parseFaultDashboardTime($value, $isEnd)
+    {
+        if (is_numeric($value)) {
+            $timestamp = intval($value);
+            return $timestamp > 0 ? $timestamp : null;
+        }
+        $value = trim(strval($value));
+        if ($value === '') {
+            return null;
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            $value .= $isEnd ? ' 23:59:59' : ' 00:00:00';
+        }
+        $timestamp = strtotime($value);
+        return $timestamp === false ? null : $timestamp;
     }
 
     /** @return \think\db\Query */
@@ -298,7 +355,9 @@ trait FaultDashboardTrait
 
         $dates = [];
         $dateLabels = [];
-        for ($timestamp = intval($startTime); $timestamp <= intval($endTime); $timestamp += 86400) {
+        $firstDay = strtotime(date('Y-m-d 00:00:00', intval($startTime)));
+        $lastDay = strtotime(date('Y-m-d 00:00:00', intval($endTime)));
+        for ($timestamp = $firstDay; $timestamp <= $lastDay; $timestamp += 86400) {
             $dates[] = date('Y-m-d', $timestamp);
             $dateLabels[] = date('m-d', $timestamp);
         }
