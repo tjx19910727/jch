@@ -44,6 +44,8 @@ use app\AppFactory\Management\Machine\OtaVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
 use app\AppFactory\Management\Machine\MachineLayoutModelClient;
+use app\AppFactory\Management\Machine\MachineChannelTemplateClient;
+use app\AppFactory\Management\Machine\MachineLoadingSchemeClient;
 use app\AppFactory\Management\Machine\MachineServiceLogClient;
 use app\AppFactory\Management\Machine\MachineSchemeClient;
 use app\AppFactory\Management\Machine\MachineVideoRecordClient;
@@ -55,6 +57,12 @@ class MachineProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['machineLayoutModel'] = function ($app) {
             return new MachineLayoutModelClient($app);
+        };
+        $app['machineChannelTemplate'] = function ($app) {
+            return new MachineChannelTemplateClient($app);
+        };
+        $app['machineLoadingScheme'] = function ($app) {
+            return new MachineLoadingSchemeClient($app);
         };
         $app['machineChannelReplenishment'] = function ($app) {
             return new MachineChannelReplenishmentClient($app);
