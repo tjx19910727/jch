@@ -24,8 +24,22 @@ class GoodsHit extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+
+        // 分组和排序属于查询控制参数，不能传入 getWhere()，
+        // 否则会被错误地当成数据库字段生成筛选条件。
+        $groupType = $postData['group_type'] ?? ($postData['groupType'] ?? 'goods');
+        $sortName = $postData['sort_name'] ?? '';
+        $sortOrder = $postData['sort_order'] ?? 'desc';
+        unset($postData['group_type'], $postData['groupType'], $postData['sort_name'], $postData['sort_order']);
+
         $where = $this->getWhere($postData);
-        return $this->app->goodsHit->getTotalListV2($where,$pageNum,$this->field,'g_id desc');
+        return $this->app->goodsHit->getTotalListV2(
+            $where,
+            $pageNum,
+            $groupType,
+            $sortName,
+            $sortOrder
+        );
     }
 
     /**
