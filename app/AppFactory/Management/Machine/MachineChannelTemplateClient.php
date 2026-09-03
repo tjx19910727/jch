@@ -13,7 +13,7 @@ class MachineChannelTemplateClient extends ManagementClient
     const ACTIVE = 2;
     const DELETED = 1;
 
-    public function getList()
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "", $rQ = 1)
     {
         $postData = input();
         $page = max(1, intval($postData['page'] ?? 1));
@@ -207,7 +207,7 @@ class MachineChannelTemplateClient extends ManagementClient
         }
     }
 
-    public function del()
+    public function del($where = [], $rD = 1)
     {
         $templateId = intval(input('template_id'));
         $templateVersion = intval(input('template_version'));
