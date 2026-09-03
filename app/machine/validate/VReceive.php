@@ -194,6 +194,7 @@ class VReceive extends VCommon
         "getCurrencySnapshot" => ["msg_id","machine_id","timestamp","sign"],
         "reportCurrencySwitchState" => ["msg_id","machine_id","timestamp","sign","can_switch_currency","supported_currency_codes"],
         "updateMachineGoodsCurrencyPrice" => ["msg_id","machine_id","timestamp","sign","mg_id","currency_code","cost_price","market_price","retail_price"],
+        "switchCurrency" => ["msg_id","machine_id","timestamp","sign","currency_code","can_switch_currency","cart_count","pending_order_count","supported_currency_codes"],
         "reportMachineRunMode" => ["msg_id","machine_id","timestamp","sign","run_mode"],
         "getPayTypeList" => ["msg_id","machine_id","timestamp","sign"],
         "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],

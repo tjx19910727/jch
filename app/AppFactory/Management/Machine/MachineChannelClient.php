@@ -8,7 +8,6 @@
 
 namespace app\AppFactory\Management\Machine;
 
-
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
@@ -915,13 +914,19 @@ class MachineChannelClient extends ManagementClient
         $mc = obj2arr($mc);
         $requestedMultiGoods = isset($postData['is_multi_goods']) && intval($postData['is_multi_goods']) === 1;
         $requestedGoodsChange = array_key_exists('g_id', $postData) && intval($postData['g_id']) !== intval($mc['g_id']);
+        $channelPriceInput = [];
+        $hasChannelPrice = false;
+        $channelPriceResult = null;
         if (!$requestedMultiGoods) {
             foreach (CurrencyPriceSupport::PRICE_FIELDS as $priceField) {
                 if (array_key_exists($priceField, $postData)) {
                     if ($requestedGoodsChange) {
                         unset($postData[$priceField]);
                     } else {
-                        return $this->r(100, '普通货道价格请使用目标币种改价接口');
+                        // 普通货道改价走普通编辑，仅当前币种有效：剥离三价，交由下方按设备当前币种保存。
+                        $channelPriceInput[$priceField] = $postData[$priceField];
+                        $hasChannelPrice = true;
+                        unset($postData[$priceField]);
                     }
                 }
             }
@@ -1192,10 +1197,26 @@ class MachineChannelClient extends ManagementClient
             }
 
             unset($postData['batch_arr']);
-            $result = $this->updateMachineChannel($postData);
-            if (!$result) {
-                $this->rollbackTrans();
-                return $this->r(100,$this->lang('action_fail'));
+            // 只改价时剥离后可能只剩主键，避免空字段更新报错。
+            $channelBasicKeys = array_diff(array_keys($postData), ['mc_id', 'm_id', 'machine_id']);
+            $result = true;
+            if ($channelBasicKeys) {
+                $result = $this->updateMachineChannel($postData);
+                if (!$result) {
+                    $this->rollbackTrans();
+                    return $this->r(100,$this->lang('action_fail'));
+                }
+            }
+            if ($hasChannelPrice && !$isChangingGoods && !$isMultiGoods) {
+                // 普通货道改价仅当前币种有效：同事务写币种事实表与活跃快照。
+                $channelPriceResult = (new MachineCurrencyPriceService())->saveMachineChannelPrice(
+                    $mc['m_id'],
+                    $mc['mc_id'],
+                    (new MachineCurrencyPriceService())->getMachineCurrency($mc['m_id'])['currency_code'],
+                    $channelPriceInput,
+                    intval(isset($this->manager['manager_id']) ? $this->manager['manager_id'] : 0),
+                    false
+                );
             }
             if ($isChangingGoods && $newGId > 0 && !$isMultiGoods) {
                 // 同事务重建当前币种事实行，使事实身份与换货后的 m_id/mg_id/g_id 保持一致。
@@ -1210,6 +1231,9 @@ class MachineChannelClient extends ManagementClient
             }
 
             $this->commitTrans();
+            if ($hasChannelPrice && $channelPriceResult) {
+                $this->notifyCurrencySnapshot($channelPriceResult);
+            }
             if ($isChangingGoods && $newGId > 0 && $newGId !== 9999) {
                 try {
                     $this->syncPhysicalMachineChannelQrCodes(
@@ -1517,7 +1541,6 @@ class MachineChannelClient extends ManagementClient
         return $name ?: 'A';
     }
 
-
     public function setMachineChannelGiftPoints($m_id, $integral_rate)
     {
         if (!$m_id) return $this->r(100,$this->lang("VMachineChannel.m_id_require"));
@@ -1669,7 +1692,14 @@ class MachineChannelClient extends ManagementClient
         foreach ($listData as $key => $value) {
             if (!is_array($value) || empty($value['mc_id'])) continue;
             $targetCode = isset($targetCodeMap[intval($value['mc_id'])]) ? $targetCodeMap[intval($value['mc_id'])] : '';
-            $channelPrice = isset($channelPriceMap[intval($value['mc_id'])]) ? $channelPriceMap[intval($value['mc_id'])] : null;
+            if (isset($channelPriceMap[intval($value['mc_id'])])) {
+                $channelPrice = $channelPriceMap[intval($value['mc_id'])];
+            } elseif ($targetCode === 'CNY') {
+                $activeTriple = $this->activeRowTriple($value);
+                $channelPrice = $activeTriple !== null ? $activeTriple : $this->emptyCurrencyPrice();
+            } else {
+                $channelPrice = $this->emptyCurrencyPrice();
+            }
             $sourcePrice = $targetCode && isset($machineGoodsPriceByCode[$targetCode][intval($value['mg_id'])]) ? $machineGoodsPriceByCode[$targetCode][intval($value['mg_id'])] : null;
             if (!$hasCostPriceAuth) {
                 if ($channelPrice) $channelPrice['cost_price'] = '';
@@ -1982,20 +2012,70 @@ class MachineChannelClient extends ManagementClient
         $mc['gift_points'] = round($mc['gift_points'] ?? 0);
         $currencyCode = $this->resolveCurrencyCode(intval($mc['m_id']), $currencyCode);
         $map = (new MachineCurrencyPriceService())->getMachineChannelPriceMap([intval($mc['mc_id'])], $currencyCode);
-        $price = isset($map[intval($mc['mc_id'])]) ? $map[intval($mc['mc_id'])] : null;
+        if (isset($map[intval($mc['mc_id'])])) {
+            $price = $map[intval($mc['mc_id'])];
+        } elseif ($currencyCode === 'CNY') {
+            $price = [
+                'cost_price' => isset($mc['cost_price']) ? $mc['cost_price'] : '0.000',
+                'market_price' => isset($mc['market_price']) ? $mc['market_price'] : '0.000',
+                'retail_price' => isset($mc['retail_price']) ? $mc['retail_price'] : '0.000',
+            ];
+        } else {
+            $price = $this->emptyCurrencyPrice();
+        }
         if (!$hasCostPriceAuth && $price) $price['cost_price'] = '';
         $mc['target_currency_code'] = $currencyCode;
         $mc['currency_price'] = $price;
         return $this->r(200,'success',$mc);
     }
 
+    /**
+     * 该币种价格行缺失时返回默认占位三价（0），保证页面可正常加载与编辑提交。
+     * @return array
+     */
+    protected function emptyCurrencyPrice()
+    {
+        return ['cost_price' => '0.000', 'market_price' => '0.000', 'retail_price' => '0.000'];
+    }
+
+    /**
+     * 取行内活跃快照三价（CNY 存量未落事实行时回退）。
+     * @param array $row
+     * @return array|null
+     */
+    protected function activeRowTriple(array $row)
+    {
+        if (!array_key_exists('cost_price', $row) && !array_key_exists('retail_price', $row)) {
+            return null;
+        }
+        return [
+            'cost_price' => array_key_exists('cost_price', $row) ? $row['cost_price'] : '0.000',
+            'market_price' => array_key_exists('market_price', $row) ? $row['market_price'] : '0.000',
+            'retail_price' => array_key_exists('retail_price', $row) ? $row['retail_price'] : '0.000',
+        ];
+    }
+
+    /**
+     * 批量同步设备商品指定币种价格到普通单商品货道（支持一次多个币种，含 HKD）。
+     * 请求参数：m_id + mc_ids[] + currency_codes[]；任一组合缺价或存在多商品货道整批回滚。
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
     public function synchronizationMachineGoodsPrice($postData)
     {
         try {
             $mId = intval(isset($postData['m_id']) ? $postData['m_id'] : 0);
+            if ($mId <= 0) {
+                throw new \InvalidArgumentException($this->lang('VMachineChannel.m_id_require'));
+            }
             (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
-            $currencyCode = $this->resolveCurrencyCode($mId, isset($postData['currency_code']) ? $postData['currency_code'] : '');
-            $result = (new MachineCurrencyPriceService())->syncMachineChannels($mId, $currencyCode, isset($postData['mc_ids']) ? $postData['mc_ids'] : [], intval(isset($this->manager['manager_id']) ? $this->manager['manager_id'] : 0));
+            $currencyCodes = $this->resolveCurrencyCodes($postData);
+            $result = (new MachineCurrencyPriceService())->syncMachineChannelCurrencies(
+                $mId,
+                $currencyCodes,
+                isset($postData['mc_ids']) ? $postData['mc_ids'] : ($postData['mc_id'] ?? []),
+                intval(isset($this->manager['manager_id']) ? $this->manager['manager_id'] : 0)
+            );
             $this->notifyCurrencySnapshot($result);
             return $this->r(200, $this->lang('action_success'), $result);
         } catch (\Exception $e) {
@@ -2004,21 +2084,21 @@ class MachineChannelClient extends ManagementClient
         }
     }
 
-    public function saveCurrencyPrice($postData)
+    /**
+     * 兼容 currency_codes[] 数组与单值 currency_code。
+     * @param array $postData
+     * @return array
+     */
+    protected function resolveCurrencyCodes(array $postData)
     {
-        try {
-            $mId = intval(isset($postData['m_id']) ? $postData['m_id'] : 0);
-            (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
-            $currencyCode = $this->resolveCurrencyCode($mId, isset($postData['currency_code']) ? $postData['currency_code'] : '');
-            $result = (new MachineCurrencyPriceService())->saveMachineChannelPrice($mId, intval(isset($postData['mc_id']) ? $postData['mc_id'] : 0), $currencyCode, $postData, intval(isset($this->manager['manager_id']) ? $this->manager['manager_id'] : 0));
-            $this->notifyCurrencySnapshot($result);
-            return $this->r(200, $this->lang('update_success'), $result);
-        } catch (\Exception $e) {
-            actionException($e, 1, 'saveMachineChannelCurrencyPrice');
-            return $this->rValidate($e->getMessage());
+        if (!empty($postData['currency_codes']) && is_array($postData['currency_codes'])) {
+            return $postData['currency_codes'];
         }
+        if (isset($postData['currency_code']) && trim((string)$postData['currency_code']) !== '') {
+            return [(string)$postData['currency_code']];
+        }
+        throw new \InvalidArgumentException('至少选择一个币种');
     }
-
     protected function resolveCurrencyCode($mId, $currencyCode)
     {
         if ($currencyCode !== '') return strtoupper(trim($currencyCode));

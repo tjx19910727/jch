@@ -127,7 +127,17 @@ class Goods extends Common
             return returnState(100, '当前账号无成本价修改权限');
         }
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
-        try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        try {
+            $releaseTime = $this->releaseTimeToTimestampOrNull($postData['release_time'] ?? '');
+            if ($releaseTime === null) {
+                unset($postData['release_time']);
+            } else {
+                $postData['release_time'] = $releaseTime;
+            }
+            $this->validate($postData,$this->validatePath . 'add');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
         $result = $this->app->goods->addG($postData);
         return $result;
     }
@@ -146,10 +156,50 @@ class Goods extends Common
         if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
         if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);
         if (array_key_exists('available_stocks', $postData)) unset($postData['available_stocks']);
-        try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        $result = $this->app->goods->updateForEdit($postData);
+        try {
+            if (array_key_exists('release_time', $postData)) {
+                $releaseTime = $this->releaseTimeToTimestampOrNull($postData['release_time']);
+                if ($releaseTime === null) {
+                    unset($postData['release_time']);
+                } else {
+                    $postData['release_time'] = $releaseTime;
+                }
+            }
+            $this->validate($postData,$this->validatePath . 'update');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $result = $this->app->goods->updateForEdit($postData, $this->hasCostPriceAuth());
         //$result = $this->app->goods->update($postData);
         return $result;
+    }
+
+    /**
+     * 发售时间宽松解析：空值/非法值不报错，返回 null 表示忽略该入参；
+     * 数字时间戳直写、日期字符串经 strtotime 转秒，避免字符串直写 INT 触发 1265。
+     *
+     * @param mixed $value
+     * @return int|null
+     */
+    protected function releaseTimeToTimestampOrNull($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_int($value)) {
+            $timestamp = $value;
+        } elseif (is_string($value) && preg_match('/^-?\d+$/D', trim($value))) {
+            $timestamp = intval(trim($value));
+        } else {
+            $timestamp = strtotime((string)$value);
+            if ($timestamp === false) {
+                return null;
+            }
+        }
+        if ($timestamp < 0 || $timestamp > 2147483647) {
+            return null;
+        }
+        return $timestamp;
     }
 
     private function containsCurrencyCostPrice($postData)
@@ -171,7 +221,7 @@ class Goods extends Common
     public function getPriceDiff()
     {
         $postData = input();
-        return $this->app->goods->getPriceDiff($postData);
+        return $this->app->goods->getPriceDiff($postData, $this->hasCostPriceAuth());
     }
 
     /**
@@ -219,7 +269,8 @@ class Goods extends Common
                 $where[] = ['bar_code','like','69%'];
             }
         }
-        return $this->app->goods->exportExcel($where, $hasCostPriceAuth);
+        $exportImg = !(isset($postData['export_img']) && in_array($postData['export_img'], [0, '0', false, 'false'], true));
+        return $this->app->goods->exportExcel($where, $hasCostPriceAuth, $exportImg);
     }
 
     /**
@@ -231,7 +282,8 @@ class Goods extends Common
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
-        return $this->app->goods->exportAllGoodsToExcel($where, $hasCostPriceAuth);
+        $exportImg = !(isset($postData['export_img']) && in_array($postData['export_img'], [0, '0', false, 'false'], true));
+        return $this->app->goods->exportAllGoodsToExcel($where, $hasCostPriceAuth, $exportImg);
     }
 
     
@@ -245,7 +297,8 @@ class Goods extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
         $where[] = ['bar_code','not like','69%'];
-        return $this->app->goods->exportAbnormalBarCodeExcel($where, $hasCostPriceAuth);
+        $exportImg = !(isset($postData['export_img']) && in_array($postData['export_img'], [0, '0', false, 'false'], true));
+        return $this->app->goods->exportAbnormalBarCodeExcel($where, $hasCostPriceAuth, $exportImg);
     }
 
     /**

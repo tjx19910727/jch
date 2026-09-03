@@ -1,47 +1,250 @@
 {
   "openapi": "3.0.3",
-  "info": {"title": "多货币商品价格体系", "version": "2.0.1", "description": "后台多币种价格、设备币种切换及设备端预留接口。不包含 Flutter 设备端改造。所有管理端接口显式携带 token={{token}} 请求头。"},
+  "info": {"title": "多货币商品价格体系", "version": "2.2.1", "description": "后台多币种价格、设备币种切换及设备端预留接口（完整参数版）。不包含 Flutter 设备端改造。所有管理端接口均在 Headers 中显式携带 token={{token}}；设备端接口携带 mac={{mac}}。每个接口均按当前控制器、校验器和服务逻辑标明 Body 必填性、格式、枚举、默认值、业务约束及示例。核心商品 release_time 支持 Unix 秒级时间戳、YYYY-MM-DD、YYYY-MM-DD HH:mm:ss，写库前统一转换为秒级时间戳。人工同步支持一次选择多条记录和多个币种。"},
   "servers": [{"url": "{{baseUrl}}"}],
   "tags": [
     {"name": "币种配置"}, {"name": "核心商品多币种"}, {"name": "设备商品多币种"},
     {"name": "货道多币种"}, {"name": "设备币种切换"}, {"name": "设备端币种"}
   ],
   "paths": {
-    "/management/currency.currency/getEnabledList": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["币种配置"], "summary": "获取启用币种下拉列表", "security": [{"ManagementToken": []}], "requestBody": {"required": false, "content": {"application/json": {"schema": {"type": "object", "additionalProperties": false}, "examples": {"default": {"summary": "无业务参数", "value": {}}}}}}, "responses": {"200": {"description": "成功", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyListResponse"}}}}}}},
-    "/management/currency.currency/getList": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["币种配置"], "summary": "币种配置列表", "security": [{"ManagementToken": []}], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"status": {"type": "integer", "enum": [1, 2]}, "currency_code": {"type": "string"}}}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/currency.currency/add": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["币种配置"], "summary": "新增币种", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyInput"}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/currency.currency/update": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["币种配置"], "summary": "修改或停用币种", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyInput"}}}}, "responses": {"200": {"description": "成功；存在引用时不可删除主数据"}}}},
-    "/management/currency.currency/getReferences": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["币种配置"], "summary": "获取币种引用统计", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["currency_code"], "properties": {"currency_code": {"type": "string", "example": "HKD"}}}}}}, "responses": {"200": {"description": "成功"}}}},
+    "/management/currency.currency/getEnabledList": {"post": {"parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}], "tags": ["币种配置"], "summary": "获取启用币种下拉列表", "description": "供后台下拉框使用。仅返回 status=1 的币种，按 sort、currency_code 排序；无业务 Body 参数。", "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/EmptyRequest"}, "examples": {"empty": {"summary": "无业务参数", "value": {}}}}}}, "responses": {"200": {"description": "查询成功或查询失败，业务状态由 state 区分", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyListResponse"}, "examples": {"success": {"summary": "下拉列表", "value": {"state": 200, "msg": "查询成功", "data": [{"currency_code": "CNY", "currency_name": "人民币", "currency_symbol": "¥", "decimal_places": 2, "is_default": 1, "sort": 10}, {"currency_code": "HKD", "currency_name": "港币", "currency_symbol": "HK$", "decimal_places": 2, "is_default": 0, "sort": 20}]}}}}}}}}},
+    "/management/currency.currency/getList": {"post": {"parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}], "tags": ["币种配置"], "summary": "币种配置列表", "description": "当前代码仅支持按 status 筛选；不支持 currency_code 作为查询条件。Body 可省略或传空对象。", "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyListRequest"}, "examples": {"all": {"summary": "查询全部", "value": {}}, "enabled": {"summary": "只查启用币种", "value": {"status": 1}}}}}}, "responses": {"200": {"description": "成功", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyListResponse"}}}}}}},
+    "/management/currency.currency/add": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["币种配置"],
+        "summary": "新增币种",
+        "description": "币种编码保存时转为大写且不可重复。设置 is_default=1 时会取消旧默认币种；默认币种必须同时为启用状态。新增币种不会自动生成任何商品价格，价格需在核心商品中录入后再人工同步。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyCreateRequest"}, "example": {"currency_code": "HKD", "currency_name": "港币", "currency_symbol": "HK$", "decimal_places": 2, "status": 1, "is_default": 0, "sort": 20}}}},
+        "responses": {"200": {"$ref": "#/components/responses/ActionResult"}}
+      }
+    },
+    "/management/currency.currency/update": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["币种配置"],
+        "summary": "修改或停用币种",
+        "description": "currency_code 是不可修改的定位键。已被价格、设备配置或订单引用时不可修改 decimal_places；默认币种不能直接取消默认或停用；被设备配置或未完成订单使用时不能停用。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyUpdateRequest"}, "examples": {"rename": {"summary": "修改名称和排序", "value": {"currency_code": "HKD", "currency_name": "港币", "currency_symbol": "HK$", "sort": 30}}, "disable": {"summary": "停用币种", "value": {"currency_code": "HKD", "status": 2}}}}}},
+        "responses": {"200": {"$ref": "#/components/responses/ActionResult"}}
+      }
+    },
+    "/management/currency.currency/getReferences": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["币种配置"],
+        "summary": "获取币种引用统计",
+        "description": "用于后台修改/停用币种前展示引用影响。此接口只查询统计，不修改任何数据。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyReferencesRequest"}, "example": {"currency_code": "HKD"}}}},
+        "responses": {"200": {"description": "成功", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyReferencesResponse"}, "example": {"state": 200, "msg": "查询成功", "data": {"currency_code": "HKD", "goods_currency_price": 128, "machine_goods_currency_price": 46, "machine_channel_currency_price": 112, "machine_config": 3, "sale_orders": 25, "sale_orders_details": 40}}}}}}
+      }
+    },
 
-    "/management/goods.goods/add": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["核心商品多币种"], "summary": "新增核心商品及多币种价格", "description": "新增商品必须包含 CNY 三价；HKD 可同时配置。", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"type": "object", "required": ["g_name", "sku"], "properties": {"g_name": {"type": "string"}, "sku": {"type": "string"}}}, {"$ref": "#/components/schemas/CoreCurrencyPrices"}]}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/goods.goods/update": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["核心商品多币种"], "summary": "修改核心商品及多币种价格", "description": "不会自动覆盖设备商品或货道价格。", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"type": "object", "required": ["g_id"], "properties": {"g_id": {"type": "integer"}}}, {"$ref": "#/components/schemas/CoreCurrencyPrices"}]}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/goods.goods/getList": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["核心商品多币种"], "summary": "商品列表（返回 currency_prices）", "security": [{"ManagementToken": []}], "requestBody": {"required": false, "content": {"application/json": {"schema": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1, "description": "当前页码", "example": 1}, "pageNum": {"type": "integer", "minimum": 0, "description": "每页条数，0表示不分页", "example": 20}, "g_name": {"type": "string", "description": "商品名称，模糊查询", "example": "可乐"}, "sku": {"type": "string", "description": "SKU，模糊查询", "example": "SKU001"}, "bar_code": {"type": "integer", "enum": [1, 2], "description": "1=非69码，2=69码"}, "machine_id": {"type": "string", "description": "按授权设备筛选"}, "sale_check": {"type": "integer", "enum": [0, 1], "description": "是否按授权设备商品筛选"}}}, "examples": {"page": {"summary": "分页查询", "value": {"page": 1, "pageNum": 20, "g_name": "可乐"}}}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/goods.goods/getFind": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["核心商品多币种"], "summary": "商品详情（返回 currency_prices）", "security": [{"ManagementToken": []}], "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"g_id": {"type": "integer"}}}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/goods.goods/importExcel": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["核心商品多币种"], "summary": "按标题导入商品及 CNY/HKD 三价", "description": "识别人民币成本价/市场价/零售价、港币成本价/市场价/零售价；g_id 可位于任意列，导出模板置于末列。", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["file_path"], "properties": {"file_path": {"type": "string"}}}}}}, "responses": {"200": {"description": "返回逐行新增/更新统计"}}}},
+    "/management/goods.goods/add": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["核心商品多币种"],
+        "summary": "新增核心商品及多币种价格",
+        "description": "商品基础信息与 currency_prices 在同一事务保存。必须提供完整 CNY 三价，可同时提供 HKD 或其他已启用币种。CNY 三价会同步写入 goods 旧三价字段作为兼容快照；不会自动同步设备商品或货道。stocks、locked_stocks、available_stocks 即使传入也会被忽略。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsCreateRequest"}, "example": {"g_name": "示例商品", "gc_id": 10, "gc_name": "饮料", "sku": "SKU1001", "bar_code": "6900000001001", "release_time": "2026-09-02", "length": 10, "width": 6, "height": 18, "status": 1, "currency_prices": {"CNY": {"cost_price": "5.000", "market_price": "8.000", "retail_price": "6.500"}, "HKD": {"cost_price": "5.500", "market_price": "8.800", "retail_price": "7.200"}}}}}},
+        "responses": {"200": {"$ref": "#/components/responses/ActionResult"}}
+      }
+    },
+    "/management/goods.goods/update": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["核心商品多币种"],
+        "summary": "修改核心商品及多币种价格",
+        "description": "除 g_id 外其余基础字段均按需传入；currency_prices 只更新本次出现的币种。修改 CNY 时同步更新 goods 旧三价兼容快照。不会自动覆盖设备商品或货道价格，需调用人工同步接口。不得再传 mg_id 或 mc_id 触发隐式下游同步；非空时接口会拒绝。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsUpdateRequest"}, "examples": {"hkdPrice": {"summary": "仅修改港币三价", "value": {"g_id": 1001, "currency_prices": {"HKD": {"cost_price": "5.600", "market_price": "8.900", "retail_price": "7.300"}}}}, "metadataAndPrices": {"summary": "同时修改资料和多币种价格", "value": {"g_id": 1001, "g_name": "示例商品（新包装）", "bar_code": "6900000001002", "currency_prices": {"CNY": {"cost_price": "5.100", "market_price": "8.200", "retail_price": "6.800"}, "HKD": {"cost_price": "5.700", "market_price": "9.000", "retail_price": "7.400"}}}}}}}},
+        "responses": {"200": {"$ref": "#/components/responses/ActionResult"}}
+      }
+    },
+    "/management/goods.goods/getList": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["核心商品多币种"],
+        "summary": "商品列表（返回 currency_prices）",
+        "description": "currency_prices 在响应中是价格记录数组，不是新增/修改时的币种键值对象。无成本价权限时，旧 cost_price 和各币种 cost_price 会被隐藏或置空。",
+        "requestBody": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsListRequest"}, "examples": {"page": {"summary": "名称分页查询", "value": {"page": 1, "pageNum": 20, "g_name": "可乐"}}, "authorizedMachine": {"summary": "按授权设备商品过滤", "value": {"page": 1, "pageNum": 20, "machine_id": ["JCHM-H2D-0001"], "sale_check": 1}}}}}},
+        "responses": {"200": {"description": "成功", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsListResponse"}}}}}
+      }
+    },
+    "/management/goods.goods/getFind": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["核心商品多币种"],
+        "summary": "商品详情（返回 currency_prices）",
+        "description": "按核心商品主键查询完整资料和全部币种价格。currency_prices 为数组；每项同时带币种名称、符号、小数位和状态。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsFindRequest"}, "example": {"g_id": 1001}}}},
+        "responses": {"200": {"description": "成功或商品不存在", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsDetailResponse"}}}}}
+      }
+    },
+    "/management/goods.goods/importExcel": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["核心商品多币种"],
+        "summary": "按标题导入商品及 CNY/HKD 三价",
+        "description": "Body 只提交已上传文件的相对路径。Excel 第1行为标题、第2行起为数据。支持标题：商品名称、分类ID、商品分类、型号、SKU、SKU2、图片、条形码、人民币成本价/市场价/零售价、港币成本价/市场价/零售价、成本价/市场价/零售价/售卖价、生产厂家、售后电话、状态、长、宽、高、商品ID、g_id。存在 g_id 且商品存在时，仅更新条形码和本行提供的币种三价；否则按新增商品处理且必须有 CNY 三价。无成本价权限时所有成本价列必须为空。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsImportRequest"}, "example": {"file_path": "/uploads/excel/goods_currency_20260902.xlsx"}}}},
+        "responses": {"200": {"description": "返回逐行新增/更新统计", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsImportResponse"}, "examples": {"completed": {"summary": "导入完成（含失败行）", "value": {"state": 200, "msg": "导入完成", "data": {"total": 3, "update_success": 1, "update_fail": 0, "insert_total": 2, "insert_success": 1, "insert_fail": 1, "insert_fail_list": [{"row": 4, "error": "新增商品必须配置人民币(CNY)三价"}]}}}, "empty": {"summary": "未读取到数据", "value": {"state": 100, "msg": "获取不到Excel文档中的数据"}}}}}}}
+      }
+    },
 
-    "/management/machine.machine_goods/saveCurrencyPrice": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["设备商品多币种"], "summary": "修改设备商品指定币种三价", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"type": "object", "required": ["m_id", "mg_id"], "properties": {"m_id": {"type": "integer"}, "mg_id": {"type": "integer"}}}, {"$ref": "#/components/schemas/CurrencyPriceInput"}]}}}}, "responses": {"200": {"description": "当前币种同时更新旧表快照并递增 currency_version"}}}},
-    "/management/machine.machine_goods/synchronizationGoods": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["设备商品多币种"], "summary": "选中设备商品一键同步核心商品币种价", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["m_id", "mg_ids", "currency_code"], "properties": {"m_id": {"type": "integer"}, "mg_ids": {"oneOf": [{"type": "array", "items": {"type": "integer"}}, {"type": "string", "example": "12,13"}]}, "currency_code": {"type": "string", "example": "HKD"}}}}}}, "responses": {"200": {"description": "全选全成或全选全失败"}}}},
-    "/management/machine.machine_channel/saveCurrencyPrice": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["货道多币种"], "summary": "修改普通货道指定币种三价", "description": "本期拒绝单货道多商品。", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"type": "object", "required": ["m_id", "mc_id"], "properties": {"m_id": {"type": "integer"}, "mc_id": {"type": "integer"}}}, {"$ref": "#/components/schemas/CurrencyPriceInput"}]}}}}, "responses": {"200": {"description": "成功"}}}},
-    "/management/machine.machine_channel/synchronizationMachineGoodsPrice": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["货道多币种"], "summary": "选中货道一键同步设备商品币种价", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["m_id", "mc_ids", "currency_code"], "properties": {"m_id": {"type": "integer"}, "mc_ids": {"oneOf": [{"type": "array", "items": {"type": "integer"}}, {"type": "string", "example": "101,102"}]}, "currency_code": {"type": "string", "example": "HKD"}}}}}}, "responses": {"200": {"description": "全选全成或全选全失败"}}}},
+    "/management/machine.machine_goods/saveCurrencyPrice": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["设备商品多币种"],
+        "summary": "修改设备商品指定币种三价",
+        "description": "只修改当前 m_id 下的指定 mg_id。currency_code 可省略，省略时使用设备当前配置币种。若修改当前币种且价格发生变化，同时更新 machine_goods 旧三价快照、currency_version 并通知设备；修改非当前币种只更新价格事实表。不会联动同设备同商品的其他记录或货道。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsPriceSaveRequest"}, "examples": {"currentCurrency": {"summary": "省略币种，修改设备当前币种", "value": {"m_id": 100, "mg_id": 2001, "cost_price": "5.100", "market_price": "8.000", "retail_price": "6.500"}}, "specifiedCurrency": {"summary": "修改港币", "value": {"m_id": 100, "mg_id": 2001, "currency_code": "HKD", "cost_price": "5.500", "market_price": "8.800", "retail_price": "7.200"}}}}}},
+        "responses": {"200": {"description": "成功或业务失败", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PriceWriteResponse"}}}}}
+      }
+    },
+    "/management/machine.machine_goods/synchronizationGoods": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["设备商品多币种"],
+        "summary": "批量同步核心商品的多个币种价格到设备商品",
+        "description": "一次请求处理全部“mg_ids × currency_codes”组合。任一核心商品缺少任一目标币种价格时整批回滚。若包含设备当前币种且活跃快照发生变化，整次请求只递增一次 currency_version 并只通知设备一次。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/MachineGoodsSyncRequest"},
+              "examples": {
+                "multipleCurrencies": {"summary": "三个设备商品同步人民币和港币", "value": {"m_id": 100, "mg_ids": [2001, 2002, 2003], "currency_codes": ["CNY", "HKD"]}}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务成功或校验失败；业务状态由 state 区分",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/MultiCurrencySyncResponse"},
+                "examples": {
+                  "success": {"summary": "同步成功", "value": {"state": 200, "msg": "操作成功", "data": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_codes": ["CNY", "HKD"], "active_currency_code": "CNY", "currency_version": 8, "changed_count": 6, "unchanged_count": 0, "active_snapshot_changed": 1, "currency_results": {"CNY": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_code": "CNY", "active_currency_code": "CNY", "currency_version": 8, "changed_count": 3, "unchanged_count": 0, "active_snapshot_changed": 1}, "HKD": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_code": "HKD", "active_currency_code": "CNY", "currency_version": 8, "changed_count": 3, "unchanged_count": 0, "active_snapshot_changed": 0}}}}},
+                  "rollback": {"summary": "核心商品缺少港币价格，整批回滚", "value": {"state": 100, "msg": "核心商品缺少币种价格：HKD(g_id:1002)", "data": []}}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_channel/saveCurrencyPrice": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["货道多币种"],
+        "summary": "修改普通货道指定币种三价",
+        "description": "只修改当前 m_id 下选中的普通单商品货道 mc_id。本期拒绝单货道多商品或存在历史批次的货道。currency_code 必传。若修改设备当前币种且价格变化，同步更新 machine_channel 旧三价快照、currency_version 并通知设备；不会自动修改同设备同商品的其他货道。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineChannelPriceSaveRequest"}, "example": {"m_id": 100, "mc_id": 3001, "currency_code": "HKD", "cost_price": "5.500", "market_price": "8.800", "retail_price": "7.200"}}}},
+        "responses": {"200": {"description": "成功或业务失败", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PriceWriteResponse"}}}}}
+      }
+    },
+    "/management/machine.machine_channel/synchronizationMachineGoodsPrice": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["货道多币种"],
+        "summary": "批量同步设备商品的多个币种价格到货道",
+        "description": "一次请求处理全部“mc_ids × currency_codes”组合。任一组合缺少设备商品币种价格或包含多商品货道时整批回滚；不会联动未选中的同商品货道。若当前币种快照发生变化，整次请求只递增一次 currency_version 并只通知设备一次。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/MachineChannelSyncRequest"},
+              "examples": {
+                "multipleCurrencies": {"summary": "两个货道同步人民币和港币", "value": {"m_id": 100, "mc_ids": [3001, 3002], "currency_codes": ["CNY", "HKD"]}}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务成功或校验失败；业务状态由 state 区分",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/MultiCurrencySyncResponse"},
+                "examples": {
+                  "success": {"summary": "同步成功", "value": {"state": 200, "msg": "操作成功", "data": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_codes": ["CNY", "HKD"], "active_currency_code": "CNY", "currency_version": 9, "changed_count": 4, "unchanged_count": 0, "active_snapshot_changed": 1, "currency_results": {"CNY": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_code": "CNY", "active_currency_code": "CNY", "currency_version": 9, "changed_count": 2, "unchanged_count": 0, "active_snapshot_changed": 1}, "HKD": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_code": "HKD", "active_currency_code": "CNY", "currency_version": 9, "changed_count": 2, "unchanged_count": 0, "active_snapshot_changed": 0}}}}},
+                  "rollback": {"summary": "货道缺少港币设备商品价格，整批回滚", "value": {"state": 100, "msg": "货道缺少对应设备商品币种价格：HKD(mc_id:3002)", "data": []}}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
 
-    "/management/machine.machine_config/currencyReadiness": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["设备币种切换"], "summary": "设备币种切换预检", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencySwitchInput"}}}}, "responses": {"200": {"description": "返回 ready、blockers、缺失或串价 ID"}}}},
-    "/management/machine.machine_config/switchCurrency": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["设备币种切换"], "summary": "原子切换单台设备币种", "description": "在同一数据库事务中投影设备商品、普通货道三价并更新币种/version。", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencySwitchInput"}}}}, "responses": {"200": {"description": "成功"}, "400": {"description": "存在预检阻断"}}}},
-    "/management/machine.machine_config/switchCurrencyBatch": {"parameters": [{"$ref": "#/components/parameters/ManagementTokenHeader"}], "post": {"tags": ["设备币种切换"], "summary": "批量逐台切换设备币种", "security": [{"ManagementToken": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["m_ids", "currency_code"], "properties": {"m_ids": {"type": "array", "maxItems": 50, "items": {"type": "integer"}}, "currency_code": {"type": "string", "example": "HKD"}}}}}}, "responses": {"200": {"description": "返回 success/failed 明细，不跨设备做大事务"}}}},
+    "/management/machine.machine_config/currencyReadiness": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["设备币种切换"],
+        "summary": "设备币种切换预检",
+        "description": "只检查，不修改设备配置和价格。检查设备在线/空闲、设备上报状态时效、设备及服务端支持币种、待支付订单、单货道多商品、设备商品和货道价格完整性及货道串价。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencySwitchRequest"}, "example": {"m_id": 100, "currency_code": "HKD"}}}},
+        "responses": {"200": {"description": "无论 ready 为 1 或 0 均返回预检明细", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyReadinessResponse"}, "examples": {"ready": {"summary": "允许切换", "value": {"state": 200, "msg": "查询成功", "data": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "current_currency_code": "CNY", "target_currency_code": "HKD", "currency_version": 7, "missing_mg_ids": [], "missing_mc_ids": [], "stale_mc_ids": [], "multi_goods_mc_ids": [], "blockers": [], "ready": 1}}, "blocked": {"summary": "目标价格不完整", "value": {"state": 200, "msg": "查询成功", "data": {"m_id": 100, "machine_id": "JCHM-H2D-0100", "current_currency_code": "CNY", "target_currency_code": "HKD", "currency_version": 7, "missing_mg_ids": [2002], "missing_mc_ids": [3002], "stale_mc_ids": [], "multi_goods_mc_ids": [], "blockers": [{"code": "MACHINE_GOODS_PRICE_MISSING", "message": "设备商品目标币种价格未准备完整"}, {"code": "MACHINE_CHANNEL_PRICE_MISSING", "message": "设备货道目标币种价格未准备完整"}], "ready": 0}}}}}}}}}
+      }
+    },
+    "/management/machine.machine_config/switchCurrency": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["设备币种切换"],
+        "summary": "原子切换单台设备币种",
+        "description": "先执行相同预检，再在单一数据库事务中将目标币种价格投影到 machine_goods 和普通 machine_channel 三价快照，最后更新 machine_config.currency_code 与 currency_version。任一步失败则整台设备回滚；切换到当前币种时幂等返回。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencySwitchRequest"}, "example": {"m_id": 100, "currency_code": "HKD"}}}},
+        "responses": {"200": {"description": "业务成功或预检阻断，HTTP 状态通常仍为 200", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencySwitchResponse"}, "examples": {"success": {"value": {"state": 200, "msg": "操作成功", "data": {"success": 1, "idempotent": 0, "m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_code": "HKD", "currency_version": 8, "machine_goods_count": 12, "channel_count": 24}}, "blocked": {"value": {"state": 100, "msg": "设备币种切换条件未满足", "data": {"m_id": 100, "target_currency_code": "HKD", "ready": 0, "blockers": [{"code": "MACHINE_OFFLINE", "message": "设备离线"}]}}}}}}}}}
+      }
+    },
+    "/management/machine.machine_config/switchCurrencyBatch": {
+      "post": {
+        "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
+        "tags": ["设备币种切换"],
+        "summary": "批量逐台切换设备币种",
+        "description": "最多处理50台设备。每台设备分别预检、分别开启事务；某台失败不会回滚已成功设备。接口整体返回 state=200，具体结果查看 data.success 与 data.failed。",
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyBatchSwitchRequest"}, "examples": {"array": {"summary": "推荐：数组", "value": {"m_ids": [100, 101, 102], "currency_code": "HKD"}}, "commaSeparated": {"summary": "兼容：逗号字符串", "value": {"m_ids": "100,101,102", "currency_code": "HKD"}}}}}},
+        "responses": {"200": {"description": "逐台结果", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CurrencyBatchSwitchResponse"}, "example": {"state": 200, "msg": "操作成功", "data": {"success": [{"m_id": 100, "machine_id": "JCHM-H2D-0100", "currency_code": "HKD", "currency_version": 8}], "failed": [{"m_id": 101, "message": "设备币种切换条件未满足", "blockers": [{"code": "MACHINE_GOODS_PRICE_MISSING", "message": "设备商品目标币种价格未准备完整"}]}]}}}}}}
+      }
+    },
 
-    "/machine/receive/getCurrencySnapshot": {"parameters": [{"$ref": "#/components/parameters/MachineMacHeader"}], "post": {"tags": ["设备端币种"], "summary": "设备拉取当前完整币种价格快照（预留）", "security": [{"MachineMac": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineSignedRequest"}}}}, "responses": {"200": {"description": "返回 currency_code、currency_version、machine_goods、machine_channels"}}}},
-    "/machine/receive/reportCurrencySwitchState": {"parameters": [{"$ref": "#/components/parameters/MachineMacHeader"}], "post": {"tags": ["设备端币种"], "summary": "设备上报币种切换状态（预留）", "security": [{"MachineMac": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/MachineSignedRequest"}, {"type": "object", "required": ["can_switch_currency", "supported_currency_codes"], "properties": {"can_switch_currency": {"type": "integer", "enum": [0, 1]}, "cart_count": {"type": "integer"}, "pending_order_count": {"type": "integer"}, "supported_currency_codes": {"type": "array", "items": {"type": "string"}}, "report_time": {"type": "integer"}}}]}}}}, "responses": {"200": {"description": "状态缓存默认有效 120 秒"}}}},
-    "/machine/receive/updateMachineGoodsCurrencyPrice": {"parameters": [{"$ref": "#/components/parameters/MachineMacHeader"}], "post": {"tags": ["设备端币种"], "summary": "设备修改当前币种设备商品三价（预留）", "security": [{"MachineMac": []}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/MachineSignedRequest"}, {"type": "object", "required": ["mg_id", "cost_price", "market_price", "retail_price"], "properties": {"mg_id": {"type": "integer"}, "currency_code": {"type": "string", "description": "可不传；传入时必须等于设备当前币种"}, "cost_price": {"type": "number"}, "market_price": {"type": "number"}, "retail_price": {"type": "number"}}}]}}}}, "responses": {"200": {"description": "成功"}}}}
+    "/machine/receive/getCurrencySnapshot": {
+      "parameters": [{"$ref": "#/components/parameters/MachineMacHeader"}],
+      "post": {
+        "tags": ["设备端币种"],
+        "summary": "设备拉取当前完整币种价格快照（预留）",
+        "description": "设备按当前 machine_config.currency_code 拉取币种信息、配置版本、全部设备商品和普通货道的当前售卖快照。本期不改 Flutter，仅预留服务端接口。",
+        "security": [{"MachineMac": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineSignedRequest"}, "example": {"msg_id": "currency-snapshot-20260902-0001", "machine_id": "JCHM-H2D-0100", "timestamp": 1788300000, "sign": "按签名规则计算的32位MD5"}}}},
+        "responses": {"200": {"description": "返回当前完整快照", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineCurrencySnapshotResponse"}}}}}
+      }
+    },
+    "/machine/receive/reportCurrencySwitchState": {
+      "parameters": [{"$ref": "#/components/parameters/MachineMacHeader"}],
+      "post": {
+        "tags": ["设备端币种"],
+        "summary": "设备上报币种切换状态（预留）",
+        "description": "设备周期上报是否处于可切换状态、购物车和待处理订单数量、支持的币种。状态默认缓存120秒；report_time 与服务器时间偏差不得超过300秒。本期不改 Flutter，仅预留服务端接口。",
+        "security": [{"MachineMac": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineCurrencyStateReportRequest"}, "example": {"msg_id": "currency-state-20260902-0001", "machine_id": "JCHM-H2D-0100", "timestamp": 1788300000, "sign": "按签名规则计算的32位MD5", "can_switch_currency": 1, "cart_count": 0, "pending_order_count": 0, "supported_currency_codes": ["CNY", "HKD"], "report_time": 1788300000}}}},
+        "responses": {"200": {"description": "上报成功", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineStateReportResponse"}}}}}
+      }
+    },
+    "/machine/receive/updateMachineGoodsCurrencyPrice": {
+      "parameters": [{"$ref": "#/components/parameters/MachineMacHeader"}],
+      "post": {
+        "tags": ["设备端币种"],
+        "summary": "设备修改当前币种设备商品三价（预留）",
+        "description": "设备只能修改属于本机的 mg_id，且只能修改本机当前配置币种。currency_code 可省略；传入时必须与当前币种一致。更新价格事实与 machine_goods 当前快照并递增 currency_version，不联动货道。本期不改 Flutter，仅预留服务端接口。",
+        "security": [{"MachineMac": []}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MachineGoodsDevicePriceRequest"}, "example": {"msg_id": "currency-price-20260902-0001", "machine_id": "JCHM-H2D-0100", "timestamp": 1788300000, "sign": "按签名规则计算的32位MD5", "mg_id": 2001, "currency_code": "HKD", "cost_price": "5.500", "market_price": "8.800", "retail_price": "7.200"}}}},
+        "responses": {"200": {"description": "成功或业务失败", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PriceWriteResponse"}}}}}
+      }
+    }
   },
   "components": {
     "parameters": {
-      "ManagementTokenHeader": {
-        "name": "token",
-        "in": "header",
-        "required": true,
-        "description": "后台登录令牌",
-        "schema": {"type": "string", "default": "{{token}}", "example": "{{token}}"},
-        "example": "{{token}}"
-      },
       "MachineMacHeader": {
         "name": "mac",
         "in": "header",
@@ -52,17 +255,539 @@
       }
     },
     "securitySchemes": {
-      "ManagementToken": {"type": "apiKey", "in": "header", "name": "token", "description": "参数值使用 {{token}}"},
       "MachineMac": {"type": "apiKey", "in": "header", "name": "mac", "description": "参数值使用 {{mac}}"}
     },
+    "responses": {
+      "ActionResult": {
+        "description": "业务成功或失败。项目通常使用 HTTP 200，通过响应体 state 区分业务状态。",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/ActionResponse"},
+            "examples": {
+              "success": {"summary": "成功", "value": {"state": 200, "msg": "操作成功"}},
+              "validationFailed": {"summary": "参数或业务校验失败", "value": {"state": 100, "msg": "参数或业务校验失败"}},
+              "validatorFailed": {"summary": "验证器失败", "value": {"state": 300, "msg": "字段验证失败"}}
+            }
+          }
+        }
+      }
+    },
     "schemas": {
-      "Currency": {"type": "object", "properties": {"currency_code": {"type": "string", "example": "HKD"}, "currency_name": {"type": "string", "example": "港币"}, "currency_symbol": {"type": "string", "example": "HK$"}, "decimal_places": {"type": "integer", "example": 2}, "status": {"type": "integer", "enum": [1, 2]}, "is_default": {"type": "integer", "enum": [0, 1]}}},
-      "CurrencyInput": {"allOf": [{"$ref": "#/components/schemas/Currency"}, {"type": "object", "required": ["currency_code", "currency_name", "currency_symbol", "decimal_places", "status"]}], "example": {"currency_code": "HKD", "currency_name": "港币", "currency_symbol": "HK$", "decimal_places": 2, "status": 1, "is_default": 0, "sort": 20}},
-      "CurrencyListResponse": {"type": "object", "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "查询成功"}, "data": {"type": "array", "items": {"$ref": "#/components/schemas/Currency"}}}},
-      "CurrencyPriceInput": {"type": "object", "required": ["currency_code", "cost_price", "market_price", "retail_price"], "properties": {"currency_code": {"type": "string", "pattern": "^[A-Za-z]{3}$", "description": "三位币种编码，保存时转为大写", "example": "HKD"}, "cost_price": {"type": "number", "minimum": 0, "description": "成本价，最多3位小数", "example": 5.100}, "market_price": {"type": "number", "minimum": 0, "description": "市场价，最多3位小数", "example": 8.000}, "retail_price": {"type": "number", "minimum": 0, "description": "零售价，最多3位小数", "example": 6.500}}, "example": {"currency_code": "HKD", "cost_price": 5.100, "market_price": 8.000, "retail_price": 6.500}},
-      "CoreCurrencyPrices": {"type": "object", "properties": {"currency_prices": {"type": "array", "items": {"$ref": "#/components/schemas/CurrencyPriceInput"}}, "cny_cost_price": {"type": "number"}, "cny_market_price": {"type": "number"}, "cny_retail_price": {"type": "number"}, "hkd_cost_price": {"type": "number"}, "hkd_market_price": {"type": "number"}, "hkd_retail_price": {"type": "number"}}},
-      "CurrencySwitchInput": {"type": "object", "required": ["m_id", "currency_code"], "properties": {"m_id": {"type": "integer", "description": "设备主键", "example": 123}, "currency_code": {"type": "string", "pattern": "^[A-Za-z]{3}$", "description": "目标币种编码", "example": "HKD"}}, "example": {"m_id": 123, "currency_code": "HKD"}},
-      "MachineSignedRequest": {"type": "object", "required": ["msg_id", "machine_id", "timestamp", "sign"], "properties": {"msg_id": {"type": "string", "description": "设备请求唯一消息号", "example": "currency-20260902-0001"}, "machine_id": {"type": "string", "description": "设备编号", "example": "JCHM-H2D-0001"}, "timestamp": {"type": "integer", "description": "秒级时间戳", "example": 1788336000}, "sign": {"type": "string", "description": "设备请求签名", "example": "example-signature"}}, "example": {"msg_id": "currency-20260902-0001", "machine_id": "JCHM-H2D-0001", "timestamp": 1788336000, "sign": "example-signature"}}
+      "Currency": {
+        "type": "object",
+        "description": "币种主数据。管理列表会返回完整字段；启用币种下拉列表可能不返回 status。",
+        "properties": {
+          "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "currency_name": {"type": "string", "maxLength": 32, "description": "币种中文展示名称", "example": "港币"},
+          "currency_symbol": {"type": "string", "maxLength": 8, "description": "价格展示符号", "example": "HK$"},
+          "decimal_places": {"type": "integer", "minimum": 0, "maximum": 3, "description": "展示小数位；被业务引用后不允许修改", "example": 2},
+          "status": {"type": "integer", "enum": [1, 2], "description": "1=启用，2=停用", "example": 1},
+          "is_default": {"type": "integer", "enum": [0, 1], "description": "0=非默认，1=系统默认；同一时刻仅一个默认币种", "example": 0},
+          "sort": {"type": "integer", "minimum": 0, "description": "升序排序值，越小越靠前", "example": 20},
+          "created_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", "description": "创建时间，数据库格式 YYYY-MM-DD HH:mm:ss", "example": "2026-09-01 14:30:24"},
+          "updated_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}$", "description": "最后更新时间，数据库格式 YYYY-MM-DD HH:mm:ss", "example": "2026-09-02 09:10:30"}
+        }
+      },
+      "CurrencyListResponse": {"type": "object", "required": ["state", "msg"], "properties": {"state": {"type": "integer", "description": "200=成功，其他值=业务失败", "example": 200}, "msg": {"type": "string", "example": "查询成功"}, "data": {"type": "array", "items": {"$ref": "#/components/schemas/Currency"}}}},
+      "CurrencyCodeArray": {"type": "array", "minItems": 1, "uniqueItems": true, "description": "需要同步的已启用币种编码数组；必须显式传入，不默认设备当前币种", "items": {"type": "string", "pattern": "^[A-Za-z]{3}$"}, "example": ["CNY", "HKD"]},
+      "CurrencySyncResultItem": {"type": "object", "required": ["m_id", "machine_id", "currency_code", "active_currency_code", "currency_version", "changed_count", "unchanged_count", "active_snapshot_changed"], "properties": {"m_id": {"type": "integer"}, "machine_id": {"type": "string"}, "currency_code": {"type": "string"}, "active_currency_code": {"type": "string"}, "currency_version": {"type": "integer"}, "changed_count": {"type": "integer", "description": "该币种事实价格发生变化的选中记录数"}, "unchanged_count": {"type": "integer", "description": "该币种事实价格未变化的选中记录数"}, "active_snapshot_changed": {"type": "integer", "enum": [0, 1]}}},
+      "MultiCurrencySyncData": {"type": "object", "required": ["m_id", "machine_id", "currency_codes", "active_currency_code", "currency_version", "changed_count", "unchanged_count", "active_snapshot_changed", "currency_results"], "properties": {"m_id": {"type": "integer"}, "machine_id": {"type": "string"}, "currency_codes": {"$ref": "#/components/schemas/CurrencyCodeArray"}, "active_currency_code": {"type": "string"}, "currency_version": {"type": "integer", "description": "设备当前售卖快照版本；整次同步最多递增一次"}, "changed_count": {"type": "integer", "description": "全部“记录 × 币种”组合中发生变化的价格事实数"}, "unchanged_count": {"type": "integer", "description": "全部“记录 × 币种”组合中未变化的价格事实数"}, "active_snapshot_changed": {"type": "integer", "enum": [0, 1]}, "currency_results": {"type": "object", "description": "以币种编码为键的同步明细", "additionalProperties": {"$ref": "#/components/schemas/CurrencySyncResultItem"}}}},
+      "MultiCurrencySyncResponse": {"type": "object", "required": ["state", "msg", "data"], "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "操作成功"}, "data": {"oneOf": [{"$ref": "#/components/schemas/MultiCurrencySyncData"}, {"type": "array", "maxItems": 0, "description": "业务校验失败时为空数组"}]}}},
+      "MachineSignedRequest": {
+        "type": "object",
+        "required": ["msg_id", "machine_id", "timestamp", "sign"],
+        "properties": {
+          "msg_id": {"type": "string", "minLength": 1, "description": "设备请求全局唯一消息号，用于 machine_mq_record 幂等去重；重试同一业务请求应复用同一 msg_id", "example": "currency-20260902-0001"},
+          "machine_id": {"type": "string", "minLength": 1, "description": "设备业务编号，必须与 Header mac 对应的设备一致", "example": "JCHM-H2D-0100"},
+          "timestamp": {"type": "integer", "format": "int64", "description": "请求发起时的 Unix 秒级时间戳。过期容差取 rabbit_mq.machine_receive_timestamp_tolerance，配置缺失时为180秒且最小120秒", "example": 1788300000},
+          "sign": {"type": "string", "minLength": 32, "maxLength": 32, "description": "小写MD5签名：移除 sign 后按参数名升序；数组/对象按 JSON 编码；拼接 k=v 并追加 key=设备签名密钥，再计算 MD5。实际值不可使用示例占位文本", "example": "0123456789abcdef0123456789abcdef"}
+        }
+      },
+      "CurrencyCode": {"type": "string", "pattern": "^[A-Za-z]{3}$", "minLength": 3, "maxLength": 3, "description": "ISO风格三位字母币种编码；服务端 trim 后转为大写。必须存在于币种表，涉及价格或切换时通常还要求 status=1", "example": "HKD"},
+      "PriceValueInput": {
+        "description": "非负价格，最多3位小数。推荐以字符串提交，避免前端浮点精度损失。",
+        "oneOf": [
+          {"type": "string", "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,3})?$", "example": "7.200"},
+          {"type": "number", "minimum": 0, "multipleOf": 0.001, "example": 7.2}
+        ]
+      },
+      "PriceValueOutput": {"type": "string", "pattern": "^[0-9]+(\\.[0-9]{1,3})?$", "description": "数据库 DECIMAL 价格字符串，最多3位小数", "example": "7.200"},
+      "EmptyRequest": {"type": "object", "additionalProperties": false, "description": "无业务参数，提交空 JSON 对象即可"},
+      "ActionResponse": {
+        "type": "object",
+        "required": ["state", "msg"],
+        "properties": {
+          "state": {"type": "integer", "description": "业务状态。常见：200=成功，100=业务失败，300=验证器失败，3301=异常捕获", "example": 200},
+          "msg": {"type": "string", "description": "面向调用方的结果或错误说明", "example": "操作成功"},
+          "data": {"description": "成功结果或阻断详情；部分接口无 data 字段", "nullable": true}
+        }
+      },
+      "CurrencyListRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "status": {"type": "integer", "enum": [1, 2], "description": "可选。1=只查启用，2=只查停用；不传=全部", "example": 1}
+        }
+      },
+      "CurrencyCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["currency_code", "currency_name", "currency_symbol"],
+        "properties": {
+          "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "currency_name": {"type": "string", "minLength": 1, "maxLength": 32, "description": "必填，币种展示名称", "example": "港币"},
+          "currency_symbol": {"type": "string", "minLength": 1, "maxLength": 8, "description": "必填，前端价格展示符号", "example": "HK$"},
+          "decimal_places": {"type": "integer", "minimum": 0, "maximum": 3, "default": 2, "description": "可选，展示小数位，默认2", "example": 2},
+          "status": {"type": "integer", "enum": [1, 2], "default": 1, "description": "可选，1=启用，2=停用，默认1", "example": 1},
+          "is_default": {"type": "integer", "enum": [0, 1], "default": 0, "description": "可选，0=非默认，1=设为默认。设为1时 status 必须为1", "example": 0},
+          "sort": {"type": "integer", "minimum": 0, "default": 0, "description": "可选，升序排序值，默认0", "example": 20}
+        }
+      },
+      "CurrencyUpdateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["currency_code"],
+        "properties": {
+          "currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "必填，不可修改的定位键"},
+          "currency_name": {"type": "string", "minLength": 1, "maxLength": 32, "description": "可选，新展示名称"},
+          "currency_symbol": {"type": "string", "minLength": 1, "maxLength": 8, "description": "可选，新展示符号"},
+          "decimal_places": {"type": "integer", "minimum": 0, "maximum": 3, "description": "可选。存在任一价格、设备配置或订单引用后禁止修改"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "可选，1=启用，2=停用；默认币种或存在阻断引用时不能停用"},
+          "is_default": {"type": "integer", "enum": [0, 1], "description": "可选，1=设为新默认；当前默认币种不能通过传0直接取消"},
+          "sort": {"type": "integer", "minimum": 0, "description": "可选，升序排序值"}
+        }
+      },
+      "CurrencyReferencesRequest": {"type": "object", "additionalProperties": false, "required": ["currency_code"], "properties": {"currency_code": {"$ref": "#/components/schemas/CurrencyCode"}}},
+      "CurrencyReferencesResponse": {
+        "type": "object",
+        "required": ["state", "msg", "data"],
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "查询成功"},
+          "data": {
+            "type": "object",
+            "properties": {
+              "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+              "goods_currency_price": {"type": "integer", "minimum": 0, "description": "核心商品币种价格记录数"},
+              "machine_goods_currency_price": {"type": "integer", "minimum": 0, "description": "设备商品币种价格记录数"},
+              "machine_channel_currency_price": {"type": "integer", "minimum": 0, "description": "货道币种价格记录数"},
+              "machine_config": {"type": "integer", "minimum": 0, "description": "当前配置为该币种的设备数"},
+              "sale_orders": {"type": "integer", "minimum": 0, "description": "引用该币种的订单数"},
+              "sale_orders_details": {"type": "integer", "minimum": 0, "description": "引用该币种的订单明细数"}
+            }
+          }
+        }
+      },
+      "CurrencyPriceTripleInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cost_price", "market_price", "retail_price"],
+        "properties": {
+          "cost_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，成本价。调用账号必须具有成本价权限"},
+          "market_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，市场价"},
+          "retail_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，零售价/实际售卖价"}
+        }
+      },
+      "CoreCurrencyPriceMap": {
+        "type": "object",
+        "minProperties": 1,
+        "description": "以三位币种编码为 key、三价对象为 value。例如 currency_prices.CNY.retail_price。只接受统一 currency_prices 结构，不再在文档中定义 cny_cost_price、hkd_retail_price 等扁平字段。新增商品时必须含 CNY；修改时仅更新本次传入的币种。所有 key 对应币种必须已启用。",
+        "additionalProperties": {"$ref": "#/components/schemas/CurrencyPriceTripleInput"},
+        "example": {"CNY": {"cost_price": "5.000", "market_price": "8.000", "retail_price": "6.500"}, "HKD": {"cost_price": "5.500", "market_price": "8.800", "retail_price": "7.200"}}
+      },
+      "GoodsWritableFields": {
+        "type": "object",
+        "description": "核心商品可写基础字段。库存字段 stocks、locked_stocks、available_stocks 不允许通过新增/编辑接口维护，传入也会被剔除。",
+        "properties": {
+          "g_name": {"type": "string", "minLength": 1, "maxLength": 100, "description": "商品名称；新增必填，修改可选", "example": "示例商品"},
+          "gc_id": {"type": "integer", "minimum": 0, "description": "商品分类主键", "example": 10},
+          "gc_name": {"type": "string", "description": "商品分类名称，沿用现有核心商品字段", "example": "饮料"},
+          "g_type": {"type": "integer", "description": "商品类型，沿用现有业务枚举；本需求不改变其取值", "example": 1},
+          "model": {"type": "string", "pattern": "^[A-Za-z0-9_-]*$", "description": "商品型号，仅字母、数字、下划线和短横线", "example": "MODEL-1001"},
+          "bar_code": {"type": "string", "pattern": "^[A-Za-z0-9_-]*$", "description": "条形码，仅字母、数字、下划线和短横线", "example": "6900000001001"},
+          "sku": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$", "description": "SKU；新增必填且全局唯一，仅字母、数字、下划线和短横线", "example": "SKU1001"},
+          "sku2": {"type": "string", "pattern": "^[A-Za-z0-9_-]*$", "description": "备用SKU，仅字母、数字、下划线和短横线"},
+          "banner": {"type": "string", "maxLength": 1024, "description": "商品轮播图或图片集合字段，沿用现有格式"},
+          "pic": {"type": "string", "maxLength": 255, "description": "商品主图相对路径或URL", "example": "/uploads/goods/1001.jpg"},
+          "intergral_rate": {"type": "number", "minimum": 0, "description": "积分比例，字段名沿用现有拼写"},
+          "manufacturer": {"type": "string", "maxLength": 100, "description": "生产厂家"},
+          "service_phone": {"type": "string", "maxLength": 100, "description": "售后联系电话"},
+          "performance": {"type": "string", "description": "商品性能/说明，沿用现有字段"},
+          "sell_channel": {"type": "integer", "description": "销售渠道，沿用现有业务枚举；值为外链渠道时应同时提供 exter_url"},
+          "exter_url": {"type": "string", "maxLength": 2048, "description": "外部销售链接，字段名沿用现有拼写"},
+          "expire_notice": {"type": "integer", "minimum": 0, "description": "临期提醒配置，沿用现有单位"},
+          "sell_by_date": {"type": "integer", "minimum": 0, "description": "保质/销售日期配置，必须为非负整数"},
+          "is_gift": {"type": "integer", "description": "是否礼品，沿用现有业务枚举"},
+          "is_recommend": {"type": "integer", "description": "是否推荐，沿用现有业务枚举"},
+          "recoverable": {"type": "integer", "description": "是否可回收，沿用现有业务枚举"},
+          "heat": {"type": "integer", "minimum": 0, "description": "商品热度"},
+          "release_time": {
+            "description": "发售时间；新增必填。数据库字段为有符号 INT，接口支持 Unix 秒级时间戳、YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss，日期字符串会按服务器时区转为秒级时间戳。不得传13位毫秒时间戳；最大值2147483647。",
+            "oneOf": [
+              {"type": "integer", "format": "int64", "minimum": 0, "maximum": 2147483647, "example": 1788278400},
+              {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}( \\d{2}:\\d{2}:\\d{2})?$", "example": "2026-09-02"}
+            ]
+          },
+          "length": {"type": "number", "minimum": 0, "description": "商品长度；新增必填，单位沿用现有系统", "example": 10},
+          "width": {"type": "number", "minimum": 0, "description": "商品宽度；新增必填，单位沿用现有系统", "example": 6},
+          "height": {"type": "number", "minimum": 0, "description": "商品高度；新增必填，单位沿用现有系统", "example": 18},
+          "group_quantity": {"type": "integer", "minimum": 0, "description": "组合数量，沿用现有商品字段"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "商品状态：1=启用/上架，2=停用/下架", "example": 1},
+          "currency_prices": {"$ref": "#/components/schemas/CoreCurrencyPriceMap"}
+        }
+      },
+      "GoodsCreateRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/GoodsWritableFields"},
+          {"type": "object", "required": ["g_name", "sku", "release_time", "length", "width", "height", "currency_prices"], "description": "currency_prices 中还必须包含 CNY，且 CNY 必须一次提供完整三价"}
+        ]
+      },
+      "GoodsUpdateRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/GoodsWritableFields"},
+          {
+            "type": "object",
+            "required": ["g_id"],
+            "properties": {
+              "g_id": {"type": "integer", "minimum": 1, "description": "必填，要修改的核心商品主键", "example": 1001}
+            },
+            "description": "g_id 必填，其余字段按需提交。不要传 mg_id、mc_id；库存字段会被忽略。"
+          }
+        ]
+      },
+      "GoodsListRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "page": {"type": "integer", "minimum": 1, "default": 1, "description": "当前页码；pageNum>0 时生效", "example": 1},
+          "pageNum": {"type": "integer", "minimum": 0, "default": 0, "description": "每页条数；0=不分页并返回数组", "example": 20},
+          "g_name": {"type": "string", "description": "商品名称模糊匹配", "example": "可乐"},
+          "sku": {"type": "string", "description": "SKU模糊匹配", "example": "SKU10"},
+          "bar_code": {"type": "integer", "enum": [1, 2], "description": "条形码类型筛选：1=不以69开头，2=以69开头"},
+          "machine_id": {"oneOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}], "description": "按管理账号有权访问的设备编号筛选；推荐传设备编号数组", "example": ["JCHM-H2D-0001"]},
+          "sale_check": {"type": "integer", "enum": [0, 1], "default": 0, "description": "1=按授权设备商品范围筛选；0或不传=普通核心商品查询"}
+        }
+      },
+      "GoodsFindRequest": {"type": "object", "additionalProperties": false, "required": ["g_id"], "properties": {"g_id": {"type": "integer", "minimum": 1, "description": "核心商品主键", "example": 1001}}},
+      "GoodsImportRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file_path"],
+        "properties": {
+          "file_path": {"type": "string", "minLength": 1, "description": "上传接口返回的文件相对路径。服务端会拼接到项目 public 目录；不要传服务器绝对路径。文件须为现有 Excel 导入工具支持的格式", "example": "/uploads/excel/goods_currency_20260902.xlsx"}
+        }
+      },
+      "CurrencyPriceRow": {
+        "type": "object",
+        "properties": {
+          "g_id": {"type": "integer", "description": "核心商品主键"},
+          "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "cost_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "market_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "retail_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "created_at": {"type": "string", "description": "创建时间，YYYY-MM-DD HH:mm:ss"},
+          "updated_at": {"type": "string", "description": "更新时间，YYYY-MM-DD HH:mm:ss"},
+          "currency_name": {"type": "string", "description": "币种名称"},
+          "currency_symbol": {"type": "string", "description": "币种符号"},
+          "decimal_places": {"type": "integer", "minimum": 0, "maximum": 3, "description": "展示小数位"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "币种状态：1=启用，2=停用"}
+        }
+      },
+      "GoodsItem": {
+        "type": "object",
+        "description": "核心商品数据；除列出的多货币字段外仍保留现有商品列表/详情字段。",
+        "additionalProperties": true,
+        "properties": {
+          "g_id": {"type": "integer", "example": 1001},
+          "g_name": {"type": "string", "example": "示例商品"},
+          "sku": {"type": "string", "example": "SKU1001"},
+          "bar_code": {"type": "string", "example": "6900000001001"},
+          "cost_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "market_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "retail_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "currency_prices": {"type": "array", "description": "该商品已配置的币种价格记录数组；注意与写接口的键值对象格式不同", "items": {"$ref": "#/components/schemas/CurrencyPriceRow"}}
+        }
+      },
+      "GoodsListResponse": {
+        "type": "object",
+        "required": ["state", "msg"],
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "查询成功"},
+          "data": {
+            "description": "pageNum=0 时通常为商品数组；pageNum>0 时为 ThinkPHP 分页对象，分页对象的 data 字段为商品数组",
+            "oneOf": [
+              {"type": "array", "items": {"$ref": "#/components/schemas/GoodsItem"}},
+              {"type": "object", "additionalProperties": true, "properties": {"data": {"type": "array", "items": {"$ref": "#/components/schemas/GoodsItem"}}, "current_page": {"type": "integer"}, "per_page": {"type": "integer"}, "total": {"type": "integer"}}}
+            ]
+          }
+        }
+      },
+      "GoodsDetailResponse": {"type": "object", "required": ["state", "msg"], "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "查询成功"}, "data": {"$ref": "#/components/schemas/GoodsItem"}}},
+      "GoodsImportResponse": {
+        "type": "object",
+        "required": ["state", "msg"],
+        "properties": {
+          "state": {"type": "integer", "description": "200=已完成逐行处理，100/300=文件或整体参数失败", "example": 200},
+          "msg": {"type": "string", "example": "导入完成"},
+          "data": {
+            "type": "object",
+            "properties": {
+              "total": {"type": "integer", "minimum": 0, "description": "读取到的数据行总数"},
+              "update_success": {"type": "integer", "minimum": 0, "description": "按有效 g_id 更新成功行数"},
+              "update_fail": {"type": "integer", "minimum": 0, "description": "按 g_id 更新失败行数"},
+              "insert_total": {"type": "integer", "minimum": 0, "description": "按新增处理的行数"},
+              "insert_success": {"type": "integer", "minimum": 0, "description": "新增成功行数"},
+              "insert_fail": {"type": "integer", "minimum": 0, "description": "新增失败行数"},
+              "insert_fail_list": {"type": "array", "description": "失败行和原因；row 为 Excel 的1基行号", "items": {"type": "object", "required": ["row", "error"], "properties": {"row": {"type": "integer", "minimum": 2}, "error": {"type": "string"}}}}
+            }
+          }
+        }
+      },
+      "MachineGoodsPriceSaveRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["m_id", "mg_id", "cost_price", "market_price", "retail_price"],
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "设备数据库主键；当前管理员必须有该设备权限", "example": 100},
+          "mg_id": {"type": "integer", "minimum": 1, "description": "设备商品主键；必须属于 m_id", "example": 2001},
+          "currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "可选。省略或空字符串时使用设备当前配置币种"},
+          "cost_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，设备商品成本价；需要成本价权限"},
+          "market_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，设备商品市场价"},
+          "retail_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，设备商品零售价"}
+        }
+      },
+      "MachineChannelPriceSaveRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["m_id", "mc_id", "currency_code", "cost_price", "market_price", "retail_price"],
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "设备数据库主键；当前管理员必须有该设备权限", "example": 100},
+          "mc_id": {"type": "integer", "minimum": 1, "description": "普通单商品货道主键；必须属于 m_id，本期不支持多商品货道", "example": 3001},
+          "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "cost_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，货道成本价；需要成本价权限"},
+          "market_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，货道市场价"},
+          "retail_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，货道零售价"}
+        }
+      },
+      "MachineGoodsSyncRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["m_id", "mg_ids", "currency_codes"],
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "目标设备主键；全部 mg_ids 必须属于该设备", "example": 100},
+          "mg_ids": {"type": "array", "minItems": 1, "maxItems": 200, "uniqueItems": true, "description": "待同步的设备商品主键数组；服务端去重，最多200条", "items": {"type": "integer", "minimum": 1}, "example": [2001, 2002, 2003]},
+          "currency_codes": {"$ref": "#/components/schemas/CurrencyCodeArray"}
+        }
+      },
+      "MachineChannelSyncRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["m_id", "mc_ids", "currency_codes"],
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "目标设备主键；全部 mc_ids 必须属于该设备", "example": 100},
+          "mc_ids": {"type": "array", "minItems": 1, "maxItems": 200, "uniqueItems": true, "description": "待同步的普通单商品货道主键数组；服务端去重，最多200条；多商品/历史批次货道整批拒绝", "items": {"type": "integer", "minimum": 1}, "example": [3001, 3002]},
+          "currency_codes": {"$ref": "#/components/schemas/CurrencyCodeArray"}
+        }
+      },
+      "PriceWriteData": {
+        "type": "object",
+        "properties": {
+          "m_id": {"type": "integer", "description": "设备主键"},
+          "machine_id": {"type": "string", "description": "设备业务编号"},
+          "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "active_currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "设备当前生效币种"},
+          "currency_version": {"type": "integer", "minimum": 0, "description": "设备售卖快照版本；仅当前币种快照实际变化时递增"},
+          "changed_count": {"type": "integer", "minimum": 0, "description": "本次发生事实价格变化的记录数"},
+          "unchanged_count": {"type": "integer", "minimum": 0, "description": "本次价格未变化的记录数"},
+          "active_snapshot_changed": {"type": "integer", "enum": [0, 1], "description": "1=本次同时更新了设备当前币种旧表快照，0=只改非当前币种或价格未变化"}
+        }
+      },
+      "PriceWriteResponse": {"type": "object", "required": ["state", "msg"], "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "操作成功"}, "data": {"$ref": "#/components/schemas/PriceWriteData"}}},
+      "CurrencySwitchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["m_id", "currency_code"],
+        "properties": {
+          "m_id": {"type": "integer", "minimum": 1, "description": "待预检或切换的设备数据库主键；当前管理员必须有权限", "example": 100},
+          "currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "目标币种；必须为已启用币种且在服务端允许切换列表中"}
+        }
+      },
+      "CurrencyBatchSwitchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["m_ids", "currency_code"],
+        "properties": {
+          "m_ids": {
+            "description": "待切换设备主键。推荐传数组；兼容英文逗号分隔字符串。去重后必须为1至50台",
+            "oneOf": [
+              {"type": "array", "minItems": 1, "maxItems": 50, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}, "example": [100, 101, 102]},
+              {"type": "string", "pattern": "^[0-9]+(,[0-9]+){0,49}$", "example": "100,101,102"}
+            ]
+          },
+          "currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "所有选中设备的统一目标币种"}
+        }
+      },
+      "CurrencySwitchBlocker": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["MACHINE_OFFLINE", "MACHINE_BUSY", "DEVICE_STATE_STALE", "DEVICE_LOCAL_BUSY", "DEVICE_CURRENCY_UNSUPPORTED", "SERVER_CAPABILITY_DISABLED", "SERVER_ORDER_PENDING", "MULTI_GOODS_UNSUPPORTED", "MACHINE_GOODS_PRICE_MISSING", "MACHINE_CHANNEL_PRICE_MISSING", "MACHINE_CHANNEL_PRICE_STALE"],
+            "description": "预检阻断码：设备离线、服务端忙、设备状态过期、设备本地忙、设备不支持、服务端未开放、存在待处理订单、多商品不支持、设备商品缺价、货道缺价、货道价格串价"
+          },
+          "message": {"type": "string", "description": "阻断原因中文说明"}
+        }
+      },
+      "CurrencyReadinessData": {
+        "type": "object",
+        "properties": {
+          "m_id": {"type": "integer", "description": "设备主键"},
+          "machine_id": {"type": "string", "description": "设备业务编号"},
+          "current_currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "target_currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "target_currency": {"$ref": "#/components/schemas/Currency"},
+          "currency_version": {"type": "integer", "minimum": 0, "description": "预检时的设备售卖快照版本"},
+          "missing_mg_ids": {"type": "array", "description": "缺少目标币种价格的设备商品ID", "items": {"type": "integer"}},
+          "missing_mc_ids": {"type": "array", "description": "缺少目标币种价格的货道ID", "items": {"type": "integer"}},
+          "stale_mc_ids": {"type": "array", "description": "货道价格记录与货道当前商品归属不一致，存在串价风险的货道ID", "items": {"type": "integer"}},
+          "multi_goods_mc_ids": {"type": "array", "description": "检测到的多商品或历史批次货道ID，本期直接阻断", "items": {"type": "integer"}},
+          "blockers": {"type": "array", "description": "全部预检阻断原因；空数组表示无阻断", "items": {"$ref": "#/components/schemas/CurrencySwitchBlocker"}},
+          "ready": {"type": "integer", "enum": [0, 1], "description": "1=满足切换条件，0=存在阻断"},
+          "idempotent": {"type": "integer", "enum": [0, 1], "description": "可选；目标币种已是当前币种时为1"},
+          "device_state": {"type": "object", "nullable": true, "additionalProperties": true, "description": "设备最近一次上报的切换状态及接收时间"}
+        }
+      },
+      "CurrencyReadinessResponse": {"type": "object", "required": ["state", "msg", "data"], "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "查询成功"}, "data": {"$ref": "#/components/schemas/CurrencyReadinessData"}}},
+      "CurrencySwitchSuccessData": {
+        "type": "object",
+        "properties": {
+          "success": {"type": "integer", "enum": [1], "description": "切换成功标志"},
+          "idempotent": {"type": "integer", "enum": [0, 1], "description": "1=目标币种原本已生效，未重复投影"},
+          "m_id": {"type": "integer"},
+          "machine_id": {"type": "string"},
+          "currency_code": {"$ref": "#/components/schemas/CurrencyCode"},
+          "currency_version": {"type": "integer", "minimum": 0, "description": "切换后的快照版本"},
+          "machine_goods_count": {"type": "integer", "minimum": 0, "description": "已投影设备商品数量；幂等返回时可能省略"},
+          "channel_count": {"type": "integer", "minimum": 0, "description": "已投影普通货道数量；幂等返回时可能省略"}
+        }
+      },
+      "CurrencySwitchResponse": {"type": "object", "required": ["state", "msg"], "properties": {"state": {"type": "integer", "description": "200=切换成功或幂等，100=预检阻断/业务失败"}, "msg": {"type": "string"}, "data": {"oneOf": [{"$ref": "#/components/schemas/CurrencySwitchSuccessData"}, {"$ref": "#/components/schemas/CurrencyReadinessData"}]}}},
+      "CurrencyBatchSwitchResponse": {
+        "type": "object",
+        "required": ["state", "msg", "data"],
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "操作成功"},
+          "data": {
+            "type": "object",
+            "required": ["success", "failed"],
+            "properties": {
+              "success": {"type": "array", "description": "切换成功或幂等的设备结果", "items": {"$ref": "#/components/schemas/CurrencySwitchSuccessData"}},
+              "failed": {"type": "array", "description": "切换失败的设备及原因，不影响其他设备", "items": {"type": "object", "additionalProperties": true, "properties": {"m_id": {"type": "integer"}, "message": {"type": "string"}, "blockers": {"type": "array", "items": {"$ref": "#/components/schemas/CurrencySwitchBlocker"}}}}}
+            }
+          }
+        }
+      },
+      "MachineCurrencyStateReportRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/MachineSignedRequest"},
+          {
+            "type": "object",
+            "required": ["can_switch_currency", "supported_currency_codes"],
+            "properties": {
+              "can_switch_currency": {"type": "integer", "enum": [0, 1], "description": "必填。1=设备现场当前允许切币，0=设备本地存在阻断", "example": 1},
+              "cart_count": {"type": "integer", "minimum": 0, "default": 0, "description": "可选，设备本地购物车商品数量；服务端会将负数归零", "example": 0},
+              "pending_order_count": {"type": "integer", "minimum": 0, "default": 0, "description": "可选，设备本地待处理订单数；大于0时切币预检阻断", "example": 0},
+              "supported_currency_codes": {
+                "description": "必填，设备程序可识别和展示的币种。推荐传数组；代码兼容JSON数组字符串或英文逗号字符串。无效编码会被过滤。",
+                "oneOf": [
+                  {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/components/schemas/CurrencyCode"}, "example": ["CNY", "HKD"]},
+                  {"type": "string", "example": "CNY,HKD"}
+                ]
+              },
+              "report_time": {"type": "integer", "format": "int64", "description": "可选，设备生成状态时的Unix秒级时间戳；省略时取服务器当前时间，传入时必须为正且与服务器时间偏差不超过300秒", "example": 1788300000}
+            }
+          }
+        ]
+      },
+      "MachineGoodsDevicePriceRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/MachineSignedRequest"},
+          {
+            "type": "object",
+            "required": ["mg_id", "cost_price", "market_price", "retail_price"],
+            "properties": {
+              "mg_id": {"type": "integer", "minimum": 1, "description": "必填，本设备下要改价的设备商品主键", "example": 2001},
+              "currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "可选；省略时使用当前设备币种，传入时必须严格等于当前设备币种"},
+              "cost_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，成本价"},
+              "market_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，市场价"},
+              "retail_price": {"allOf": [{"$ref": "#/components/schemas/PriceValueInput"}], "description": "必填，零售价"}
+            }
+          }
+        ]
+      },
+      "MachineStateReportData": {
+        "type": "object",
+        "required": ["m_id", "can_switch_currency", "cart_count", "pending_order_count", "supported_currency_codes", "report_time", "received_at"],
+        "properties": {
+          "m_id": {"type": "integer", "description": "由 Header mac/machine_id 识别出的设备主键"},
+          "can_switch_currency": {"type": "integer", "enum": [0, 1]},
+          "cart_count": {"type": "integer", "minimum": 0},
+          "pending_order_count": {"type": "integer", "minimum": 0},
+          "supported_currency_codes": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/components/schemas/CurrencyCode"}},
+          "report_time": {"type": "integer", "format": "int64", "description": "设备状态生成时间"},
+          "received_at": {"type": "integer", "format": "int64", "description": "服务端接收并写入缓存的时间"}
+        }
+      },
+      "MachineStateReportResponse": {"type": "object", "required": ["state", "msg", "data"], "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "操作成功"}, "data": {"$ref": "#/components/schemas/MachineStateReportData"}}},
+      "MachineGoodsSnapshotItem": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "machine_goods 当前币种售卖快照完整行；保留原表全部字段。",
+        "properties": {
+          "mg_id": {"type": "integer", "description": "设备商品主键"},
+          "m_id": {"type": "integer", "description": "设备主键"},
+          "machine_id": {"type": "string", "description": "设备业务编号"},
+          "g_id": {"type": "integer", "description": "核心商品主键"},
+          "g_name": {"type": "string", "description": "商品名称"},
+          "cost_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "market_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "retail_price": {"$ref": "#/components/schemas/PriceValueOutput"}
+        }
+      },
+      "MachineChannelSnapshotItem": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "普通单商品 machine_channel 当前币种售卖快照完整行；status=2、空商品和多商品货道不进入本快照。",
+        "properties": {
+          "mc_id": {"type": "integer", "description": "货道主键"},
+          "mg_id": {"type": "integer", "description": "当前关联设备商品主键"},
+          "m_id": {"type": "integer", "description": "设备主键"},
+          "machine_id": {"type": "string", "description": "设备业务编号"},
+          "channel_code": {"type": "string", "description": "货道编号"},
+          "g_id": {"type": "integer", "description": "当前商品主键"},
+          "g_name": {"type": "string", "description": "当前商品名称"},
+          "cost_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "market_price": {"$ref": "#/components/schemas/PriceValueOutput"},
+          "retail_price": {"$ref": "#/components/schemas/PriceValueOutput"}
+        }
+      },
+      "MachineCurrencySnapshotData": {
+        "type": "object",
+        "required": ["currency_code", "currency_version", "currency", "machine_config", "machine_goods", "machine_channels", "counts"],
+        "properties": {
+          "currency_code": {"allOf": [{"$ref": "#/components/schemas/CurrencyCode"}], "description": "本快照统一使用的当前设备币种"},
+          "currency_version": {"type": "integer", "minimum": 1, "description": "快照版本。设备应整体原子应用同一版本，不能混用不同版本的数据"},
+          "currency": {"$ref": "#/components/schemas/Currency"},
+          "machine_config": {"type": "object", "additionalProperties": true, "description": "machine_config 完整配置行，包含当前 currency_code 和 currency_version"},
+          "machine_goods": {"type": "array", "description": "全部设备商品当前售卖快照", "items": {"$ref": "#/components/schemas/MachineGoodsSnapshotItem"}},
+          "machine_channels": {"type": "array", "description": "全部有效普通单商品货道当前售卖快照", "items": {"$ref": "#/components/schemas/MachineChannelSnapshotItem"}},
+          "counts": {"type": "object", "required": ["machine_goods", "machine_channels"], "properties": {"machine_goods": {"type": "integer", "minimum": 0, "description": "machine_goods 数组数量"}, "machine_channels": {"type": "integer", "minimum": 0, "description": "machine_channels 数组数量"}}}
+        }
+      },
+      "MachineCurrencySnapshotResponse": {"type": "object", "required": ["state", "msg", "data"], "properties": {"state": {"type": "integer", "example": 200}, "msg": {"type": "string", "example": "查询成功"}, "data": {"$ref": "#/components/schemas/MachineCurrencySnapshotData"}}}
     }
   }
 }

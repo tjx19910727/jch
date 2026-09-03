@@ -22,7 +22,16 @@ class MachineConfig extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        $filterCurrency = '';
+        if (isset($postData['currency_code']) && trim((string)$postData['currency_code']) !== '') {
+            $filterCurrency = strtoupper(trim((string)$postData['currency_code']));
+            unset($postData['currency_code']);
+        }
         $where = $this->getWhere($postData, false, []);
+        if ($filterCurrency && !preg_match('/^[A-Z]{3}$/', $filterCurrency)) $filterCurrency = '';
+        if ($filterCurrency) {
+            $where[] = ['currency_code', '=', $filterCurrency];
+        }
         return $this->app->machineConfig->getList($where,$pageNum,$this->field);
     }
 

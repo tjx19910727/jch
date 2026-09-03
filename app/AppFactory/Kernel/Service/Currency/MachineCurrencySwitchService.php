@@ -205,10 +205,18 @@ class MachineCurrencySwitchService
                 $price = $mcMap[intval($mc['mc_id'])];
                 Db::name('machine_channel')->where('mc_id', intval($mc['mc_id']))->update($this->priceFields($price));
             }
-            Db::name('machine_config')->where('m_id', $mId)->update([
+            $currencyInfo = $this->catalog->getByCode($targetCurrencyCode);
+            $mcUpdate = [
                 'currency_code' => $targetCurrencyCode,
                 'currency_version' => Db::raw('currency_version + 1'),
-            ]);
+            ];
+            // machine_config.currency_name/currency_symbol 依赖迁移 SQL；列未加时降级只写 code/version。
+            $hasNameColumn = Db::query("SHOW COLUMNS FROM `machine_config` LIKE 'currency_name'");
+            if ($hasNameColumn) {
+                $mcUpdate['currency_name'] = isset($currencyInfo['currency_name']) ? $currencyInfo['currency_name'] : $targetCurrencyCode;
+                $mcUpdate['currency_symbol'] = isset($currencyInfo['currency_symbol']) && $currencyInfo['currency_symbol'] !== '' ? $currencyInfo['currency_symbol'] : $targetCurrencyCode;
+            }
+            Db::name('machine_config')->where('m_id', $mId)->update($mcUpdate);
             $version = intval(Db::name('machine_config')->where('m_id', $mId)->value('currency_version'));
             return [
                 'success' => 1,

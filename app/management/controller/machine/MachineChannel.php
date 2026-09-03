@@ -8,11 +8,9 @@
 
 namespace app\management\controller\machine;
 
-
 use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineChannel;
-
 
 class MachineChannel extends Common
 {
@@ -27,7 +25,7 @@ class MachineChannel extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
         //return $this->app->machineChannel->getList($where,$pageNum,$this->field);
-        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field,'',$hasCostPriceAuth,$postData['currency_code'] ?? '');
+        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field,'',$hasCostPriceAuth,'');
     }
 
     public function getFind()
@@ -36,7 +34,7 @@ class MachineChannel extends Common
         $where = $this->getWhere($postData, false, []);
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
-        return $this->app->machineChannel->getMcFind($where,$field,$postData['currency_code'] ?? '',$hasCostPriceAuth);
+        return $this->app->machineChannel->getMcFind($where,$field,'',$hasCostPriceAuth);
     }
 
     public function add()
@@ -213,24 +211,6 @@ class MachineChannel extends Common
         return $this->app->machineChannel->batchRestoreMc($postData, $where);
     }
 
-    public function synchronizationMachineGoodsPrice()
-    {
-        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价同步权限');
-        return $this->app->machineChannel->synchronizationMachineGoodsPrice(input());
-    }
-
-    public function saveCurrencyPrice()
-    {
-        $postData = input();
-        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价修改权限');
-        try {
-            $this->validate($postData, $this->validatePath . '.currencyPrice');
-        } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
-        }
-        return $this->app->machineChannel->saveCurrencyPrice($postData);
-    }
-
     /**
      * 远程下架货道商品回收
      * @return array|string
@@ -270,5 +250,16 @@ class MachineChannel extends Common
         $m_id = input('m_id');
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         return $this->app->machineChannel->exportMcByShelfLevel($m_id, $hasCostPriceAuth);
+    }
+
+    /**
+     * 货道同步设备商品币种价格（支持一次多个币种，含 HKD）。
+     * 请求参数：m_id + mc_ids[] + currency_codes[]。
+     * @return array|\think\response\Json
+     */
+    public function synchronizationMachineGoodsPrice()
+    {
+        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价同步权限');
+        return $this->app->machineChannel->synchronizationMachineGoodsPrice(input());
     }
 }

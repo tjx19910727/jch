@@ -136,6 +136,35 @@ class BaseModel extends Model
      * @param string $group
      * @return mixed
      */
+    /**
+     * 去掉 where 条件中的表别名前缀（如 a.m_id -> m_id）。
+     * getFind 等不带别名的查询无法解析带前缀条件，列表查询使用 alias a 时才可带 a. 前缀。
+     * @param array $where
+     * @return array
+     */
+    public static function stripWhereAliasPrefix($where)
+    {
+        if (!is_array($where) || !$where) {
+            return $where;
+        }
+        $clean = [];
+        foreach ($where as $key => $value) {
+            if (is_string($key)) {
+                $dot = strpos($key, '.');
+                $clean[$dot === false ? $key : substr($key, $dot + 1)] = $value;
+                continue;
+            }
+            if (is_array($value) && isset($value[0]) && is_string($value[0])) {
+                $fieldKey = $value[0];
+                $dot = strpos($fieldKey, '.');
+                if ($dot !== false) {
+                    $value[0] = substr($fieldKey, $dot + 1);
+                }
+            }
+            $clean[] = $value;
+        }
+        return $clean;
+    }
     public static function getFind($where,$field = '*',$order = "", $group = "")
     {
         $result = self::where($where)->field($field)->order($order)->group($group)->find();

@@ -72,16 +72,52 @@ trait GoodsTrait
         !isset($this->manager['manager_id']) ? : $update['update_id'] = $this->manager['manager_id'];
         $result = GoodsModel::update($update,$where,$field);
         if ($result && $updateType) {
-            $new = GoodsModel::getFind(['g_id' => $result['g_id']],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code')->toArray();
-            MachineGoodsModel::update($new,['g_id' => $result['g_id']]);
-            MachineChannelModel::update($new,['g_id' => $result['g_id']]);
+            // ThinkPHP 的 update 返回对象只包含实际更新字段时可能没有主键，必须从更新条件回收 g_id。
+            $gId = $this->resolveUpdatedGoodsId($result, $update, $where);
+            if ($gId <= 0) {
+                throw new \RuntimeException('更新商品后无法确定商品ID');
+            }
+            $newGoods = GoodsModel::getFind(['g_id' => $gId],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code');
+            if (!$newGoods) {
+                throw new \RuntimeException('更新后的商品不存在');
+            }
+            $new = $newGoods->toArray();
+            MachineGoodsModel::update($new,['g_id' => $gId]);
+            MachineChannelModel::update($new,['g_id' => $gId]);
             ActivityGoodsModel::update([
                 'g_name' => $new['g_name'],
                 'pic' => $new['pic'],
                 'sku' => $new['sku'],
-            ],['g_id' => $result['g_id']]);
+            ],['g_id' => $gId]);
         }
         return $result;
+    }
+
+    /**
+     * 优先使用模型返回主键，并兼容仅通过 where 指定 g_id 的更新调用。
+     */
+    protected function resolveUpdatedGoodsId($result, array $update, array $where)
+    {
+        if ($result && isset($result['g_id']) && intval($result['g_id']) > 0) {
+            return intval($result['g_id']);
+        }
+        if (isset($update['g_id']) && intval($update['g_id']) > 0) {
+            return intval($update['g_id']);
+        }
+        if (isset($where['g_id']) && !is_array($where['g_id']) && intval($where['g_id']) > 0) {
+            return intval($where['g_id']);
+        }
+        foreach ($where as $condition) {
+            if (is_array($condition)
+                && isset($condition[0], $condition[1], $condition[2])
+                && $condition[0] === 'g_id'
+                && in_array(strtolower((string)$condition[1]), ['=', 'eq'], true)
+                && intval($condition[2]) > 0
+            ) {
+                return intval($condition[2]);
+            }
+        }
+        return 0;
     }
 
     public function delGoods($where)

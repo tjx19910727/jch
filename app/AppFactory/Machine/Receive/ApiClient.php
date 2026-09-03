@@ -648,7 +648,47 @@ class ApiClient extends ReceiveBaseClient
         $where['mg.m_id'] = $this->machine['m_id'];
         $goodsField = "mg.mg_id,mg.m_id,mg.machine_id,mg.g_id,mg.g_name,mg.gc_id,mg.gc_name,mg.pic,mg.sku,mg.bar_code,mg.cost_price,mg.market_price,mg.retail_price,mg.gift_points,mg.available_stock,
         mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf,g.sell_channel,g.exter_url";
-        return $this->r(200, "SUCCESS", $this->getMachineGoodsListJoinGoods($where, $this->data['pageNum'] ?? 0, $goodsField));
+        $data = $this->getMachineGoodsListJoinGoods($where, $this->data['pageNum'] ?? 0, $goodsField);
+        $data = is_object($data) && method_exists($data, 'toArray') ? $data->toArray() : $data;
+        $items = is_array($data) && isset($data['data']) && is_array($data['data']) ? $data['data'] : $data;
+        if (is_array($items)) {
+            $currency = $this->deviceCurrentCurrency();
+            $mgIds = array_values(array_unique(array_filter(array_map(function ($it) {
+                return intval(isset($it['mg_id']) ? $it['mg_id'] : 0);
+            }, $items))));
+            $map = $mgIds ? Db::name('machine_goods_currency_price')->whereIn('mg_id', $mgIds)->where('currency_code', $currency['currency_code'])->select()->toArray() : [];
+            $priceByMg = [];
+            foreach ($map as $row) {
+                $priceByMg[intval($row['mg_id'])] = $row;
+            }
+            foreach ($items as &$row) {
+                $mgId = intval(isset($row['mg_id']) ? $row['mg_id'] : 0);
+                if (isset($priceByMg[$mgId])) {
+                    $price = $priceByMg[$mgId];
+                } elseif ($currency['currency_code'] === 'CNY') {
+                    $price = [
+                        'cost_price' => isset($row['cost_price']) ? $row['cost_price'] : '0.000',
+                        'market_price' => isset($row['market_price']) ? $row['market_price'] : '0.000',
+                        'retail_price' => isset($row['retail_price']) ? $row['retail_price'] : '0.000',
+                    ];
+                } else {
+                    $price = $this->defaultCurrencyTriple();
+                }
+                $row['cost_price'] = $price['cost_price'];
+                $row['market_price'] = $price['market_price'];
+                $row['retail_price'] = $price['retail_price'];
+                $row['currency_code'] = $currency['currency_code'];
+                $row['currency_name'] = $currency['currency_name'];
+                $row['currency_symbol'] = $currency['currency_symbol'];
+            }
+            unset($row);
+            if (is_array($data) && isset($data['data'])) {
+                $data['data'] = $items;
+            } else {
+                $data = $items;
+            }
+        }
+        return $this->r(200, "SUCCESS", $data);
     }
 
     /**
@@ -758,6 +798,43 @@ class ApiClient extends ReceiveBaseClient
                 $mcList[$key] = $mc;
             }
         }
+        // 货道三价以设备当前币种事实为准（machine_channel_currency_price），缺配给 0 占位；多商品货道保留活跃批次价只附加币种。
+        $currency = $this->deviceCurrentCurrency();
+        $mcIds = array_values(array_unique(array_filter(array_map(function ($it) {
+            return intval(isset($it['mc_id']) ? $it['mc_id'] : 0);
+        }, $mcList))));
+        $priceMap = $mcIds ? Db::name('machine_channel_currency_price')->whereIn('mc_id', $mcIds)->where('currency_code', $currency['currency_code'])->select()->toArray() : [];
+        $priceByMc = [];
+        foreach ($priceMap as $row) {
+            $priceByMc[intval($row['mc_id'])] = $row;
+        }
+        foreach ($mcList as &$mcRow) {
+            if (intval(isset($mcRow['is_multi_goods']) ? $mcRow['is_multi_goods'] : 2) === 1) {
+                $mcRow['currency_code'] = $currency['currency_code'];
+                $mcRow['currency_name'] = $currency['currency_name'];
+                $mcRow['currency_symbol'] = $currency['currency_symbol'];
+                continue;
+            }
+            $mcId = intval(isset($mcRow['mc_id']) ? $mcRow['mc_id'] : 0);
+            if (isset($priceByMc[$mcId])) {
+                $price = $priceByMc[$mcId];
+            } elseif ($currency['currency_code'] === 'CNY') {
+                $price = [
+                    'cost_price' => isset($mcRow['cost_price']) ? $mcRow['cost_price'] : '0.000',
+                    'market_price' => isset($mcRow['market_price']) ? $mcRow['market_price'] : '0.000',
+                    'retail_price' => isset($mcRow['retail_price']) ? $mcRow['retail_price'] : '0.000',
+                ];
+            } else {
+                $price = $this->defaultCurrencyTriple();
+            }
+            $mcRow['cost_price'] = $price['cost_price'];
+            $mcRow['market_price'] = $price['market_price'];
+            $mcRow['retail_price'] = $price['retail_price'];
+            $mcRow['currency_code'] = $currency['currency_code'];
+            $mcRow['currency_name'] = $currency['currency_name'];
+            $mcRow['currency_symbol'] = $currency['currency_symbol'];
+        }
+        unset($mcRow);
         actionLog($mcList, '返回的货道数据');
         return $this->r(200, "SUCCESS", $mcList);
     }
@@ -1146,6 +1223,28 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 设备端发起货币切换。
+     * 设备先在本机确认空闲（购物车/未完成订单为 0）并通过本请求上报状态，服务端复用切币预检与事务切换。
+     * @return array|\think\response\Json
+     */
+    public function switchCurrency()
+    {
+        try {
+            if (empty($this->data['currency_code'])) {
+                throw new \InvalidArgumentException('目标币种不能为空');
+            }
+            $service = new MachineCurrencySwitchService();
+            $mId = intval($this->machine['m_id']);
+            // 先落设备现场状态（短 TTL），随后 switchCurrency 内部 readiness 会基于该状态预检。
+            $service->reportDeviceState($mId, $this->data);
+            $result = $service->switchCurrency($mId, trim((string)$this->data['currency_code']));
+            return $this->r(200, $this->lang('action_success'), $result);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
      * 设备上报修改自身运行模式：1生产模式，2测试模式
      * @return array|\think\response\Json
      */
@@ -1320,6 +1419,87 @@ class ApiClient extends ReceiveBaseClient
             mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
     /**
+     * 设备当前币种信息（machine_config.currency_code，空按 CNY），name/symbol 取自 currency_info。
+     * @return array{currency_code:string,currency_name:string,currency_symbol:string}
+     */
+    protected function deviceCurrentCurrency()
+    {
+        $config = Db::name('machine_config')->where('m_id', intval($this->machine['m_id']))->field('currency_code')->find();
+        $code = strtoupper(trim((string)(isset($config['currency_code']) ? $config['currency_code'] : '')));
+        if (!preg_match('/^[A-Z]{3}$/', $code)) {
+            $code = 'CNY';
+        }
+        $row = Db::name('currency_info')->where('currency_code', $code)->find();
+        return [
+            'currency_code' => $code,
+            'currency_name' => $row && isset($row['currency_name']) ? $row['currency_name'] : $code,
+            'currency_symbol' => $row && isset($row['currency_symbol']) && $row['currency_symbol'] !== '' ? $row['currency_symbol'] : $code,
+        ];
+    }
+
+    /**
+     * 当前币种价格缺失时的默认占位三价。
+     * @return array
+     */
+    protected function defaultCurrencyTriple()
+    {
+        return ['cost_price' => '0.000', 'market_price' => '0.000', 'retail_price' => '0.000'];
+    }
+
+    /**
+     * 商品行三价按设备当前币种覆盖（goods_currency_price），支持扁平数组或分页 {data:[]} 结构；缺配给 0 占位并附币种信息。
+     * @param mixed $data
+     * @return mixed
+     */
+    protected function patchGoodsCurrencyPrice($data)
+    {
+        if (!is_array($data)) {
+            return $data;
+        }
+        $currency = $this->deviceCurrentCurrency();
+        $outer = isset($data['data']) && is_array($data['data']);
+        $items = $outer ? $data['data'] : $data;
+        if (!is_array($items)) {
+            return $data;
+        }
+        $gIds = array_values(array_unique(array_filter(array_map(function ($it) {
+            return intval(isset($it['g_id']) ? $it['g_id'] : 0);
+        }, $items))));
+        $map = $gIds ? Db::name('goods_currency_price')->whereIn('g_id', $gIds)->where('currency_code', $currency['currency_code'])->select()->toArray() : [];
+        $priceByG = [];
+        foreach ($map as $row) {
+            $priceByG[intval($row['g_id'])] = $row;
+        }
+        foreach ($items as &$row) {
+            $gId = intval(isset($row['g_id']) ? $row['g_id'] : 0);
+            if (isset($priceByG[$gId])) {
+                $price = $priceByG[$gId];
+            } elseif ($currency['currency_code'] === 'CNY') {
+                $price = [
+                    'cost_price' => array_key_exists('cost_price', $row) ? $row['cost_price'] : '0.000',
+                    'market_price' => array_key_exists('market_price', $row) ? $row['market_price'] : '0.000',
+                    'retail_price' => array_key_exists('retail_price', $row) ? $row['retail_price'] : '0.000',
+                ];
+            } else {
+                $price = $this->defaultCurrencyTriple();
+            }
+            $row['cost_price'] = $price['cost_price'];
+            $row['market_price'] = $price['market_price'];
+            $row['retail_price'] = $price['retail_price'];
+            $row['currency_code'] = $currency['currency_code'];
+            $row['currency_name'] = $currency['currency_name'];
+            $row['currency_symbol'] = $currency['currency_symbol'];
+        }
+        unset($row);
+        if ($outer) {
+            $data['data'] = $items;
+        } else {
+            $data = $items;
+        }
+        return $data;
+    }
+
+    /**
      * 获取设备归属组织所有上级商品
      * @return array|string
      */
@@ -1337,6 +1517,10 @@ class ApiClient extends ReceiveBaseClient
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
         }
+        if (is_object($goodsList) && method_exists($goodsList, 'toArray')) {
+            $goodsList = $goodsList->toArray();
+        }
+        $goodsList = $this->patchGoodsCurrencyPrice($goodsList);
 
         return $this->rQ($goodsList);
     }
@@ -1367,6 +1551,7 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail($goodsList);
         }
         $goodsList = $goodsList ? $goodsList->toArray() : [];
+        $goodsList = $this->patchGoodsCurrencyPrice($goodsList);
 
         $categoryMap = [];
         foreach ($goodsList as $goods) {
@@ -1403,6 +1588,34 @@ class ApiClient extends ReceiveBaseClient
             $goods['lang'] = $this->getGoodsLangList(['g_id' => $this->data['g_id']], 0, 'g_name,gc_name,pic,banner,details_pic,manufacturer,`desc`,performance,lang');
             $mg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'], 'g_id' => $goods['g_id']], 'mg_id,available_stock,disabled_stock,cost_price,market_price,retail_price,reserve_stock,standby_stock,pre_loading_stock,is_shelf');
             if ($mg) $goods = array_merge($goods, $mg->toArray());
+            // 三价按设备当前币种：优先本机 machine_goods_currency_price，其次 goods_currency_price，缺配 0 占位，并附币种。
+            $currency = $this->deviceCurrentCurrency();
+            $price = null;
+            if (!empty($goods['mg_id'])) {
+                $mgPriceRow = Db::name('machine_goods_currency_price')->where(['mg_id' => intval($goods['mg_id']), 'currency_code' => $currency['currency_code']])->find();
+                if ($mgPriceRow) $price = $mgPriceRow;
+            }
+            if ($price === null) {
+                $corePriceRow = Db::name('goods_currency_price')->where(['g_id' => intval($goods['g_id']), 'currency_code' => $currency['currency_code']])->find();
+                if ($corePriceRow) $price = $corePriceRow;
+            }
+            if ($price === null) {
+                if ($currency['currency_code'] === 'CNY') {
+                    $price = [
+                        'cost_price' => array_key_exists('cost_price', $goods) ? $goods['cost_price'] : '0.000',
+                        'market_price' => array_key_exists('market_price', $goods) ? $goods['market_price'] : '0.000',
+                        'retail_price' => array_key_exists('retail_price', $goods) ? $goods['retail_price'] : '0.000',
+                    ];
+                } else {
+                    $price = $this->defaultCurrencyTriple();
+                }
+            }
+            $goods['cost_price'] = $price['cost_price'];
+            $goods['market_price'] = $price['market_price'];
+            $goods['retail_price'] = $price['retail_price'];
+            $goods['currency_code'] = $currency['currency_code'];
+            $goods['currency_name'] = $currency['currency_name'];
+            $goods['currency_symbol'] = $currency['currency_symbol'];
         }
         return $this->rQ($goods);
     }

@@ -55,10 +55,14 @@ class VMachineConfig extends VCommon
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
         "mcList" => ["m_id", "online_pay_success_tip", "add_other_org_goods", "run_mode", "is_multi_goods", "subcar_mix", "goods_no_stock_jump_to_mini_program", "subcar_offline_sp_ids", "subcar_online_sp_ids"],
-        "currencySwitch" => ["m_id", "currency_code"],
+
         "currencySwitchBatch" => ["m_ids", "currency_code"],
     ];
 
+    public function sceneCurrencySwitch()
+    {
+        return $this->only(['m_id', 'currency_code'])->remove('m_id', 'unique');
+    }
     public function sceneMcList()
     {
         return $this->only(['m_id', 'online_pay_success_tip', 'add_other_org_goods', 'run_mode', 'is_multi_goods', 'subcar_mix', 'goods_no_stock_jump_to_mini_program', 'subcar_offline_sp_ids', 'subcar_online_sp_ids'])

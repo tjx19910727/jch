@@ -18,11 +18,7 @@ class VMachineChannel extends VCommon
         "m_id" => "require",
         "machine_id" => "require",
         "channel_code" => "require",
-        "mc_ids" => "require",
-        "currency_code" => "require|regex:^[A-Za-z]{3}$",
-        "cost_price" => "require|float|egt:0",
-        "market_price" => "require|float|egt:0",
-        "retail_price" => "require|float|egt:0",
+        "mc_ids" => "require|array",
     ];
 
     protected $message = [
@@ -31,7 +27,7 @@ class VMachineChannel extends VCommon
         "machine_id.require" => "VMachineChannel.machine_id_require",
         "channel_code.require" => "VMachineChannel.channel_code_require",
         "mc_ids.require" => "VMachineChannel.mc_id_require",
-        "currency_code.require" => "币种代码不能为空",
+        "mc_ids.array" => "货道ID必须是数组",
     ];
 
     protected $scene = [
@@ -41,6 +37,5 @@ class VMachineChannel extends VCommon
         "updateAll" => ["mc_ids"],
         "remoteRemoval" => ["mc_id"],
         "del" => ["mc_id"],
-        "currencyPrice" => ["m_id", "mc_id", "currency_code", "cost_price", "market_price", "retail_price"],
     ];
 }

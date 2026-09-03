@@ -38,7 +38,14 @@ trait MachineGoodsTrait
 
     public function getMachineGoodsFind($where,$field = "*",$order = "")
     {
-        return MachineGoodsModel::getFind($where,$field,$order);
+        $clean = MachineGoodsModel::stripWhereAliasPrefix($where);
+        try {
+            // 详情 field 含 a.m_id 子查询（如 machine_name），必须 alias a，与列表一致。
+            return MachineGoodsModel::alias('a')->where($clean)->field($field)->order($order)->find();
+        } catch (\Throwable $e) {
+            @file_put_contents(root_path().'runtime/mgfind_debug.log', date('Y-m-d H:i:s')."\nWHERE=".var_export($where,true)."\nCLEAN=".var_export($clean,true)."\nMSG=".$e->getMessage()."\n", FILE_APPEND);
+            throw $e;
+        }
     }
 
     public function getMachineGoodsList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = '')

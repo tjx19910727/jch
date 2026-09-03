@@ -8,7 +8,6 @@
 
 namespace app\management\controller\machine;
 
-
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineGoods;
 
@@ -30,7 +29,7 @@ class MachineGoods extends Common
         $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->getMgList($where, $pageNum, $field, '', $postData['currency_code'] ?? '', $hasCostPriceAuth);
+        return $this->app->machineGoods->getMgList($where, $pageNum, $field, '', '', $hasCostPriceAuth);
     }
 
     public function getFind()
@@ -39,7 +38,7 @@ class MachineGoods extends Common
         $where = $this->getWhere($postData, false, []);
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
-        return $this->app->machineGoods->getMgFindCurrency($where, $field, $postData['currency_code'] ?? '', $hasCostPriceAuth);
+        return $this->app->machineGoods->getMgFindCurrency($where, $field, '', $hasCostPriceAuth);
     }
 
     /**
@@ -142,7 +141,8 @@ class MachineGoods extends Common
     }
 
     /**
-     * 设备商品库同步商品库价格
+     * 设备商品库同步核心商品币种价格（支持一次多个币种，含 HKD）。
+     * 请求参数：m_id + mg_ids[] + currency_codes[]。
      * @return array|\think\response\Json
      */
     public function synchronizationGoods()
@@ -152,15 +152,4 @@ class MachineGoods extends Common
         return $this->app->machineGoods->synchronizationGoodsPrice($postData);
     }
 
-    public function saveCurrencyPrice()
-    {
-        $postData = input();
-        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价修改权限');
-        try {
-            $this->validate($postData, $this->validatePath . '.currencyPrice');
-        } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
-        }
-        return $this->app->machineGoods->saveCurrencyPrice($postData);
-    }
 }

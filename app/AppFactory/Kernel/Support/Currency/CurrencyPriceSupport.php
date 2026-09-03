@@ -15,6 +15,28 @@ class CurrencyPriceSupport
         return $currencyCode;
     }
 
+    /**
+     * 人工同步必须明确选择一个或多个币种；统一转换为大写并按首次出现顺序去重。
+     */
+    public static function normalizeCurrencyCodes($currencyCodes)
+    {
+        if (!is_array($currencyCodes)) {
+            throw new \InvalidArgumentException('币种代码必须是数组');
+        }
+        $result = [];
+        foreach ($currencyCodes as $currencyCode) {
+            if (!is_string($currencyCode)) {
+                throw new \InvalidArgumentException('币种代码必须是字符串');
+            }
+            $currencyCode = self::normalizeCurrencyCode($currencyCode);
+            $result[$currencyCode] = $currencyCode;
+        }
+        if (!$result) {
+            throw new \InvalidArgumentException('至少选择一个币种');
+        }
+        return array_values($result);
+    }
+
     public static function normalizePrice($value, $fieldName = 'price')
     {
         $value = trim((string)$value);
@@ -71,6 +93,21 @@ class CurrencyPriceSupport
                 return false;
             }
             if (bccomp((string)$left[$field], (string)$right[$field], 3) !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 判断一组三价是否全部为 0（默认占位价），用于首次保存保护。
+     * @param array $row
+     * @return bool
+     */
+    public static function isZeroPrice(array $row)
+    {
+        foreach (self::PRICE_FIELDS as $field) {
+            if (!isset($row[$field]) || bccomp((string)$row[$field], '0', 3) !== 0) {
                 return false;
             }
         }

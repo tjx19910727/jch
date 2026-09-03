@@ -278,6 +278,16 @@ class Receive extends Common
         return $this->app->api->updateMachineGoodsCurrencyPrice();
     }
 
+    public function switchCurrency()
+    {
+        try {
+            return $this->app->api->switchCurrency();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     /**
      * 设备上报修改自身运行模式
      * @return array|string

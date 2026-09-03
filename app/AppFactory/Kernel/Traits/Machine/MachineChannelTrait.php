@@ -96,7 +96,7 @@ trait MachineChannelTrait
      */
     public function getMachineChannelFind($where, $field = "*", $order = "")
     {
-        return MachineChannelModel::getFind($where, $field, $order);
+        return MachineChannelModel::alias("a")->where(MachineChannelModel::stripWhereAliasPrefix($where))->field($field)->order($order)->find();
     }
 
     public function getMachineChannelList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = '')
