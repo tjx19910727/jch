@@ -40,6 +40,9 @@ class MachineConfigClient extends ManagementClient
         if (array_key_exists('currency_code', $postData) || array_key_exists('currency_version', $postData) || array_key_exists('currency_name', $postData) || array_key_exists('currency_symbol', $postData)) {
             return $this->r(100, '设备币种只能通过币种切换接口修改');
         }
+        if (intval($postData['is_only_octopus'] ?? 0) === 1 && (string)($postData['pay_type'] ?? '') !== '8') {
+            return $this->r(100, '开启仅支持八达通后，支付类型只能选择CoGoLink(八达通POS机)支付');
+        }
         $oldMc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'mc_id,m_id,machine_id,remote_calibration,is_multi_goods');
         $oldMc = $oldMc ? $oldMc->toArray() : [];
         $oldRemoteCalibration = isset($oldMc['remote_calibration']) ? intval($oldMc['remote_calibration']) : null;
