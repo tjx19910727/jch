@@ -50,6 +50,7 @@ class AuthManagerRoleClient extends ManagementClient
         "/management/config.config_lang/getList",
         "/management/auth.auth_manager/getEnabledManagerList",
         "/management/config.pay_type/getList",
+        "/management/machine.machine_service_fee/getRenewNoticeStatus",
     ];
 
     /**

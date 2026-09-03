@@ -39,6 +39,7 @@ class Machine extends Common
         }
         $pageNum = $postData['pageNum'] ?? 0;
         $field = $this->field;
+        $this->appendServiceFeeFields($field);
         $order = $this->buildMachineListOrder($postData, $field);
         $isOnOff = $postData['is_on_off'] ?? 0;
         $lowSignal = isset($postData['low_signal']) && $postData['low_signal'] == 1;
@@ -222,6 +223,15 @@ class Machine extends Common
             return;
         }
         $field .= ", {$expression} {$alias}";
+    }
+
+    /**
+     * 服务费独立表字段随设备列表一次查询返回，避免列表逐台查询。
+     */
+    private function appendServiceFeeFields(&$field)
+    {
+        $this->appendSelectField($field, 'service_fee_annual_fee_cent', "IFNULL((SELECT msf.annual_fee_cent FROM machine_service_fee msf WHERE msf.m_id=a.m_id LIMIT 1),0)");
+        $this->appendSelectField($field, 'service_expire_at', "IFNULL((SELECT msf.service_expire_at FROM machine_service_fee msf WHERE msf.m_id=a.m_id LIMIT 1),0)");
     }
 
     private function normalizeSortDirection($direction)
