@@ -1,0 +1,255 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "V2 获取机器信息在营状态",
+    "version": "1.0.0",
+    "description": "V2 get_machines 返回设备在营状态 is_operating。本次仅扩展返回字段，不改变原有查询、分页、鉴权、签名和状态筛选逻辑。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "当前环境域名"
+    }
+  ],
+  "paths": {
+    "/api/v2": {
+      "post": {
+        "tags": [
+          "对外 V2 接口"
+        ],
+        "summary": "get_machines - 获取机器信息",
+        "description": "按原有签名规则查询设备列表。响应设备对象包含 is_operating：1 在营、2 在库、3 外售，以及对应中文描述 is_operating_desc。is_operating 与 oo_status 含义不同，oo_status 表示在线或离线状态。",
+        "operationId": "v2GetMachines",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/GetMachinesFormRequest"
+              },
+              "examples": {
+                "allMachines": {
+                  "summary": "分页查询全部设备",
+                  "value": {
+                    "auth_name": "{{auth_name}}",
+                    "timestamp": "1788134400",
+                    "api": "get_machines",
+                    "params": "{\"pageNum\":20,\"page\":1}",
+                    "sign": "按签名规则生成"
+                  }
+                },
+                "specifiedMachine": {
+                  "summary": "查询指定设备",
+                  "value": {
+                    "auth_name": "{{auth_name}}",
+                    "timestamp": "1788134400",
+                    "api": "get_machines",
+                    "params": "{\"machine_id\":\"test0001\",\"pageNum\":20,\"page\":1}",
+                    "sign": "按签名规则生成"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应，status_code 为 0 时 data 为设备分页列表。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetMachinesResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "查询成功",
+                    "value": {
+                      "status_code": 0,
+                      "msg": "成功",
+                      "data": {
+                        "total": 1,
+                        "per_page": 20,
+                        "current_page": 1,
+                        "last_page": 1,
+                        "data": [
+                          {
+                            "machine_id": "test0001",
+                            "machine_name": "测试设备",
+                            "oo_status": "online",
+                            "is_operating": 1,
+                            "is_operating_desc": "在营",
+                            "inventory": 12,
+                            "sale_income": 0,
+                            "sale_count": 0
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "noData": {
+                    "summary": "无设备数据",
+                    "value": {
+                      "status_code": 10,
+                      "msg": "找不到需要的数据",
+                      "data": ""
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "GetMachinesFormRequest": {
+        "type": "object",
+        "required": [
+          "auth_name",
+          "timestamp",
+          "api",
+          "params",
+          "sign"
+        ],
+        "properties": {
+          "auth_name": {
+            "type": "string",
+            "description": "外部 API 用户名，对应 config_api.auth_name。",
+            "example": "{{auth_name}}"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "请求时间戳，参与签名。",
+            "example": "1788134400"
+          },
+          "api": {
+            "type": "string",
+            "description": "固定传 get_machines。",
+            "enum": [
+              "get_machines"
+            ],
+            "example": "get_machines"
+          },
+          "params": {
+            "type": "string",
+            "description": "JSON 字符串：pageNum 为每页数量；page 默认为 1；machine_id 不传时查询全部设备。",
+            "example": "{\"pageNum\":20,\"page\":1}"
+          },
+          "sign": {
+            "type": "string",
+            "description": "按 V2 既有 auth_password、timestamp 和 params 排序规则生成的签名。",
+            "example": "按签名规则生成"
+          }
+        }
+      },
+      "GetMachinesResponse": {
+        "type": "object",
+        "required": [
+          "status_code",
+          "msg",
+          "data"
+        ],
+        "properties": {
+          "status_code": {
+            "type": "integer",
+            "description": "业务状态码，0 表示成功。",
+            "example": 0
+          },
+          "msg": {
+            "type": "string",
+            "description": "业务提示。",
+            "example": "成功"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MachinePaginator"
+          }
+        }
+      },
+      "MachinePaginator": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "设备总数。"
+          },
+          "per_page": {
+            "type": "integer",
+            "description": "每页数量。"
+          },
+          "current_page": {
+            "type": "integer",
+            "description": "当前页。"
+          },
+          "last_page": {
+            "type": "integer",
+            "description": "最后一页。"
+          },
+          "data": {
+            "type": "array",
+            "description": "设备信息列表。",
+            "items": {
+              "$ref": "#/components/schemas/MachineInfo"
+            }
+          }
+        }
+      },
+      "MachineInfo": {
+        "type": "object",
+        "properties": {
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号。"
+          },
+          "machine_name": {
+            "type": "string",
+            "description": "设备名称。"
+          },
+          "oo_status": {
+            "type": "string",
+            "enum": [
+              "online",
+              "offline"
+            ],
+            "description": "设备在线状态。"
+          },
+          "is_operating": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "description": "设备在营状态：1 在营、2 在库、3 外售。",
+            "example": 1
+          },
+          "is_operating_desc": {
+            "type": "string",
+            "enum": [
+              "在营",
+              "在库",
+              "外售",
+              ""
+            ],
+            "description": "设备在营状态中文描述；is_operating 不在 1、2、3 范围内时返回空字符串。",
+            "example": "在营"
+          },
+          "inventory": {
+            "type": "number",
+            "description": "设备库存合计。"
+          },
+          "sale_income": {
+            "type": "number",
+            "description": "最近 7 天销售收入，按实付减退款计算。"
+          },
+          "sale_count": {
+            "type": "number",
+            "description": "最近 7 天净销售数量。"
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}

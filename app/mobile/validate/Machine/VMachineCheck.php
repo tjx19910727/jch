@@ -17,6 +17,8 @@ class VMachineCheck extends VCommon
         "m_id" => "require",
         "type" => "require|in:1,2",
         "checkList" => "require",
+        "channelList" => "array",
+        "machineGoodsList" => "array",
         "mc_id" => "require",
         "mg_id" => "require",
         "check_stock" => "require",
@@ -34,6 +36,7 @@ class VMachineCheck extends VCommon
     ];
     protected $scene = [
         "stock" => ["m_id","type","checkList"],
+        "newStock" => ["channelList","machineGoodsList"],
         "checkList1" => ["mc_id","check_stock","status"],
         "checkList2" => ["mg_id","check_stock","status"],
     ];

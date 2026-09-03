@@ -7,6 +7,9 @@
  */
 
 return [
+    "VGetOrgGoods" => [
+        "other_org_goods_forbidden" => "当前设备禁止加载其他组织商品",
+    ],
     "check_sign_fail" => "验签失败",
     "query_mv_no_data" => "查无设备视图数据",
     "machine_offline" => "设备离线",

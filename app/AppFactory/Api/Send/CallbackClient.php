@@ -38,6 +38,9 @@ class CallbackClient extends ApiBaseClient
         "9" => [0,60],
         "10" => [0,60,300,900,900,1800,3600,7200],
         "11" => [0,60,300,900,900,1800,3600,7200],
+        // 12：设备商品完整快照；13：核心商品增量同步。
+        "12" => [0,60,300,900,900,1800,3600,7200],
+        "13" => [0,60,300,900,900,1800,3600,7200],
     ];
     public $frequency = 0;
 
@@ -95,7 +98,7 @@ class CallbackClient extends ApiBaseClient
                 if (time() - $value['create_time'] >= $time) {
                     if (!$value['uuid']) $value['uuid'] = uniqid();
                     // 发起当前推送，HTTP 状态码非 200 时 5 秒间隔重试 3 次
-                    $curlResult = $this->sendCallbackWithHttpRetry($value['notify_url'], $value['message']);
+                    $curlResult = $this->sendCallbackWithHttpRetry($value['notify_url'], $value['message'], $value['callback_type']);
                     $curl = $curlResult['content'];
                     actionLog($value['message'],'推送数据',LOG_NAME);
                     actionLog($curlResult,'推送结果',LOG_NAME);
@@ -132,12 +135,12 @@ class CallbackClient extends ApiBaseClient
     /**
      * HTTP 状态码非 200 时进行短间隔重试。
      */
-    protected function sendCallbackWithHttpRetry($url, $message): array
+    protected function sendCallbackWithHttpRetry($url, $message, $callbackType = 0): array
     {
         $result = [];
         $maxAttempts = $this->httpRetryTimes + 1;
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
-            $result = $this->sendCallbackHttpRequest($url, $message, $attempt);
+            $result = $this->sendCallbackHttpRequest($url, $message, $attempt, $callbackType);
             if (intval($result['http_code']) === 200) {
                 break;
             }
@@ -148,15 +151,19 @@ class CallbackClient extends ApiBaseClient
         return $result;
     }
 
-    protected function sendCallbackHttpRequest($url, $message, $attempt): array
+    protected function sendCallbackHttpRequest($url, $message, $attempt, $callbackType = 0): array
     {
         $curl = curl_init($url);
         curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
         curl_setopt($curl, CURLOPT_POST, 1);
         curl_setopt($curl, CURLOPT_POSTFIELDS, $message);
         curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
-        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
-        curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        // 商品同步使用独立短超时，避免第三方故障长期占用既有回调进程。
+        $isProductSync = in_array(intval($callbackType), [12, 13], true);
+        $connectTimeout = $isProductSync ? intval(config('third_party_sync.connect_timeout') ?: 3) : 10;
+        $requestTimeout = $isProductSync ? intval(config('third_party_sync.request_timeout') ?: 10) : 30;
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, max(1, $connectTimeout));
+        curl_setopt($curl, CURLOPT_TIMEOUT, max(1, $requestTimeout));
         curl_setopt($curl, CURLOPT_FAILONERROR, false);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_HEADER, true);

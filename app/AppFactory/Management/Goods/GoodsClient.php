@@ -68,6 +68,15 @@ class GoodsClient extends ManagementClient
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
+        // 非超管账号按绑定设备过滤（与 getData / getDataV2 一致）；无绑定设备时返回空数据
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            } else {
+                $where[] = ['m_id', '=', 0];
+            }
+        }
         $list = $this->queryGoodsRanking($where, 1, 0, 10);
         if ($list) {
             $list = $this->formatGoodsRankingList($list)->toArray();
@@ -445,7 +454,7 @@ class GoodsClient extends ManagementClient
     }
 
     /**
-     * 导入Excel有商品ID则更新，目前只更新（bar_code）
+     * 导入Excel有商品ID则更新商品名称、商品图片和条形码
      * @param $data
      * @return array|string
      */
@@ -474,8 +483,18 @@ class GoodsClient extends ManagementClient
                     if ($gId > 0) {
                         $goodsFind = $this->getGoodsFind(['g_id' => $gId], 'g_id');
                         if ($goodsFind) {
-                            $update = ['bar_code' => trim($value['bar_code'] ?? '')];
-                            $updateResult = $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
+                            $update = [
+                                'bar_code' => trim((string)($value['bar_code'] ?? '')),
+                            ];
+                            $goodsName = trim((string)($value['g_name'] ?? ''));
+                            $goodsPic = trim((string)($value['pic'] ?? ''));
+                            if ($goodsName !== '') $update['g_name'] = $goodsName;
+                            if ($goodsPic !== '') $update['pic'] = $goodsPic;
+                            $updateResult = $this->updateGoods(
+                                ['g_id' => $gId] + $update,
+                                ['g_id' => $gId],
+                                array_keys($update)
+                            );
                             if ($updateResult) {
                                 $resultData['update_success']++;
                             } else {
@@ -530,7 +549,7 @@ class GoodsClient extends ManagementClient
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
-            model,sku,bar_code,' . $costPriceField . ',market_price,retail_price';
+            model,sku,bar_code,pic,' . $costPriceField . ',market_price,retail_price';
         $list = $this->getGoodsList($where, 0,
             $field);
         if ($list) {
@@ -543,6 +562,7 @@ class GoodsClient extends ManagementClient
                 'model' => $this->lang("export.model"),
                 'sku' => $this->lang("export.sku"),
                 'bar_code' => $this->lang("export.bar_code"),
+                'pic' => $this->lang("export.pic"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),
                 'gift_points' => $this->lang("export.gift_points"),
@@ -557,7 +577,18 @@ class GoodsClient extends ManagementClient
                 // );
             }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
-            $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
+            $result = $this->sendToExport(
+                $this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"),
+                $filename,
+                $title,
+                $list,
+                [
+                    'imageFields' => ['pic'],
+                    'imageWidth' => 160,
+                    'imageHeight' => 100,
+                    'columnWidth' => 24,
+                ]
+            );
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));

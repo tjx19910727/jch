@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsSyncLogModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
@@ -259,6 +260,39 @@ trait WcGoodsTrait
         $currentNos = array_values(array_filter(array_unique($currentNos)));
         if ($currentNos) $query->where('no', 'not in', $currentNos);
         return $query->delete();
+    }
+
+    // ========== wc_goods_sync_logs 商品同步日志 ==========
+
+    /**
+     * 写入商品同步日志（保存商品详情接口原始返回）。
+     */
+    public function addWcGoodsSyncLog($goodsNo, $goodsType, $syncBatchNo, $getData)
+    {
+        return WcGoodsSyncLogModel::create([
+            'goods_no'      => $goodsNo,
+            'goods_type'    => intval($goodsType),
+            'sync_batch_no' => $syncBatchNo,
+            'get_data'      => $getData,
+        ]);
+    }
+
+    /**
+     * 获取某商品最新一条同步日志（含 get_data）。
+     */
+    public function getWcGoodsLatestSyncLog($goodsNo)
+    {
+        return WcGoodsSyncLogModel::where('goods_no', '=', $goodsNo)
+            ->order('id', 'desc')
+            ->find();
+    }
+
+    /**
+     * 清理指定时间点之前的同步日志，返回删除条数。
+     */
+    public function deleteWcGoodsSyncLogBefore($deadline)
+    {
+        return WcGoodsSyncLogModel::where('created_at', '<', $deadline)->delete();
     }
 
     public function getWcMachineGoodsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")

@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use think\facade\Db;
 use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 
 trait MachineConfigTrait
@@ -29,6 +30,7 @@ trait MachineConfigTrait
 
     public function addMachineConfig($insert)
     {
+        $insert = $this->normalizeOtherOrgGoodsConfig($insert);
         $insert = $this->normalizeSubCarMixConfig($insert);
         !isset($this->manager['manager_id']) ?: $insert['creator'] = $this->manager['manager_id'];
         $data = MachineConfigModel::create($insert);
@@ -38,6 +40,7 @@ trait MachineConfigTrait
 
     public function updateMachineConfig($update, $where = [], $field = [])
     {
+        $update = $this->normalizeOtherOrgGoodsConfig($update);
         $update = $this->normalizeSubCarMixConfig($update);
         !isset($this->manager['manager_id']) ?: $update['update_id'] = $this->manager['manager_id'];
         $result = MachineConfigModel::update($update, $where, $field);
@@ -50,6 +53,43 @@ trait MachineConfigTrait
         $result = MachineConfigModel::whereDel($where);
         return $result;
     }
+
+    // ==================== 单货道多商品相关开始 ====================
+    protected function isMachineMultiGoodsEnabled($mId)
+    {
+        return intval(MachineConfigModel::getFieldValue(
+            ['m_id' => intval($mId)],
+            'is_multi_goods'
+        )) === 1;
+    }
+
+    /**
+     * 关闭设备下已开启的多商品货道，调用方负责设备通知。
+     */
+    protected function closeMachineMultiGoods($mId)
+    {
+        $channels = Db::name('machine_channel')
+            ->where('m_id', intval($mId))
+            ->where('is_multi_goods', 1)
+            ->field('mc_id,machine_id,channel_position')
+            ->select()
+            ->toArray();
+        if (!$channels) {
+            return [];
+        }
+
+        $mcIds = array_column($channels, 'mc_id');
+        Db::name('channel_goods_batch')
+            ->whereIn('mc_id', $mcIds)
+            ->whereIn('status', [1, 2, 3])
+            ->update(['status' => 4]);
+        Db::name('machine_channel')
+            ->whereIn('mc_id', $mcIds)
+            ->update(['is_multi_goods' => 2]);
+
+        return $channels;
+    }
+    // ==================== 单货道多商品相关结束 ====================
 
     protected function syncMachineRecycleBoxCapacity($data, $where = [])
     {
@@ -123,6 +163,17 @@ trait MachineConfigTrait
             if (array_key_exists($field, $data)) {
                 $data[$field] = SubCarMixPolicy::normalizePayeeIds($data[$field]);
             }
+        }
+        return $data;
+    }
+
+    /**
+     * 跨组织商品开关统一保存为整型枚举值。
+     */
+    protected function normalizeOtherOrgGoodsConfig($data)
+    {
+        if (array_key_exists('add_other_org_goods', $data)) {
+            $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
         }
         return $data;
     }

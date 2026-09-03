@@ -9,11 +9,11 @@
 namespace app\AppFactory\Pay\SaleOrders;
 
 
-use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\AuthCode;
 use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityFdUsedTrait;
+use app\AppFactory\Kernel\Traits\FaultNotice\FaultReportTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -51,6 +51,7 @@ class PaymentClient extends PayBaseClient
     use MachineMqRecordTrait;
     use ActivityCouponUsedTrait;
     use ActivityFdUsedTrait;
+    use FaultReportTrait;
 
     public $machine;
     public $strategyPayee;
@@ -499,42 +500,18 @@ class PaymentClient extends PayBaseClient
     protected function recordPayError($msg)
     {
         try {
-            $machineName = mb_substr($this->machine['machine_name'] ?? '', 0, 20, 'UTF-8');
-            $errorMsg = mb_substr($msg, 0, 20, 'UTF-8');
-
-            $insert = [
-                "m_id" => $this->machine['m_id'] ?? 0,
-                "machine_id" => $this->machine['machine_id'] ?? '',
-                "machine_name" => $machineName,
-                "address" => $this->machine['address'] ?? '',
-                "error_position" => 4,
-                "errorCode" => "2100021",
-                "remark" => $errorMsg,
-                "msg" => $msg,
-                "ao_id" => $this->machine['ao_id'] ?? 0,
-            ];
-            $meId = MachineErrorCodeModel::create($insert)->me_id;
-
-            $this->noticeSendData = [
-                "ao_id" => $this->machine['ao_id'] ?? 0,
-                "m_id" => $this->machine['m_id'] ?? 0,
-                "me_id" => $meId,
-                "templateType" => "mFault",
-                "replaceData" => [
-                    "machine_id" => $this->machine['machine_id'] ?? '',
-                    "machine_name" => $machineName,
-                    "errorCode" => "2100021",
-                    "date" => date("Y年m月d日"),
-                    "exceptionDeclaration" => $errorMsg,
-                    "error_code" => $errorMsg,
-                    "error_time" => date('Y-m-d H:i:s'),
-                    "error_info" => "2100021",
-                ],
-            ];
-            actionLog($this->noticeSendData, '发送支付异常通知');
-            @$this->noticeSend();
+            $meId = $this->reportFaultCode($this->machine, [
+                'errorCode' => '1500000',
+                'msg' => strval($msg),
+                'error_position' => 4,
+            ]);
+            actionLog([
+                'me_id' => intval($meId),
+                'error_code' => '1500000',
+                'msg' => strval($msg),
+            ], '发送支付异常故障通知结果', 'PaymentFault');
         } catch (\Exception $e) {
-            actionException($e);
+            actionException($e, 1, 'PaymentFault');
         }
     }  
 }

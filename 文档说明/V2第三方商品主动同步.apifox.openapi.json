@@ -1,0 +1,315 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "V2第三方商品主动同步接口",
+    "version": "1.0.0",
+    "description": "由嘉潮汇主动调用第三方提供的修改接口。实际地址分别配置为 third_party_sync.machine_inventory_url 和 third_party_sync.core_goods_url。第三方必须按 event_id 幂等，并按同一聚合对象的 version 防止旧数据覆盖新数据。"
+  },
+  "servers": [
+    {
+      "url": "{thirdPartyBaseUrl}",
+      "variables": {
+        "thirdPartyBaseUrl": {
+          "default": "https://third-party.example.com",
+          "description": "第三方接收服务地址"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/v2/machine-inventory/update": {
+      "post": {
+        "summary": "接收设备商品最新快照",
+        "description": "嘉潮汇主动推送单台设备的完整商品快照。第三方应按 machine_id 整体覆盖；items 为空表示设备当前没有有效商品。",
+        "operationId": "receiveMachineInventorySnapshot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MachineInventoryEnvelope"
+              },
+              "examples": {
+                "设备商品快照": {
+                  "summary": "设备存在有效货道",
+                  "value": {
+                    "app_id": "jch-v2",
+                    "event_id": "a8f26ad4-cf2e-4e6a-83ec-2e1b30d8a821",
+                    "event_type": "machine_inventory.sync",
+                    "timestamp": 1788123456,
+                    "version": 15,
+                    "sign_type": "HMAC-SHA256",
+                    "data": {
+                      "machine_id": "M10001",
+                      "sync_mode": "snapshot",
+                      "items": [
+                        {
+                          "mc_id": 101,
+                          "channel_code": "A01",
+                          "quantity": 8,
+                          "sale_price": 5.5,
+                          "sku": "SKU-001",
+                          "mismatch_quantity": 0,
+                          "product_id": 1001,
+                          "g_name": "矿泉水",
+                          "bar_code": "690000000001",
+                          "cost_price": 3,
+                          "market_price": 6,
+                          "reserver_quantity": 1,
+                          "slot_max_count": 12,
+                          "status": 1,
+                          "g_retail_price": 5.5,
+                          "pic": "https://cdn.example.com/goods/1001.jpg",
+                          "details_pic": "",
+                          "banner": "",
+                          "sku2": "",
+                          "g_desc": "550ml",
+                          "gc_id": 10,
+                          "gc_name": "饮料"
+                        }
+                      ]
+                    },
+                    "sign": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                  }
+                },
+                "清空设备商品": {
+                  "summary": "设备已无有效商品",
+                  "value": {
+                    "app_id": "jch-v2",
+                    "event_id": "496b8ed3-2e1d-4c73-b8ad-78d7568ddc56",
+                    "event_type": "machine_inventory.sync",
+                    "timestamp": 1788123456,
+                    "version": 16,
+                    "sign_type": "HMAC-SHA256",
+                    "data": {
+                      "machine_id": "M10001",
+                      "sync_mode": "snapshot",
+                      "items": []
+                    },
+                    "sign": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "第三方明确返回业务处理结果；只有 success=true 才视为推送成功。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncResponse" },
+                "examples": {
+                  "成功": { "value": { "success": true, "message": "success" } },
+                  "业务失败": { "value": { "success": false, "message": "invalid machine_id" } }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v2/core-goods/update": {
+      "post": {
+        "summary": "接收核心商品变化",
+        "description": "嘉潮汇主动推送 ao_id=17 核心商品的新增、修改或删除事件。",
+        "operationId": "receiveCoreGoodsChange",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoreGoodsEnvelope"
+              },
+              "examples": {
+                "新增或修改商品": {
+                  "summary": "operation=upsert",
+                  "value": {
+                    "app_id": "jch-v2",
+                    "event_id": "76595d27-8048-4120-bf2e-dab78dc8ca68",
+                    "event_type": "core_goods.sync",
+                    "timestamp": 1788123456,
+                    "version": 8,
+                    "sign_type": "HMAC-SHA256",
+                    "data": {
+                      "sync_mode": "delta",
+                      "items": [
+                        {
+                          "product_id": 1001,
+                          "g_name": "矿泉水",
+                          "gc_id": 10,
+                          "gc_name": "饮料",
+                          "desc": "550ml",
+                          "cost_price": 3,
+                          "sku": "SKU-001",
+                          "sku2": "",
+                          "bar_code": "690000000001",
+                          "banner": "",
+                          "pic": "https://cdn.example.com/goods/1001.jpg",
+                          "details_pic": "",
+                          "retail_price": 5.5,
+                          "market_price": 6,
+                          "status": 1,
+                          "operation": "upsert"
+                        }
+                      ]
+                    },
+                    "sign": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                  }
+                },
+                "删除商品": {
+                  "summary": "operation=delete",
+                  "value": {
+                    "app_id": "jch-v2",
+                    "event_id": "91dc4748-8f92-4906-82b5-bb47ee64253d",
+                    "event_type": "core_goods.sync",
+                    "timestamp": 1788123456,
+                    "version": 9,
+                    "sign_type": "HMAC-SHA256",
+                    "data": {
+                      "sync_mode": "delta",
+                      "items": [
+                        {
+                          "product_id": 1001,
+                          "operation": "delete"
+                        }
+                      ]
+                    },
+                    "sign": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "第三方明确返回业务处理结果；只有 success=true 才视为推送成功。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SyncResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "BaseEnvelope": {
+        "type": "object",
+        "required": ["app_id", "event_id", "event_type", "timestamp", "version", "sign_type", "data", "sign"],
+        "properties": {
+          "app_id": { "type": "string", "description": "嘉潮汇调用方标识" },
+          "event_id": { "type": "string", "format": "uuid", "description": "全局唯一事件ID，第三方据此幂等" },
+          "event_type": { "type": "string", "description": "事件类型" },
+          "timestamp": { "type": "integer", "format": "int64", "description": "请求生成的Unix秒级时间戳，第三方应校验时间窗口" },
+          "version": { "type": "integer", "format": "int64", "minimum": 1, "description": "同一设备或商品的递增版本，第三方不得用低版本覆盖高版本" },
+          "sign_type": { "type": "string", "enum": ["HMAC-SHA256"], "description": "签名算法" },
+          "data": { "type": "object", "description": "业务数据" },
+          "sign": { "type": "string", "minLength": 64, "maxLength": 64, "description": "移除 sign 后，对请求对象递归按键名排序并以无转义 Unicode/斜杠的紧凑 JSON 编码，再使用共享 secret 计算 HMAC-SHA256 小写十六进制值" }
+        }
+      },
+      "MachineInventoryEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseEnvelope" },
+          {
+            "type": "object",
+            "properties": {
+              "event_type": { "type": "string", "enum": ["machine_inventory.sync"] },
+              "data": { "$ref": "#/components/schemas/MachineInventoryData" }
+            }
+          }
+        ]
+      },
+      "MachineInventoryData": {
+        "type": "object",
+        "required": ["machine_id", "sync_mode", "items"],
+        "properties": {
+          "machine_id": { "type": "string", "description": "设备业务编号" },
+          "sync_mode": { "type": "string", "enum": ["snapshot"], "description": "完整快照覆盖模式" },
+          "items": { "type": "array", "description": "与 V2 get_inventory_list 一致的有效货道商品列表", "items": { "$ref": "#/components/schemas/MachineInventoryItem" } }
+        }
+      },
+      "MachineInventoryItem": {
+        "type": "object",
+        "required": ["mc_id", "channel_code", "quantity", "sale_price", "mismatch_quantity", "product_id", "reserver_quantity", "slot_max_count", "status"],
+        "properties": {
+          "mc_id": { "type": "integer", "description": "货道ID" },
+          "channel_code": { "type": "string", "description": "货道编码" },
+          "quantity": { "type": "integer", "description": "可售库存；状态3时固定为0" },
+          "sale_price": { "type": "number", "format": "double", "description": "设备销售价" },
+          "sku": { "type": "string", "description": "商品SKU" },
+          "mismatch_quantity": { "type": "integer", "description": "异常库存；状态3时取货道stock，否则为0" },
+          "product_id": { "type": "integer", "description": "核心商品ID" },
+          "g_name": { "type": "string", "description": "商品名称" },
+          "bar_code": { "type": "string", "description": "商品条码" },
+          "cost_price": { "type": "number", "format": "double", "description": "成本价" },
+          "market_price": { "type": "number", "format": "double", "description": "市场价" },
+          "reserver_quantity": { "type": "integer", "description": "冻结/预占库存" },
+          "slot_max_count": { "type": "integer", "description": "货道容量" },
+          "status": { "type": "integer", "description": "货道状态；状态2不进入快照" },
+          "g_retail_price": { "type": "number", "format": "double", "description": "核心商品零售价" },
+          "pic": { "type": "string", "description": "商品主图" },
+          "details_pic": { "type": "string", "description": "商品详情图" },
+          "banner": { "type": "string", "description": "商品轮播图" },
+          "sku2": { "type": "string", "description": "商品备用SKU" },
+          "g_desc": { "type": "string", "description": "商品描述" },
+          "gc_id": { "type": "integer", "description": "商品分类ID" },
+          "gc_name": { "type": "string", "description": "商品分类名称" }
+        }
+      },
+      "CoreGoodsEnvelope": {
+        "allOf": [
+          { "$ref": "#/components/schemas/BaseEnvelope" },
+          {
+            "type": "object",
+            "properties": {
+              "event_type": { "type": "string", "enum": ["core_goods.sync"] },
+              "data": { "$ref": "#/components/schemas/CoreGoodsData" }
+            }
+          }
+        ]
+      },
+      "CoreGoodsData": {
+        "type": "object",
+        "required": ["sync_mode", "items"],
+        "properties": {
+          "sync_mode": { "type": "string", "enum": ["delta"], "description": "按商品增量修改模式" },
+          "items": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "$ref": "#/components/schemas/CoreGoodsItem" } }
+        }
+      },
+      "CoreGoodsItem": {
+        "type": "object",
+        "required": ["product_id", "operation"],
+        "properties": {
+          "product_id": { "type": "integer", "description": "核心商品ID" },
+          "operation": { "type": "string", "enum": ["upsert", "delete"], "description": "新增修改或删除" },
+          "g_name": { "type": "string", "description": "商品名称；delete时可省略" },
+          "gc_id": { "type": "integer", "description": "分类ID" },
+          "gc_name": { "type": "string", "description": "分类名称" },
+          "desc": { "type": "string", "description": "商品描述" },
+          "cost_price": { "type": "number", "format": "double", "description": "成本价" },
+          "sku": { "type": "string", "description": "SKU" },
+          "sku2": { "type": "string", "description": "备用SKU" },
+          "bar_code": { "type": "string", "description": "商品条码" },
+          "banner": { "type": "string", "description": "轮播图" },
+          "pic": { "type": "string", "description": "主图" },
+          "details_pic": { "type": "string", "description": "详情图" },
+          "retail_price": { "type": "number", "format": "double", "description": "零售价" },
+          "market_price": { "type": "number", "format": "double", "description": "市场价" },
+          "status": { "type": "integer", "description": "商品状态" }
+        }
+      },
+      "SyncResponse": {
+        "type": "object",
+        "required": ["success"],
+        "properties": {
+          "success": { "type": "boolean", "description": "是否业务处理成功；必须为true才停止重试" },
+          "message": { "type": "string", "description": "处理结果说明" }
+        }
+      }
+    }
+  }
+}

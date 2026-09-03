@@ -99,6 +99,8 @@ return [
         "name" => "operation_want_of_goods",
         "codeList" => [
             1000101,
+            1000110,
+            1000111,
         ],
     ],
     3 => [
