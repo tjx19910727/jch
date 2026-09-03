@@ -137,6 +137,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\OtaVersionPlanClient           $otaVersionPlan         OTA固件发布计划
  * @property Machine\SimCardInfoClient              $simCardInfo            物联卡基础信息
  * @property Machine\MachineLayoutModelClient        $machineLayoutModel      设备型号布局模板
+ * @property Machine\MachineChannelTemplateClient    $machineChannelTemplate  前端模拟货道模板
+ * @property Machine\MachineLoadingSchemeClient      $machineLoadingScheme    模拟上货方案
  * @property Machine\MachineServiceLogClient        $machineServiceLog      设备运行日志
  * @property Machine\MachineSchemeClient            $machineScheme          货道推荐上架方案
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
