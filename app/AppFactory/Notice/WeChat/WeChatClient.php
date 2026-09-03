@@ -15,6 +15,7 @@ use EasyWeChat\Factory;
 use EasyWeChat\Kernel\Exceptions\InvalidArgumentException;
 use EasyWeChat\Kernel\Exceptions\InvalidConfigException;
 use GuzzleHttp\Exception\GuzzleException;
+use think\facade\Cache;
 
 class WeChatClient extends NoticeBaseClient
 {
@@ -32,6 +33,7 @@ class WeChatClient extends NoticeBaseClient
             isset($this->config['receiver']) && $this->config['receiver']) {
             try {
                 $app = Factory::officialAccount($this->config['config']);
+                $app->access_token->setCache(Cache::store('file'));
                 foreach ($this->config['receiver'] as $key => $value) {
                     if ($value['openid']) {
                         $data = [
@@ -92,6 +94,7 @@ class WeChatClient extends NoticeBaseClient
             isset($this->config['receiver']) && $this->config['receiver']) {
             try {
                 $app = Factory::officialAccount($this->config['config']);
+                $app->access_token->setCache(Cache::store('file'));
                 foreach ($this->config['receiver'] as $value) {
                     if ($value['openid']) {
                         $data = [
