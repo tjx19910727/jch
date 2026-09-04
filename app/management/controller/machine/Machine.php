@@ -74,7 +74,11 @@ class Machine extends Common
         }
         if ($signalLevel !== null) {
             $signalValidTime = date('Y-m-d H:i:s', time() - 1800);
-            $signalLevelWhere = "IFNULL((SELECT IF(ssl.created_at >= '{$signalValidTime}', ssl.rsrp_level, 0) FROM sim_signal_log ssl WHERE ssl.m_id = a.m_id ORDER BY ssl.id DESC LIMIT 1), 0) = {$signalLevel}";
+            if ($signalLevel === 0) {
+                $signalLevelWhere = "NOT EXISTS (SELECT 1 FROM sim_signal_log WHERE m_id = a.m_id AND created_at >= '{$signalValidTime}')";
+            } else {
+                $signalLevelWhere = "(SELECT rsrp_level FROM sim_signal_log WHERE m_id = a.m_id AND created_at >= '{$signalValidTime}' ORDER BY id DESC LIMIT 1) = {$signalLevel}";
+            }
             $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . $signalLevelWhere;
         }
         return $this->app->machine->getMList($where,$pageNum,$field,$order);
