@@ -752,18 +752,35 @@ class GoodsClient extends ManagementClient
         }
     }
 
+    /**
+     * 导入识别表头：由 config('goods_import_export') 统一派生。
+     * - columns 反转即标准表头；import_aliases 提供历史/旧模板的兼容别名。
+     */
     protected function getGoodsImportHeaderMap()
     {
-        return [
-            '商品名称' => 'g_name', '分类ID' => 'gc_id', '商品分类' => 'gc_name', '型号' => 'model',
-            'SKU' => 'sku', 'SKU2' => 'sku2', '图片' => 'pic', '条形码' => 'bar_code',
-            '人民币成本价' => 'cny_cost_price', '人民币市场价' => 'cny_market_price', '人民币零售价' => 'cny_retail_price',
-            '港币成本价' => 'hkd_cost_price', '港币市场价' => 'hkd_market_price', '港币零售价' => 'hkd_retail_price',
-            '成本价' => 'cost_price', '市场价' => 'market_price', '零售价' => 'retail_price', '售卖价' => 'retail_price',
-            '商品类型' => 'g_type', '赠送积分' => 'gift_points', '消费积分' => 'cost_points',
-            '生产厂家' => 'manufacturer', '售后电话' => 'service_phone', '状态' => 'status',
-            '长' => 'length', '宽' => 'width', '高' => 'height', '商品ID' => 'g_id', 'g_id' => 'g_id',
-        ];
+        $columns = (array)config('goods_import_export.columns');
+        $aliases = (array)config('goods_import_export.import_aliases');
+        $map = [];
+        foreach ($columns as $field => $header) {
+            $map[(string)$header] = $field;
+        }
+        return array_merge($map, $aliases);
+    }
+
+    /**
+     * 按给定字段顺序生成导出列标题，标题取自 config('goods_import_export.columns')。
+     * 导出与导入共用同一标题源，保证导出的文件可以直接回导。
+     */
+    protected function getGoodsExportColumnTitles(array $fields)
+    {
+        $columns = (array)config('goods_import_export.columns');
+        $titles = [];
+        foreach ($fields as $field) {
+            if (isset($columns[$field])) {
+                $titles[$field] = $columns[$field];
+            }
+        }
+        return $titles;
     }
 
     protected function normalizeGoodsImportRow(array $row)
@@ -837,6 +854,7 @@ class GoodsClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
+<<<<<<< HEAD
             $title = [
                 'g_name' => $this->lang("export.g_name") ,
                 'g_type' => $this->lang("export.g_type"),
@@ -855,6 +873,14 @@ class GoodsClient extends ManagementClient
                 'cost_points' => $this->lang("export.cost_points"),
                 'g_id' => 'g_id',
             ];
+=======
+            $title = $this->getGoodsExportColumnTitles([
+                'g_name', 'g_type', 'gc_name', 'model', 'sku', 'bar_code',
+                'cny_cost_price', 'cny_market_price', 'cny_retail_price',
+                'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price',
+                'gift_points', 'cost_points', 'g_id',
+            ]);
+>>>>>>> currency
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             if ($exportImg) {
                 // 带图片导出：图片以本体嵌入单元格。
@@ -900,14 +926,13 @@ class GoodsClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
-            $title = [
-                'g_name' => '商品名称', 'gc_id' => '分类ID', 'gc_name' => '商品分类',
-                'model' => '型号', 'sku' => 'SKU', 'sku2' => 'SKU2', 'pic' => '图片', 'bar_code' => '条形码',
-                'cny_cost_price' => '人民币成本价', 'cny_market_price' => '人民币市场价', 'cny_retail_price' => '人民币零售价',
-                'hkd_cost_price' => '港币成本价', 'hkd_market_price' => '港币市场价', 'hkd_retail_price' => '港币零售价',
-                'manufacturer' => '生产厂家', 'service_phone' => '售后电话', 'status' => '状态',
-                'length' => '长', 'width' => '宽', 'height' => '高', 'g_id' => 'g_id',
-            ];
+            $title = $this->getGoodsExportColumnTitles([
+                'g_name', 'gc_id', 'gc_name', 'model', 'sku', 'sku2', 'pic', 'bar_code',
+                'cny_cost_price', 'cny_market_price', 'cny_retail_price',
+                'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price',
+                'manufacturer', 'service_phone', 'status',
+                'length', 'width', 'height', 'g_id',
+            ]);
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             if (!$exportImg) { $list = $this->stripExportImageFields($list); }
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
