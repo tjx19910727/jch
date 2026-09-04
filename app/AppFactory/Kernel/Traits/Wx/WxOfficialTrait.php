@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\Wx;
 use app\AppFactory\Kernel\Model\Wx\WxOfficialModel;
 use EasyWeChat\Factory;
 use EasyWeChat\OfficialAccount\Application;
+use think\facade\Cache;
 
 trait WxOfficialTrait
 {
@@ -80,6 +81,7 @@ trait WxOfficialTrait
     public function getWxApp($wx)
     {
         $this->wx_app = Factory::officialAccount($wx);
+        $this->wx_app->access_token->setCache(Cache::store('file'));
         return $this->wx_app;
     }
 }
