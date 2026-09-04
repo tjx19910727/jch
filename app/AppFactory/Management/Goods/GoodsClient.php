@@ -861,25 +861,12 @@ class GoodsClient extends ManagementClient
                 'gift_points', 'cost_points', 'g_id',
             ]);
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
-            if ($exportImg) {
-                // 带图片导出：图片以本体嵌入单元格。
-                $result = $this->sendToExport(
-                    $this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"),
-                    $filename,
-                    $title,
-                    $list,
-                    [
-                        'imageFields' => ['pic'],
-                        'imageWidth' => 160,
-                        'imageHeight' => 100,
-                        'columnWidth' => 24,
-                    ]
-                );
-            } else {
-                // 不带图片导出：仅清空图片列值，避免文档过大。
-                $list = $this->stripExportImageFields($list);
-                $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
-            }
+            $result = $this->sendToExport(
+                $this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"),
+                $filename,
+                $title,
+                $list
+            );
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));
