@@ -581,13 +581,7 @@ class GoodsClient extends ManagementClient
                 $this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"),
                 $filename,
                 $title,
-                $list,
-                [
-                    'imageFields' => ['pic'],
-                    'imageWidth' => 160,
-                    'imageHeight' => 100,
-                    'columnWidth' => 24,
-                ]
+                $list
             );
             return $result;
         }
