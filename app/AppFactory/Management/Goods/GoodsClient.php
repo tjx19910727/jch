@@ -854,33 +854,12 @@ class GoodsClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
-<<<<<<< HEAD
-            $title = [
-                'g_name' => $this->lang("export.g_name") ,
-                'g_type' => $this->lang("export.g_type"),
-                'gc_name' => $this->lang("export.gc_name"),
-                'model' => $this->lang("export.model"),
-                'sku' => $this->lang("export.sku"),
-                'bar_code' => $this->lang("export.bar_code"),
-                'pic' => $this->lang("export.pic"),
-                'cny_cost_price' => '人民币成本价',
-                'cny_market_price' => '人民币市场价',
-                'cny_retail_price' => '人民币零售价',
-                'hkd_cost_price' => '港币成本价',
-                'hkd_market_price' => '港币市场价',
-                'hkd_retail_price' => '港币零售价',
-                'gift_points' => $this->lang("export.gift_points"),
-                'cost_points' => $this->lang("export.cost_points"),
-                'g_id' => 'g_id',
-            ];
-=======
             $title = $this->getGoodsExportColumnTitles([
                 'g_name', 'g_type', 'gc_name', 'model', 'sku', 'bar_code',
                 'cny_cost_price', 'cny_market_price', 'cny_retail_price',
                 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price',
                 'gift_points', 'cost_points', 'g_id',
             ]);
->>>>>>> currency
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             if ($exportImg) {
                 // 带图片导出：图片以本体嵌入单元格。
