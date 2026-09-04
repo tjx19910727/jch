@@ -43,6 +43,8 @@ use app\management\validate\Machine\VMachine;
 use app\AppFactory\Kernel\Traits\Machine\MachineLevelDescTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Support\Excel;
+use app\AppFactory\Kernel\Model\Machine\MachineServiceFeeModel;
+use app\AppFactory\Kernel\Support\Machine\MachineServiceFeeService;
 use think\facade\Db;
 
 class MachineClient extends ManagementClient
@@ -388,6 +390,7 @@ class MachineClient extends ManagementClient
             $item['month_target_amount'] = $targetAmount < 0 ? 0 : $targetAmount;
             $item['month_achieve_amount'] = $achieveAmount;
             $item['month_achieve_rate'] = $targetAmount > 0 ? round($achieveAmount / $targetAmount * 100, 2) : 0;
+            $item = $this->decorateServiceFeeFromList($item);
             return $item;
         }));
     }
@@ -616,8 +619,35 @@ class MachineClient extends ManagementClient
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['machine_level']) && $item['machine_level']) $item['machine_level_info'] = $this->getMachineLevelFind(['machine_level' => $item['machine_level']],'name,pic');
+            $fee = MachineServiceFeeModel::where('m_id', intval($item['m_id']))->find();
+            $item = array_merge($item, MachineServiceFeeService::getMachineState($fee));
         }
         return $this->rQ($item);
+    }
+
+    private function decorateServiceFeeFromList($item)
+    {
+        $annualFeeYuan = MachineServiceFeeService::normalizeYuan($item['service_fee_annual_fee_cent'] ?? 0);
+        $expireAt = intval($item['service_expire_at'] ?? 0);
+        $requiresServiceFee = MachineServiceFeeService::isPositiveYuan($annualFeeYuan);
+
+        // 设备列表只返回两个面向展示的服务费字段，内部查询字段不得透出。
+        unset(
+            $item['service_fee_configured'],
+            $item['service_fee_annual_fee_cent'],
+            $item['service_expire_at'],
+            $item['service_fee_grace_used'],
+            $item['configured'],
+            $item['annual_fee_cent'],
+            $item['service_fee_status'],
+            $item['service_fee_status_desc'],
+            $item['service_available']
+        );
+        $item['annual_fee'] = $requiresServiceFee ? $annualFeeYuan : '无需服务费';
+        $item['service_expire_time'] = $requiresServiceFee && $expireAt > 0
+            ? date('Y-m-d H:i:s', $expireAt)
+            : '无期限';
+        return $item;
     }
 
     /**

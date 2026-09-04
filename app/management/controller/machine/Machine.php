@@ -39,9 +39,13 @@ class Machine extends Common
         }
         $pageNum = $postData['pageNum'] ?? 0;
         $field = $this->field;
+        $this->appendServiceFeeFields($field);
         $order = $this->buildMachineListOrder($postData, $field);
         $isOnOff = $postData['is_on_off'] ?? 0;
-        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order'],$postData['is_on_off']);
+        $signalLevel = isset($postData['low_signal']) && $postData['low_signal'] !== ''
+            ? intval($postData['low_signal'])
+            : null;
+        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order'],$postData['is_on_off'],$postData['low_signal']);
         $filterCurrency = '';
         if (isset($postData['currency_code']) && trim((string)$postData['currency_code']) !== '') {
             $filterCurrency = strtoupper(trim((string)$postData['currency_code']));
@@ -79,6 +83,11 @@ class Machine extends Common
                 $where[] = ['http_online', '=', 2];
                 $where[] = ['online', '=', 2];
             }
+        }
+        if ($signalLevel !== null) {
+            $signalValidTime = date('Y-m-d H:i:s', time() - 1800);
+            $signalLevelWhere = "IFNULL((SELECT IF(ssl.created_at >= '{$signalValidTime}', ssl.rsrp_level, 0) FROM sim_signal_log ssl WHERE ssl.m_id = a.m_id ORDER BY ssl.id DESC LIMIT 1), 0) = {$signalLevel}";
+            $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . $signalLevelWhere;
         }
         return $this->app->machine->getMList($where,$pageNum,$field,$order);
     }
@@ -184,9 +193,8 @@ class Machine extends Common
         }
 
         if ($sortName == 'rsrp') {
-            $todayStart = date('Y-m-d 00:00:00');
-            $todayEnd = date('Y-m-d 23:59:59');
-            $this->appendSelectField($field, 'rsrp_sort', "(SELECT IFNULL(rsrp, -999) FROM sim_signal_log WHERE m_id = a.m_id AND created_at >= '{$todayStart}' AND created_at <= '{$todayEnd}' ORDER BY id DESC LIMIT 1)");
+            $signalValidTime = date('Y-m-d H:i:s', time() - 1800);
+            $this->appendSelectField($field, 'rsrp_sort', "IFNULL((SELECT IF(created_at >= '{$signalValidTime}', IFNULL(rsrp, -999), -999) FROM sim_signal_log WHERE m_id = a.m_id ORDER BY id DESC LIMIT 1), -999)");
             return 'rsrp_sort';
         }
 
@@ -217,6 +225,15 @@ class Machine extends Common
             return;
         }
         $field .= ", {$expression} {$alias}";
+    }
+
+    /**
+     * 服务费独立表字段随设备列表一次查询返回，避免列表逐台查询。
+     */
+    private function appendServiceFeeFields(&$field)
+    {
+        $this->appendSelectField($field, 'service_fee_annual_fee_cent', "IFNULL((SELECT msf.annual_fee_cent FROM machine_service_fee msf WHERE msf.m_id=a.m_id LIMIT 1),0)");
+        $this->appendSelectField($field, 'service_expire_at', "IFNULL((SELECT msf.service_expire_at FROM machine_service_fee msf WHERE msf.m_id=a.m_id LIMIT 1),0)");
     }
 
     private function normalizeSortDirection($direction)

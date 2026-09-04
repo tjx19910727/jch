@@ -140,6 +140,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineChannelTemplateClient    $machineChannelTemplate  前端模拟货道模板
  * @property Machine\MachineLoadingSchemeClient      $machineLoadingScheme    模拟上货方案
  * @property Machine\MachineServiceLogClient        $machineServiceLog      设备运行日志
+ * @property Machine\MachineRemarkClient            $machineRemark          设备备注记录
  * @property Machine\MachineSchemeClient            $machineScheme          货道推荐上架方案
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
  *
@@ -187,6 +188,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Wx\WxTemplateLogClient                 $wxTemplateLog          微信公众号消息模板通知日志
  * @property Machine\MachineAppSettingsClient       $machineAppSettings     设备应用配置
  * @property Machine\MachineCalibrationConfigClient $machineCalibrationConfig 设备校准配置
+ * @property Machine\MachineServiceFeeClient        $machineServiceFee        设备服务年费
  *
  *
  * @package app\AppFactory\Management
