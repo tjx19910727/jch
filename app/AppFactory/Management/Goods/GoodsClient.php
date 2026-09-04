@@ -34,6 +34,50 @@ class GoodsClient extends ManagementClient
 
     protected $priceFields = ['cost_price', 'market_price', 'retail_price'];
 
+    /**
+     * 商品导入/导出列标题兜底值（与 config/goods_import_export.php 保持一致）。
+     * 防止运行环境未同步该配置文件时导出标题为空、生成空白 Excel。
+     * 调整列标题请优先改 config/goods_import_export.php，再同步这里。
+     */
+    protected const EXPORT_COLUMN_FALLBACK = [
+        'g_name'            => '商品名称',
+        'g_type'            => '商品类型',
+        'gc_id'             => '分类ID',
+        'gc_name'           => '商品分类',
+        'model'             => '型号',
+        'sku'               => 'SKU',
+        'sku2'              => 'SKU2',
+        'pic'               => '图片',
+        'bar_code'          => '条形码',
+        'cny_cost_price'    => '人民币成本价',
+        'cny_market_price'  => '人民币市场价',
+        'cny_retail_price'  => '人民币零售价',
+        'hkd_cost_price'    => '港币成本价',
+        'hkd_market_price'  => '港币市场价',
+        'hkd_retail_price'  => '港币零售价',
+        'manufacturer'      => '生产厂家',
+        'service_phone'     => '售后电话',
+        'status'            => '状态',
+        'length'            => '长',
+        'width'             => '宽',
+        'height'            => '高',
+        'gift_points'       => '赠送积分',
+        'cost_points'       => '消费积分',
+        'g_id'              => 'g_id',
+    ];
+
+    /** 导入兼容别名兜底（与 config/goods_import_export.php 保持一致）。 */
+    protected const IMPORT_ALIAS_FALLBACK = [
+        '成本价'   => 'cost_price',
+        '市场价'   => 'market_price',
+        '零售价'   => 'retail_price',
+        '售卖价'   => 'retail_price',
+        '商品ID'   => 'g_id',
+        '商品型号' => 'model',
+        'SKU码'    => 'sku',
+        '商品图片' => 'pic',
+    ];
+
     public function addG($postData)
     {
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
@@ -751,7 +795,13 @@ class GoodsClient extends ManagementClient
     protected function getGoodsImportHeaderMap()
     {
         $columns = (array)config('goods_import_export.columns');
+        if (!$columns) {
+            $columns = self::EXPORT_COLUMN_FALLBACK;
+        }
         $aliases = (array)config('goods_import_export.import_aliases');
+        if (!$aliases) {
+            $aliases = self::IMPORT_ALIAS_FALLBACK;
+        }
         $map = [];
         foreach ($columns as $field => $header) {
             $map[(string)$header] = $field;
@@ -766,6 +816,9 @@ class GoodsClient extends ManagementClient
     protected function getGoodsExportColumnTitles(array $fields)
     {
         $columns = (array)config('goods_import_export.columns');
+        if (!$columns) {
+            $columns = self::EXPORT_COLUMN_FALLBACK;
+        }
         $titles = [];
         foreach ($fields as $field) {
             if (isset($columns[$field])) {
@@ -852,6 +905,9 @@ class GoodsClient extends ManagementClient
                 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price',
                 'gift_points', 'cost_points', 'g_id',
             ]);
+            if (!$title) {
+                return $this->r(100, '导出标题缺失，请检查商品导入导出列标题配置');
+            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             if (!$exportImg) { $list = $this->stripExportImageFields($list); }
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
@@ -888,6 +944,9 @@ class GoodsClient extends ManagementClient
                 'manufacturer', 'service_phone', 'status',
                 'length', 'width', 'height', 'g_id',
             ]);
+            if (!$title) {
+                return $this->r(100, '导出标题缺失，请检查商品导入导出列标题配置');
+            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             if (!$exportImg) { $list = $this->stripExportImageFields($list); }
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
