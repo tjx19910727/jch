@@ -55,7 +55,7 @@
         "parameters": [{"name": "token", "in": "header", "required": true, "description": "后台登录令牌；Apifox 环境变量取值", "schema": {"type": "string", "default": "{{token}}"}, "example": "{{token}}"}],
         "tags": ["核心商品多币种"],
         "summary": "修改核心商品及多币种价格",
-        "description": "除 g_id 外其余基础字段均按需传入；currency_prices 只更新本次出现的币种。修改 CNY 时同步更新 goods 旧三价兼容快照。不会自动覆盖设备商品或货道价格，需调用人工同步接口。不得再传 mg_id 或 mc_id 触发隐式下游同步；非空时接口会拒绝。",
+        "description": "除 g_id 外其余基础字段均按需传入；currency_prices 只更新本次出现的币种。修改 CNY 时同步更新 goods 旧三价兼容快照。可传可选 mg_id[]/mc_id[]：接口会把本次确有变化的核心价按各设备当前币种写入设备商品/货道货币价格事实表（缺失即新增）；命中设备当前币种时回写活跃快照、currency_version +1 并通知设备一次。不传 mg_id/mc_id 则仅更新核心商品价。",
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/GoodsUpdateRequest"}, "examples": {"hkdPrice": {"summary": "仅修改港币三价", "value": {"g_id": 1001, "currency_prices": {"HKD": {"cost_price": "5.600", "market_price": "8.900", "retail_price": "7.300"}}}}, "metadataAndPrices": {"summary": "同时修改资料和多币种价格", "value": {"g_id": 1001, "g_name": "示例商品（新包装）", "bar_code": "6900000001002", "currency_prices": {"CNY": {"cost_price": "5.100", "market_price": "8.200", "retail_price": "6.800"}, "HKD": {"cost_price": "5.700", "market_price": "9.000", "retail_price": "7.400"}}}}}}}},
         "responses": {"200": {"$ref": "#/components/responses/ActionResult"}}
       }
@@ -449,9 +449,11 @@
             "type": "object",
             "required": ["g_id"],
             "properties": {
-              "g_id": {"type": "integer", "minimum": 1, "description": "必填，要修改的核心商品主键", "example": 1001}
+              "g_id": {"type": "integer", "minimum": 1, "description": "必填，要修改的核心商品主键", "example": 1001},
+              "mg_id": {"oneOf": [{"type": "integer"}, {"type": "array", "items": {"type": "integer"}}], "description": "可选：要隐式覆盖的设备商品 id（单个或数组），仅作用到绑定本商品的记录；按设备当前币种写 machine_goods_currency_price 货币价格事实行，命中设备当前币种时回写活跃快照/版本/通知", "example": [2001, 2002]},
+              "mc_id": {"oneOf": [{"type": "integer"}, {"type": "array", "items": {"type": "integer"}}], "description": "可选：要隐式覆盖的普通单商品货道 id（单个或数组），仅作用到绑定本商品的普通货道；按设备当前币种写 machine_channel_currency_price 货币价格事实行，命中设备当前币种时回写活跃快照/版本/通知", "example": [3001]}
             },
-            "description": "g_id 必填，其余字段按需提交。不要传 mg_id、mc_id；库存字段会被忽略。"
+            "description": "g_id 必填，其余字段按需提交。可传 mg_id/mc_id 触发按设备当前币种的隐式覆盖（写设备商品/货道货币价格事实行，缺失即新增；命中设备当前币种才回写活跃快照/版本/通知）。库存字段会被忽略。"
           }
         ]
       },

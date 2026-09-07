@@ -521,6 +521,182 @@ class MachineCurrencyPriceService
         return $manageTransaction ? Db::transaction($save) : $save();
     }
     /**
+     * 核心商品编辑隐式覆盖（与 main 交互一致）：把“本次编辑确有变化”的核心商品多币种三价
+     * 同步写入选中的设备商品与普通货道对应币种事实行（缺失则新增）。
+     * - 只处理本设备内且 g_id 等于被编辑商品的选中记录，其余放入 skipped 返回；
+     * - 本次提交的每个币种都会写事实行（含“非设备当前币种”的预配置）；
+     * - 仅当币种等于设备当前币种且与活跃快照不一致时，才回写 machine_goods/machine_channel
+     *   平铺三价，并按设备只递增一次 currency_version（版本变化设备的通知由调用方在提交后统一发送）。
+     * 调用方应在商品保存的外层事务内以 manageTransaction=false 调用，保证与商品库改动整批提交/回滚。
+     *
+     * @param int   $mId
+     * @param int   $gId
+     * @param array $pricesByCurrency 键为币种、值为 {cost_price,market_price,retail_price}
+     * @param array $mgIds
+     * @param array $mcIds
+     * @param int   $operatorId
+     * @param bool  $manageTransaction
+     * @return array
+     */
+    public function applyCorePricesToSelectedGoods($mId, $gId, array $pricesByCurrency, array $mgIds, array $mcIds, $operatorId = 0, $manageTransaction = true)
+    {
+        $mId = intval($mId);
+        $gId = intval($gId);
+        if ($mId <= 0 || $gId <= 0) {
+            throw new \InvalidArgumentException('参数有误');
+        }
+        $currencyCodes = [];
+        $priceMap = [];
+        foreach ($pricesByCurrency as $currencyCode => $triple) {
+            $currencyCode = $this->catalog->normalizeCode($currencyCode);
+            $this->catalog->assertEnabled($currencyCode);
+            $priceMap[$currencyCode] = CurrencyPriceSupport::normalizePriceRow($triple);
+            $currencyCodes[] = $currencyCode;
+        }
+        $currencyCodes = array_values(array_unique($currencyCodes));
+        $mgIds = $mgIds ? CurrencyPriceSupport::normalizeIds($mgIds, $this->syncLimit) : [];
+        $mcIds = $mcIds ? CurrencyPriceSupport::normalizeIds($mcIds, $this->syncLimit) : [];
+        if (!$currencyCodes || (!$mgIds && !$mcIds)) {
+            return [
+                'm_id' => $mId,
+                'machine_id' => '',
+                'active_currency_code' => '',
+                'currency_version' => 0,
+                'machine_goods_changed' => 0,
+                'machine_goods_unchanged' => 0,
+                'machine_channel_changed' => 0,
+                'machine_channel_unchanged' => 0,
+                'active_snapshot_changed' => 0,
+                'skipped' => [],
+            ];
+        }
+        $save = function () use ($mId, $gId, $currencyCodes, $priceMap, $mgIds, $mcIds, $operatorId) {
+            $config = $this->getMachineCurrency($mId, true);
+            $skipped = [];
+
+            // —— 选中的设备商品：仅处理属于本设备且绑定被编辑商品的记录 ——
+            $mgList = [];
+            if ($mgIds) {
+                $rows = Db::name('machine_goods')->where('m_id', $mId)->whereIn('mg_id', $mgIds)->lock(true)->select()->toArray();
+                $rowById = [];
+                foreach ($rows as $row) {
+                    $rowById[intval($row['mg_id'])] = $row;
+                }
+                foreach ($mgIds as $mgId) {
+                    if (!isset($rowById[$mgId])) {
+                        $skipped[] = 'mg_id:' . $mgId . '(不存在或不属于本设备)';
+                    } elseif (intval($rowById[$mgId]['g_id']) !== $gId) {
+                        $skipped[] = 'mg_id:' . $mgId . '(非本商品)';
+                    } else {
+                        $mgList[] = $rowById[$mgId];
+                    }
+                }
+            }
+
+            // —— 选中的普通货道：仅处理属于本设备且绑定被编辑商品的记录 ——
+            $mcList = [];
+            if ($mcIds) {
+                $rows = Db::name('machine_channel')->where('m_id', $mId)->whereIn('mc_id', $mcIds)->lock(true)->select()->toArray();
+                $rowById = [];
+                foreach ($rows as $row) {
+                    $rowById[intval($row['mc_id'])] = $row;
+                }
+                foreach ($mcIds as $mcId) {
+                    if (!isset($rowById[$mcId])) {
+                        $skipped[] = 'mc_id:' . $mcId . '(不存在或不属于本设备)';
+                    } elseif (intval($rowById[$mcId]['g_id']) !== $gId) {
+                        $skipped[] = 'mc_id:' . $mcId . '(非本商品)';
+                    } else {
+                        $mcList[] = $rowById[$mcId];
+                    }
+                }
+            }
+
+            // 普通单商品货道 + 货道与设备商品绑定一致性校验（防止事实行归属串号）
+            if ($mcList) {
+                $this->assertOrdinaryChannels($mcList);
+                $mcMgIds = array_values(array_unique(array_map(function ($mc) {
+                    return intval($mc['mg_id']);
+                }, $mcList)));
+                $bindingRows = Db::name('machine_goods')
+                    ->where('m_id', $mId)
+                    ->whereIn('mg_id', $mcMgIds)
+                    ->field('mg_id,g_id')
+                    ->lock(true)
+                    ->select()
+                    ->toArray();
+                $bindingGId = [];
+                foreach ($bindingRows as $row) {
+                    $bindingGId[intval($row['mg_id'])] = intval($row['g_id']);
+                }
+                foreach ($mcList as $mc) {
+                    $bindingMgId = intval($mc['mg_id']);
+                    if (!array_key_exists($bindingMgId, $bindingGId) || $bindingGId[$bindingMgId] !== intval($mc['g_id'])) {
+                        throw new \InvalidArgumentException('货道设备商品归属不一致，请先在设备商品页处理：mc_id:' . intval($mc['mc_id']));
+                    }
+                }
+            }
+
+            // —— 逐币种写事实行；仅设备当前币种才回写活跃快照 ——
+            $snapshotChanged = false;
+            $mgChanged = 0;
+            $mgUnchanged = 0;
+            $mcChanged = 0;
+            $mcUnchanged = 0;
+            foreach ($currencyCodes as $currencyCode) {
+                $price = $priceMap[$currencyCode];
+                foreach ($mgList as $mg) {
+                    $mgId = intval($mg['mg_id']);
+                    $existing = Db::name('machine_goods_currency_price')
+                        ->where(['mg_id' => $mgId, 'currency_code' => $currencyCode])
+                        ->lock(true)
+                        ->find();
+                    if ($this->upsertMachineGoodsPrice($mg, $currencyCode, $price, $operatorId, $existing ? $existing : null)) {
+                        $mgChanged++;
+                    } else {
+                        $mgUnchanged++;
+                    }
+                    if ($currencyCode === $config['currency_code'] && !CurrencyPriceSupport::pricesEqual($mg, $price)) {
+                        Db::name('machine_goods')->where('mg_id', $mgId)->update($price);
+                        $snapshotChanged = true;
+                    }
+                }
+                foreach ($mcList as $mc) {
+                    $mcId = intval($mc['mc_id']);
+                    $existing = Db::name('machine_channel_currency_price')
+                        ->where(['mc_id' => $mcId, 'currency_code' => $currencyCode])
+                        ->lock(true)
+                        ->find();
+                    if ($this->upsertMachineChannelPrice($mc, $currencyCode, $price, $operatorId, $existing ? $existing : null)) {
+                        $mcChanged++;
+                    } else {
+                        $mcUnchanged++;
+                    }
+                    if ($currencyCode === $config['currency_code'] && !CurrencyPriceSupport::pricesEqual($mc, $price)) {
+                        Db::name('machine_channel')->where('mc_id', $mcId)->update($price);
+                        $snapshotChanged = true;
+                    }
+                }
+            }
+
+            $version = $snapshotChanged ? $this->bumpCurrencyVersion($mId) : $config['currency_version'];
+            return [
+                'm_id' => $mId,
+                'machine_id' => $config['machine_id'],
+                'active_currency_code' => $config['currency_code'],
+                'currency_version' => intval($version),
+                'machine_goods_changed' => $mgChanged,
+                'machine_goods_unchanged' => $mgUnchanged,
+                'machine_channel_changed' => $mcChanged,
+                'machine_channel_unchanged' => $mcUnchanged,
+                'active_snapshot_changed' => $snapshotChanged ? 1 : 0,
+                'skipped' => $skipped,
+            ];
+        };
+        return $manageTransaction ? Db::transaction($save) : $save();
+    }
+
+    /**
      * 批量校验货道均为普通单商品货道：绑定有效设备商品、非多商品模式、无历史多商品批次。
      */
     protected function assertOrdinaryChannels(array $rows)
