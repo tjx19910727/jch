@@ -31,6 +31,7 @@ $excel = $read('app/AppFactory/Kernel/Support/Excel.php');
 $receive = $read('app/AppFactory/Machine/Receive/ApiClient.php');
 $thirdParty = $read('app/AppFactory/Kernel/Service/Api/ThirdPartyProductSnapshotService.php');
 $goodsController = $read('app/management/controller/goods/Goods.php');
+$goodsClient = $read('app/AppFactory/Management/Goods/GoodsClient.php');
 $goodsTrait = $read('app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php');
 $machineGoodsController = $read('app/management/controller/machine/MachineGoods.php');
 $machineChannelController = $read('app/management/controller/machine/MachineChannel.php');
@@ -155,6 +156,11 @@ $checks['goods update checks null before toArray'] = strpos($goodsTrait, 'if (!$
     && strpos($goodsTrait, '$new = $newGoods->toArray();') !== false;
 $checks['goods downstream updates use resolved g_id'] = substr_count($goodsTrait, "['g_id' => \$gId]") >= 4
     && strpos($goodsTrait, "['g_id' => \$result['g_id']]") === false;
+$checks['goods edit no longer blocks selected device override'] = strpos($goodsClient, '不再隐式覆盖设备商品或货道价格') === false
+    && strpos($goodsClient, 'propagateCorePricesToSelectedGoods') !== false;
+$checks['core edit propagation service exists'] = strpos($currencyPriceService, 'function applyCorePricesToSelectedGoods') !== false;
+$checks['core edit propagation only pushes changed currencies'] = strpos($goodsClient, 'protected function changedCorePrices') !== false
+    && strpos($goodsClient, 'notifySelectedDeviceSnapshots') !== false;
 
 $failed = [];
 foreach ($checks as $name => $passed) {
