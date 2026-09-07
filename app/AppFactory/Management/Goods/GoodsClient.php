@@ -452,6 +452,16 @@ class GoodsClient extends ManagementClient
      */
     protected function collectPriceDiffByCode($gId, $currencyCode, $latestCost, $latestMarket, $latestRetail)
     {
+        // 缺币种价行仍列为待配置差异：CNY回退本表三价，外币展示0，不借用本表价格。
+        // 使用价格行主键判断缺行，避免把已配置的0误认为缺价；状态计算复用返回的零售价。
+        $mgPriceFields = [];
+        $mcPriceFields = [];
+        foreach ($this->priceFields as $field) {
+            $mgFallback = $currencyCode === 'CNY' ? 'COALESCE(mg.' . $field . ',0)' : '0';
+            $mcFallback = $currencyCode === 'CNY' ? 'COALESCE(mc.' . $field . ',0)' : '0';
+            $mgPriceFields[] = 'CASE WHEN p.mgcp_id IS NULL THEN ' . $mgFallback . ' ELSE p.' . $field . ' END AS ' . $field;
+            $mcPriceFields[] = 'CASE WHEN p.mccp_id IS NULL THEN ' . $mcFallback . ' ELSE p.' . $field . ' END AS ' . $field;
+        }
         $mgDiff = Db::name('machine_goods')->alias('mg')
             ->join('machine m', 'm.m_id = mg.m_id')
             ->leftJoin('machine_goods_currency_price p', 'p.mg_id=mg.mg_id AND p.currency_code="' . $currencyCode . '"')
@@ -460,7 +470,7 @@ class GoodsClient extends ManagementClient
                 $query->whereNull('p.mgcp_id')->whereOr('p.cost_price', '<>', $latestCost)
                     ->whereOr('p.market_price', '<>', $latestMarket)->whereOr('p.retail_price', '<>', $latestRetail);
             })
-            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,p.cost_price,p.market_price,p.retail_price,p.updated_at')
+            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,' . implode(',', $mgPriceFields) . ',p.updated_at')
             ->order('mg.mg_id desc')
             ->limit(200)
             ->select()
@@ -476,7 +486,7 @@ class GoodsClient extends ManagementClient
                 $query->whereNull('p.mccp_id')->whereOr('p.cost_price', '<>', $latestCost)
                     ->whereOr('p.market_price', '<>', $latestMarket)->whereOr('p.retail_price', '<>', $latestRetail);
             })
-            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,p.cost_price,p.market_price,p.retail_price,p.updated_at,mc.update_price as update_status')
+            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,' . implode(',', $mcPriceFields) . ',p.updated_at,mc.update_price as update_status')
             ->order('mc.mc_id desc')
             ->limit(200)
             ->select()
