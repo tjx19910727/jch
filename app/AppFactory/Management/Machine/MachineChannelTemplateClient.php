@@ -136,20 +136,10 @@ class MachineChannelTemplateClient extends ManagementClient
                 ]);
             }
 
-            $requestVersion = intval($postData['template_version'] ?? 0);
-            if ($requestVersion <= 0) {
-                Db::rollback();
-                return $this->templateApiError(400, '修改模板必须提交 template_version');
-            }
-
             $existing = $this->findTemplate($templateId, true);
             if (!$existing) {
                 Db::rollback();
                 return $this->templateApiError(404, '货道模板不存在');
-            }
-            if (intval($existing['template_version']) !== $requestVersion) {
-                Db::rollback();
-                return $this->templateApiError(409, '模板已被其他用户修改，请刷新后重试');
             }
             if ($this->templateNameExists($saveData['template_name'], intval($existing['ao_id']), $templateId)) {
                 Db::rollback();
@@ -157,7 +147,7 @@ class MachineChannelTemplateClient extends ManagementClient
             }
 
             $geometryChanged = $this->geometryChanged($existing, $saveData);
-            $newVersion = $requestVersion + 1;
+            $newVersion = intval($existing['template_version']) + 1;
             $updateData = $saveData + [
                 'template_version' => $newVersion,
                 'update_id' => $managerId,
@@ -166,13 +156,9 @@ class MachineChannelTemplateClient extends ManagementClient
 
             $updateQuery = Db::name('machine_channel_template')
                 ->where('template_id', $templateId)
-                ->where('template_version', $requestVersion)
                 ->where('is_del', self::ACTIVE);
             $this->applyOrganizationScope($updateQuery, '', intval($existing['ao_id']));
-            if (!$updateQuery->update($updateData)) {
-                Db::rollback();
-                return $this->templateApiError(409, '模板版本冲突，请刷新后重试');
-            }
+            $updateQuery->update($updateData);
 
             if ($geometryChanged) {
                 Db::name('machine_loading_scheme')->where('template_id', $templateId)->delete();
