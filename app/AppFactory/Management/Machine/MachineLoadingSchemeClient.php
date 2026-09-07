@@ -20,6 +20,7 @@ class MachineLoadingSchemeClient extends ManagementClient
         $pageSize = min(200, max(10, intval($postData['page_size'] ?? 100)));
         $keyword = trim((string)($postData['keyword'] ?? ''));
         $placementType = (string)($postData['placement_type'] ?? 'all');
+        $gcId = intval($postData['gc_id'] ?? 0);
         if (!in_array($placementType, ['all', 'normal', 'hanging'], true)) {
             return $this->templateApiError(400, 'placement_type 只支持 all、normal、hanging');
         }
@@ -34,6 +35,9 @@ class MachineLoadingSchemeClient extends ManagementClient
                 ->where('length', '>', 0)
                 ->whereIn('sell_channel', [1, 3]);
             $this->applyGoodsOrganizationScope($query);
+            if ($gcId > 0) {
+                $query->where('gc_id', $gcId);
+            }
             if ($keyword !== '') {
                 $query->where(function ($subQuery) use ($keyword) {
                     $subQuery->whereLike('g_name', '%' . $keyword . '%')
@@ -43,7 +47,7 @@ class MachineLoadingSchemeClient extends ManagementClient
 
             $total = intval((clone $query)->count());
             $rows = $query
-                ->field('g_id,g_name,sku,gc_name,width,height,length')
+                ->field('g_id,g_name,sku,gc_name,gc_id,pic,width,height,length')
                 ->order('g_id desc')
                 ->page($page, $pageSize)
                 ->select();
@@ -55,6 +59,7 @@ class MachineLoadingSchemeClient extends ManagementClient
                     'sku' => (string)$goods['sku'],
                     'goods_name' => (string)$goods['g_name'],
                     'category_name' => (string)$goods['gc_name'],
+                    'image_url' => $this->formatImageUrl($goods['pic'] ?? ''),
                     'width' => intval($goods['width']),
                     'height' => intval($goods['height']),
                     'depth' => intval($goods['length']),
@@ -308,5 +313,21 @@ class MachineLoadingSchemeClient extends ManagementClient
     protected function generateCode($prefix)
     {
         return $prefix . '-' . strtolower(base_convert((string)time(), 10, 36)) . '-' . bin2hex(random_bytes(5));
+    }
+
+    protected function formatImageUrl($pic)
+    {
+        $pic = trim((string)($pic ?? ''));
+        if ($pic === '') {
+            return '';
+        }
+        if (strpos($pic, 'http://') === 0 || strpos($pic, 'https://') === 0) {
+            return $pic;
+        }
+        $host = rtrim((string)($this->host ?? ''), '/');
+        if ($host === '') {
+            return $pic;
+        }
+        return $host . '/' . ltrim($pic, '/');
     }
 }
