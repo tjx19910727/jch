@@ -172,11 +172,18 @@ class MachineGoodsClient extends ManagementClient
 
     /**
      * 取行内活跃快照三价（CNY 存量未落事实行时回退）。
-     * @param array $row
+     * 列表 each / 详情 find 查询返回的行可能是 think\Model 对象（数组访问），此处统一先转数组再读取。
+     * @param array|\think\Model $row
      * @return array|null
      */
-    protected function activeRowTriple(array $row)
+    protected function activeRowTriple($row)
     {
+        if (is_object($row)) {
+            $row = obj2arr($row);
+        }
+        if (!is_array($row)) {
+            return null;
+        }
         if (!array_key_exists('cost_price', $row) && !array_key_exists('retail_price', $row)) {
             return null;
         }

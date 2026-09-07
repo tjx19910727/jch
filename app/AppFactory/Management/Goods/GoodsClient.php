@@ -14,6 +14,8 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Service\Currency\GoodsCurrencyPriceService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyAccessService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
 use app\AppFactory\Kernel\Support\Currency\CurrencyPriceSupport;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
@@ -189,7 +191,8 @@ class GoodsClient extends ManagementClient
     }
 
     /**
-     * 商品编辑只维护核心商品与核心币种价，设备商品/货道必须走人工同步接口。
+     * 商品编辑维护核心商品与核心币种价；若传入 mg_id/mc_id，按设备当前币种隐式覆盖
+     * 所选设备商品/货道：写对应币种货币价格事实行，设备当前币种命中时回写活跃快照（版本+1、通知一次）。
      * @param array $postData
      * @return mixed
      */
@@ -210,15 +213,16 @@ class GoodsClient extends ManagementClient
         $selectedMgIds = $this->parseIds($postData['mg_id'] ?? []);
         $selectedMcIds = $this->parseIds($postData['mc_id'] ?? []);
         unset($postData['mg_id'], $postData['mc_id']);
-        if ($selectedMgIds || $selectedMcIds) {
-            return $this->r(100, '商品编辑不再隐式覆盖设备商品或货道价格，请使用对应的一键同步接口');
-        }
+        // 勾选设备商品/货道时按“核心改价隐式覆盖”处理：事务内写货币价格事实行 + 当前币种活跃快照，提交后统一通知
+        $deviceSyncResults = [];
+        $deviceSyncSkipped = [];
         try {
             $currencyPrices = $this->extractCurrencyPrices($postData, false);
             foreach (array_merge($this->priceFields, ['cny_cost_price', 'cny_market_price', 'cny_retail_price', 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price']) as $field) {
                 unset($postData[$field]);
             }
             Db::startTrans();
+            $coreRowsBefore = Db::name('goods_currency_price')->where('g_id', $gId)->lock(true)->select()->toArray();
             $result = true;
             $updateData = $postData;
             unset($updateData['g_id']);
@@ -230,9 +234,25 @@ class GoodsClient extends ManagementClient
             }
             if ($currencyPrices) {
                 (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
+                if ($selectedMgIds || $selectedMcIds) {
+                    $changedPrices = $this->changedCorePrices($currencyPrices, $coreRowsBefore);
+                    if ($changedPrices) {
+                        $this->propagateCorePricesToSelectedGoods(
+                            $gId,
+                            $changedPrices,
+                            $selectedMgIds,
+                            $selectedMcIds,
+                            $deviceSyncResults,
+                            $deviceSyncSkipped
+                        );
+                    }
+                }
             }
             Db::commit();
             $this->pushGoodsUpdate($gId);
+            if ($deviceSyncResults) {
+                $this->notifySelectedDeviceSnapshots($deviceSyncResults);
+            }
             $detailField = 'g_id,g_name,gc_id,gc_name,g_type,model,bar_code,sku,sku2,pic,'
                 . ($hasCostPriceAuth ? 'cost_price' : '0 cost_price')
                 . ',market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,'
@@ -243,6 +263,134 @@ class GoodsClient extends ManagementClient
             Db::rollback();
             actionException($e, 1, 'updateGoodsCurrencyPrice');
             return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 只取本次提交中相对核心商品库“确有变化（或新增）”的币种三价，避免纯资料编辑被当成隐式覆盖。
+     * @param array $submitted     键为币种、值为三价数组
+     * @param array $existingRows  goods_currency_price 当前行
+     * @return array
+     */
+    protected function changedCorePrices(array $submitted, array $existingRows)
+    {
+        $existing = [];
+        foreach ($existingRows as $row) {
+            if (!isset($row['currency_code']) || !isset($row['cost_price'], $row['market_price'], $row['retail_price'])) {
+                continue;
+            }
+            try {
+                $existing[CurrencyPriceSupport::normalizeCurrencyCode($row['currency_code'])] = CurrencyPriceSupport::normalizePriceRow($row);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+        }
+        $changed = [];
+        foreach ($submitted as $currencyCode => $triple) {
+            if (!is_array($triple)) {
+                continue;
+            }
+            try {
+                $currencyCode = CurrencyPriceSupport::normalizeCurrencyCode($currencyCode);
+                $triple = CurrencyPriceSupport::normalizePriceRow($triple);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+            if (!isset($existing[$currencyCode]) || !CurrencyPriceSupport::pricesEqual($existing[$currencyCode], $triple)) {
+                $changed[$currencyCode] = $triple;
+            }
+        }
+        return $changed;
+    }
+
+    /**
+     * 把“确有变化”的核心商品多币种价按设备当前币种隐式覆盖到勾选的设备商品/货道。
+     * 逐设备调用 MachineCurrencyPriceService，必须位于商品保存的外层事务内（manageTransaction=false）。
+     * @param int   $gId
+     * @param array $changedPrices 键为币种、值为变化后的三价
+     * @param array $mgIds
+     * @param array $mcIds
+     * @param array $deviceResults 输出：逐设备同步结果
+     * @param array $deviceSkipped 输出：被跳过的记录说明
+     * @return void
+     */
+    protected function propagateCorePricesToSelectedGoods($gId, array $changedPrices, array $mgIds, array $mcIds, array &$deviceResults, array &$deviceSkipped)
+    {
+        $mgByDevice = [];
+        $mcByDevice = [];
+        if ($mgIds) {
+            $rows = Db::name('machine_goods')->whereIn('mg_id', $mgIds)->field('mg_id,m_id,g_id')->select()->toArray();
+            $found = [];
+            foreach ($rows as $row) {
+                $found[intval($row['mg_id'])] = true;
+                if (intval($row['g_id']) !== intval($gId)) {
+                    $deviceSkipped[] = 'mg_id:' . intval($row['mg_id']) . '(非本商品)';
+                    continue;
+                }
+                $mgByDevice[intval($row['m_id'])][] = intval($row['mg_id']);
+            }
+            foreach ($mgIds as $mgId) {
+                if (!isset($found[intval($mgId)])) {
+                    $deviceSkipped[] = 'mg_id:' . intval($mgId) . '(不存在)';
+                }
+            }
+        }
+        if ($mcIds) {
+            $rows = Db::name('machine_channel')->whereIn('mc_id', $mcIds)->field('mc_id,m_id,g_id')->select()->toArray();
+            $found = [];
+            foreach ($rows as $row) {
+                $found[intval($row['mc_id'])] = true;
+                if (intval($row['g_id']) !== intval($gId)) {
+                    $deviceSkipped[] = 'mc_id:' . intval($row['mc_id']) . '(非本商品)';
+                    continue;
+                }
+                $mcByDevice[intval($row['m_id'])][] = intval($row['mc_id']);
+            }
+            foreach ($mcIds as $mcId) {
+                if (!isset($found[intval($mcId)])) {
+                    $deviceSkipped[] = 'mc_id:' . intval($mcId) . '(不存在)';
+                }
+            }
+        }
+
+        $mIds = array_values(array_unique(array_merge(array_keys($mgByDevice), array_keys($mcByDevice))));
+        foreach ($mIds as $mId) {
+            (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
+            $result = (new MachineCurrencyPriceService())->applyCorePricesToSelectedGoods(
+                $mId,
+                $gId,
+                $changedPrices,
+                isset($mgByDevice[$mId]) ? $mgByDevice[$mId] : [],
+                isset($mcByDevice[$mId]) ? $mcByDevice[$mId] : [],
+                intval($this->manager['manager_id'] ?? 0),
+                false
+            );
+            $deviceResults[] = $result;
+            foreach ($result['skipped'] as $skip) {
+                $deviceSkipped[] = $skip;
+            }
+        }
+        if ($deviceSkipped) {
+            actionLog($deviceSkipped, '商品编辑隐式覆盖跳过记录', 'propagateCorePricesToSelectedGoods');
+        }
+    }
+
+    /**
+     * 对活跃快照发生变化的设备，在商品保存事务提交后统一发送一次快照版本通知。
+     * @param array $deviceResults
+     * @return void
+     */
+    protected function notifySelectedDeviceSnapshots(array $deviceResults)
+    {
+        foreach ($deviceResults as $result) {
+            if (intval($result['active_snapshot_changed'] ?? 0) !== 1 || empty($result['machine_id'])) {
+                continue;
+            }
+            $this->sendToMachine(
+                ['machine_id' => $result['machine_id']],
+                'currencySnapshotUpdated',
+                ['currency_code' => $result['active_currency_code'], 'currency_version' => intval($result['currency_version'])]
+            );
         }
     }
 
