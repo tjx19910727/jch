@@ -26,8 +26,6 @@ class MachineLoadingSchemeClient extends ManagementClient
         }
 
         try {
-            // 商品表没有摆放类型字段。placement_type 仅作为前端布局条件接收，
-            // 当前不用于过滤商品，具体摆放类型保存在方案 placement 中。
             $query = Db::name('goods')
                 ->where('status', 1)
                 ->where('width', '>', 0)
@@ -47,7 +45,7 @@ class MachineLoadingSchemeClient extends ManagementClient
 
             $total = intval((clone $query)->count());
             $rows = $query
-                ->field('g_id,g_name,sku,gc_name,gc_id,pic,width,height,length')
+                ->field('g_id,g_name,sku,gc_name,gc_id,pic,placement_type,width,height,length')
                 ->order('g_id desc')
                 ->page($page, $pageSize)
                 ->select();
@@ -64,7 +62,7 @@ class MachineLoadingSchemeClient extends ManagementClient
                     'height' => intval($goods['height']),
                     'depth' => intval($goods['length']),
                     'allow_rotation' => true,
-                    'placement_type' => 'normal',
+                    'placement_type' => $this->mapPlacementType($goods['placement_type'] ?? 1),
                 ];
             }
 
@@ -329,5 +327,10 @@ class MachineLoadingSchemeClient extends ManagementClient
             return $pic;
         }
         return $host . '/' . ltrim($pic, '/');
+    }
+
+    protected function mapPlacementType($placementType)
+    {
+        return intval($placementType) === 2 ? 'hanging' : 'normal';
     }
 }
