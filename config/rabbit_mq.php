@@ -21,14 +21,16 @@ return [
     // 后台下发到设备的 MQ 消息过期时间，单位：毫秒
     'data_send_expiration_ms' => 180 * 1000,
 
-    // 需短于设备首次认证重试窗口，允许首个回包丢失后及时重发。
+    // signKey 幂等补发窗口（秒）：窗口内同一设备重复认证询问时不走全链路（写库/日志/记流水），
+    // 而是把最近一次 signKey 报文再次下发——“有询问就有返回”，并避免认证风暴放大 DB/日志/下行开销（见 ReceiveBaseClient::setSignKey）。
     'machine_sign_key_resend_cooldown' => 5,
 
     // 设备 HTTP 请求 timestamp 允许落后服务器的秒数
     'machine_receive_timestamp_tolerance' => 180,
 
-    // 设备签名密钥有效期提示，单位：秒。设备端应按收到后的经过时间判断，不依赖本机绝对时间。
-    'machine_sign_key_expires_in' => 3600,
+    // signKey 有效期（秒）：<=0 或未配置 = 不设有效期（下发 365 天作为兼容占位，设备不再按小时刷新重认证）；
+    // 配置 >0 时显式指定有效秒数（最小 300）。
+    'machine_sign_key_expires_in' => 0,
 
     // "AMQP" => [
     //     "host" => "127.0.0.1",      // rabbitMQ IP

@@ -61,11 +61,7 @@ trait CommonTrait
         $machine_id = $data['machine_id'] ?? ($this->config['machine_id'] ?? "");
         if (!$signKey && $machine_id) $signKey = cache($machine_id . ".signKey");
         if (!$signKey) {
-//            $signKey = $this->getMachineFind(['machine_id' => $machine_id],'signKey,signKeyTime');
-            // 3600秒内的设备SignKey
-            if ( $this->machine['signKey'] && $this->machine['signKeyTime'] < time() - 3600) {
-                actionLog(["开始时间" => date("Y-m-d H:i:s",$this->machine['signKeyTime']),$this->machine['signKey']],'SignKey超时');
-            }
+            // signKey 已去掉有效期：即使机器较长时间未刷新也不判超时，直接使用机器当前 signKey 验签。
             $signKey = $this->machine['signKey'];
         }
         if (!$signKey) $signKey = env("api.md5Key");
