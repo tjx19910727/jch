@@ -123,9 +123,8 @@ class MachineLoadingSchemeClient extends ManagementClient
     {
         $postData = input();
         $templateId = intval($postData['template_id'] ?? 0);
-        $templateVersion = intval($postData['template_version'] ?? 0);
-        if ($templateId <= 0 || $templateVersion <= 0) {
-            return $this->templateApiError(400, 'template_id 和 template_version 参数错误');
+        if ($templateId <= 0) {
+            return $this->templateApiError(400, 'template_id 参数错误');
         }
 
         $snapshot = $postData['snapshot'] ?? null;
@@ -136,22 +135,12 @@ class MachineLoadingSchemeClient extends ManagementClient
             return $this->templateApiError(400, 'snapshot 必须为 JSON 对象');
         }
 
-        $schemeId = intval($postData['scheme_id'] ?? 0);
-        $schemeVersion = intval($postData['scheme_version'] ?? 0);
-        if (($schemeId > 0 && $schemeVersion <= 0) || ($schemeId <= 0 && $schemeVersion > 0)) {
-            return $this->templateApiError(400, '更新方案时 scheme_id 和 scheme_version 必须同时提交');
-        }
-
         Db::startTrans();
         try {
             $template = $this->findTemplate($templateId, true);
             if (!$template) {
                 Db::rollback();
                 return $this->templateApiError(404, '货道模板不存在');
-            }
-            if (intval($template['template_version']) !== $templateVersion) {
-                Db::rollback();
-                return $this->templateApiError(409, '模板参数已经变化，请重新进入模拟');
             }
 
             $validator = new LoadingSchemeSnapshotValidator();
@@ -171,21 +160,6 @@ class MachineLoadingSchemeClient extends ManagementClient
             }
 
             $currentScheme = $this->findSchemeByTemplate($templateId, true);
-            if ($schemeId <= 0 && $currentScheme) {
-                Db::rollback();
-                return $this->templateApiError(409, '模板已经存在上货方案，请刷新后覆盖保存');
-            }
-            if ($schemeId > 0) {
-                if (!$currentScheme) {
-                    Db::rollback();
-                    return $this->templateApiError(404, '上货方案不存在');
-                }
-                if (intval($currentScheme['scheme_id']) !== $schemeId
-                    || intval($currentScheme['scheme_version']) !== $schemeVersion) {
-                    Db::rollback();
-                    return $this->templateApiError(409, '方案已被其他用户修改，请刷新后重试');
-                }
-            }
 
             $schemeName = trim((string)($postData['scheme_name'] ?? ''));
             if ($schemeName === '') {
@@ -202,7 +176,7 @@ class MachineLoadingSchemeClient extends ManagementClient
             $saveData = [
                 'template_id' => $templateId,
                 'ao_id' => intval($template['ao_id']),
-                'template_version' => $templateVersion,
+                'template_version' => intval($template['template_version']),
                 'scheme_name' => $schemeName,
                 'schema_version' => 1,
                 'snapshot_json' => $validation['snapshot_json'],
@@ -215,19 +189,14 @@ class MachineLoadingSchemeClient extends ManagementClient
                 'update_time' => $now,
             ];
 
-            if ($schemeId > 0) {
-                $newSchemeVersion = $schemeVersion + 1;
+            if ($currentScheme) {
+                $newSchemeVersion = intval($currentScheme['scheme_version']) + 1;
                 $saveData['scheme_version'] = $newSchemeVersion;
-                $affected = Db::name('machine_loading_scheme')
-                    ->where('scheme_id', $schemeId)
+                Db::name('machine_loading_scheme')
+                    ->where('scheme_id', $currentScheme['scheme_id'])
                     ->where('template_id', $templateId)
-                    ->where('scheme_version', $schemeVersion)
-                    ->where('ao_id', intval($template['ao_id']))
                     ->update($saveData);
-                if (!$affected) {
-                    Db::rollback();
-                    return $this->templateApiError(409, '方案版本冲突，请刷新后重试');
-                }
+                $schemeId = intval($currentScheme['scheme_id']);
                 $schemeCode = (string)$currentScheme['scheme_code'];
             } else {
                 $newSchemeVersion = 1;
@@ -247,7 +216,7 @@ class MachineLoadingSchemeClient extends ManagementClient
                 'scheme_code' => $schemeCode,
                 'scheme_version' => $newSchemeVersion,
                 'template_id' => $templateId,
-                'template_version' => $templateVersion,
+                'template_version' => intval($template['template_version']),
                 'saved_at' => $now,
                 'summary' => $summary,
             ]);
