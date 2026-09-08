@@ -394,19 +394,51 @@ class MachineCurrencyPriceService
     }
 
     /**
-     * 按设备当前币种自动同步：核心商品三价 → 选中设备商品 → 其在本机的普通单商品货道。
-     * 两级共用同一事务，只以设备当前币种（machine_config.currency_code，空则按 CNY）为同步币种，
-     * 设备商品/货道任一缺价或多商品货道时整批回滚；当前币种活跃快照变化时版本只递增一次、通知一次。
+     * 按设备当前币种自动同步：核心商品三价 → 设备商品 → 其在本机的普通单商品货道。
+     * - 显式传 mg_ids（或 mg_id）时保持原严格语义：只同步选中的设备商品及其绑定货道，
+     *   任一缺价、多商品货道等都会整批回滚，单次最多 200 条；
+     * - 未传 mg_ids / mg_id（空数组）为全量模式：处理该设备 machine_goods 的全部记录，
+     *   以及 machine_channel 中 m_id=该设备的全部记录；同一事务内跳过缺价/绑定异常等记录，
+     *   在返回 skipped 中给出明细，其余照常同步，且不套用 200 条上限；
+     * - 两级共用同一事务，只以设备当前币种（machine_config.currency_code，空则按 CNY）为同步币种，
+     *   当前币种活跃快照变化时版本只递增一次。
      */
     public function syncMachineGoodsChannelsByDeviceCurrency($mId, $mgIds, $operatorId = 0, $manageTransaction = true)
     {
-        $mgIds = CurrencyPriceSupport::normalizeIds($mgIds, $this->syncLimit);
-        $save = function () use ($mId, $mgIds, $operatorId) {
+        $mId = intval($mId);
+        $fullMode = empty($mgIds);
+        $mgIds = $fullMode ? [] : CurrencyPriceSupport::normalizeIds($mgIds, $this->syncLimit);
+        $save = function () use ($mId, $mgIds, $fullMode, $operatorId) {
             $config = $this->getMachineCurrency($mId, true);
             $currencyCode = $config['currency_code'];
             $this->catalog->assertEnabled($currencyCode);
+            $skipped = [];
 
-            $rows = Db::name('machine_goods')->where('m_id', intval($mId))->whereIn('mg_id', $mgIds)->lock(true)->select()->toArray();
+            // 全量模式：读取该设备 machine_goods 表的全部记录，不设条数上限
+            if ($fullMode) {
+                $mgIds = array_values(array_unique(array_filter(array_map('intval',
+                    Db::name('machine_goods')->where('m_id', $mId)->column('mg_id')))));
+                if (!$mgIds) {
+                    $currency = $this->catalog->getByCode($currencyCode);
+                    return [
+                        'm_id' => intval($config['m_id']),
+                        'machine_id' => $config['machine_id'],
+                        'currency_code' => $currencyCode,
+                        'currency_symbol' => isset($currency['currency_symbol']) ? $currency['currency_symbol'] : '',
+                        'active_currency_code' => $currencyCode,
+                        'currency_version' => intval($config['currency_version']),
+                        'machine_goods_changed' => 0,
+                        'machine_goods_unchanged' => 0,
+                        'machine_channel_changed' => 0,
+                        'machine_channel_unchanged' => 0,
+                        'active_snapshot_changed' => 0,
+                        'scope' => 'all',
+                        'skipped' => [],
+                    ];
+                }
+            }
+
+            $rows = Db::name('machine_goods')->where('m_id', $mId)->whereIn('mg_id', $mgIds)->lock(true)->select()->toArray();
             if (count($rows) !== count($mgIds)) {
                 throw new \InvalidArgumentException('选中的设备商品包含不存在或不属于当前设备的记录');
             }
@@ -423,9 +455,11 @@ class MachineCurrencyPriceService
             foreach ($sourceRows as $row) {
                 $sourceMap[intval($row['g_id'])] = $row;
             }
-            $missing = array_values(array_diff($gIds, array_keys($sourceMap)));
-            if ($missing) {
-                throw new \InvalidArgumentException('核心商品缺少' . $currencyCode . '价格：' . implode(',', $missing));
+            if (!$fullMode) {
+                $missing = array_values(array_diff($gIds, array_keys($sourceMap)));
+                if ($missing) {
+                    throw new \InvalidArgumentException('核心商品缺少' . $currencyCode . '价格：' . implode(',', $missing));
+                }
             }
 
             // 第一级：核心 → 设备商品
@@ -440,12 +474,20 @@ class MachineCurrencyPriceService
                 $existingMap[intval($existing['mg_id'])] = $existing;
             }
             $devicePriceByMg = [];
+            $mgGidByMg = [];
             $snapshotChanged = false;
             $mgChanged = 0;
             $mgUnchanged = 0;
             foreach ($rows as $mg) {
                 $mgId = intval($mg['mg_id']);
-                $price = CurrencyPriceSupport::normalizePriceRow($sourceMap[intval($mg['g_id'])]);
+                $gId = intval($mg['g_id']);
+                $mgGidByMg[$mgId] = $gId;
+                if (!isset($sourceMap[$gId])) {
+                    // 全量模式遇到缺核心价时跳过该设备商品并记录；显式模式在上方已整批拦截
+                    $skipped[] = 'mg_id:' . $mgId . '(核心商品缺少' . $currencyCode . '价格)';
+                    continue;
+                }
+                $price = CurrencyPriceSupport::normalizePriceRow($sourceMap[$gId]);
                 $existing = isset($existingMap[$mgId]) ? $existingMap[$mgId] : null;
                 if ($this->upsertMachineGoodsPrice($mg, $currencyCode, $price, $operatorId, $existing)) {
                     $mgChanged++;
@@ -458,18 +500,19 @@ class MachineCurrencyPriceService
                     $snapshotChanged = true;
                 }
             }
-
-            // 第二级：设备商品 → 其在本机的普通单商品货道
-            $channels = Db::name('machine_channel')
-                ->where('m_id', intval($mId))
-                ->whereIn('mg_id', $mgIds)
-                ->lock(true)
-                ->select()
-                ->toArray();
+            // 第二级：设备商品 → 货道。显式模式只处理选中 mg 绑定的货道；
+            // 全量模式处理 machine_channel 中该设备（m_id）的全部记录，绑定异常的货道跳过并记录。
+            $channelQuery = Db::name('machine_channel')->where('m_id', $mId)->lock(true);
+            if (!$fullMode) {
+                $channelQuery->whereIn('mg_id', $mgIds);
+            }
+            $channels = $channelQuery->select()->toArray();
             $mcChanged = 0;
             $mcUnchanged = 0;
             if ($channels) {
-                $this->assertOrdinaryChannels($channels);
+                if (!$fullMode) {
+                    $this->assertOrdinaryChannels($channels);
+                }
                 $mcIds = array_values(array_unique(array_map(function ($row) {
                     return intval($row['mc_id']);
                 }, $channels)));
@@ -485,9 +528,33 @@ class MachineCurrencyPriceService
                 }
                 foreach ($channels as $mc) {
                     $mcId = intval($mc['mc_id']);
-                    $price = isset($devicePriceByMg[intval($mc['mg_id'])]) ? $devicePriceByMg[intval($mc['mg_id'])] : null;
+                    $mgId = intval($mc['mg_id']);
+                    // 全量模式逐条校验，异常货道跳过；显式模式已由 assertOrdinaryChannels 整体拦截
+                    if ($fullMode) {
+                        if ($mgId <= 0 || !array_key_exists($mgId, $devicePriceByMg)) {
+                            $skipped[] = 'mc_id:' . $mcId . '(货道未绑定有效设备商品或所属设备商品未同步)';
+                            continue;
+                        }
+                        if (intval($mc['g_id']) <= 0 || (isset($mgGidByMg[$mgId]) && intval($mc['g_id']) !== $mgGidByMg[$mgId])) {
+                            $skipped[] = 'mc_id:' . $mcId . '(货道设备商品归属不一致)';
+                            continue;
+                        }
+                        if (intval(isset($mc['is_multi_goods']) ? $mc['is_multi_goods'] : 2) === 1) {
+                            $skipped[] = 'mc_id:' . $mcId . '(单货道多商品货道不支持同步币种价格)';
+                            continue;
+                        }
+                        if (Db::name('channel_goods_batch')->where('mc_id', $mcId)->count() > 0) {
+                            $skipped[] = 'mc_id:' . $mcId . '(货道存在多商品批次，不支持同步币种价格)';
+                            continue;
+                        }
+                    }
+                    $price = isset($devicePriceByMg[$mgId]) ? $devicePriceByMg[$mgId] : null;
                     if (!$price) {
-                        throw new \InvalidArgumentException('货道缺少对应设备商品' . $currencyCode . '价格：' . $mcId);
+                        if (!$fullMode) {
+                            throw new \InvalidArgumentException('货道缺少对应设备商品' . $currencyCode . '价格：' . $mcId);
+                        }
+                        $skipped[] = 'mc_id:' . $mcId . '(缺少所属设备商品' . $currencyCode . '价格)';
+                        continue;
                     }
                     $existing = isset($channelExistingMap[$mcId]) ? $channelExistingMap[$mcId] : null;
                     if ($this->upsertMachineChannelPrice($mc, $currencyCode, $price, $operatorId, $existing)) {
@@ -516,6 +583,8 @@ class MachineCurrencyPriceService
                 'machine_channel_changed' => $mcChanged,
                 'machine_channel_unchanged' => $mcUnchanged,
                 'active_snapshot_changed' => $snapshotChanged ? 1 : 0,
+                'scope' => $fullMode ? 'all' : 'selected',
+                'skipped' => $skipped,
             ];
         };
         return $manageTransaction ? Db::transaction($save) : $save();
