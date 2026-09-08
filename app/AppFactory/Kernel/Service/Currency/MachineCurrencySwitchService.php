@@ -111,6 +111,12 @@ class MachineCurrencySwitchService
         }
 
         $serverCodes = array_map('strtoupper', (array)config('currency.server_switch_currency_codes'));
+        // env 未显式配置切换白名单时兜底为全部启用币种，避免漏配 .env 导致联调被拦；
+        // 生产如需收紧，在 .env 配置 currency.switch_currency_codes 即可恢复白名单语义。
+        if (empty(config('currency.switch_codes_configured'))) {
+            $enabledCodes = Db::name('currency_info')->where('status', 1)->column('currency_code');
+            $serverCodes = array_values(array_unique(array_map('strtoupper', array_filter(array_map('trim', $enabledCodes)))));
+        }
         if (!in_array($targetCurrencyCode, $serverCodes, true)) {
             $this->addBlocker($result, 'SERVER_CAPABILITY_DISABLED', '服务端支付、营销或外部业务尚未启用目标币种能力');
         }
