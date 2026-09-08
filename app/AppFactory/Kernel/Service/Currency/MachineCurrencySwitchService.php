@@ -161,11 +161,11 @@ class MachineCurrencySwitchService
     /**
      * 在单设备事务中锁定配置、设备商品和货道，并把目标币种事实价格投影为活跃售卖快照。
      */
-    public function switchCurrency($mId, $targetCurrencyCode, $ignoreDeviceReport = false)
+    public function switchCurrency($mId, $targetCurrencyCode, $ignoreDeviceReport = false, $forceSwitch = false)
     {
         $mId = intval($mId);
         $targetCurrencyCode = $this->catalog->normalizeCode($targetCurrencyCode);
-        return Db::transaction(function () use ($mId, $targetCurrencyCode, $ignoreDeviceReport) {
+        return Db::transaction(function () use ($mId, $targetCurrencyCode, $ignoreDeviceReport, $forceSwitch) {
             $config = Db::name('machine_config')->where('m_id', $mId)->lock(true)->find();
             if (!$config) {
                 throw new \InvalidArgumentException('设备配置不存在');
@@ -188,14 +188,17 @@ class MachineCurrencySwitchService
             }
 
             $scope = $this->getSnapshotScope($mId, true);
-            // 先确认旧三价仍等于当前币种事实，禁止把被其他链路污染的快照反向当作正确价格。
-            $sourceProblem = $this->validateSourceSnapshot($scope, $currentCurrencyCode);
-            if ($sourceProblem['mg_ids'] || $sourceProblem['mc_ids']) {
-                $readiness['source_mismatch_mg_ids'] = $sourceProblem['mg_ids'];
-                $readiness['source_mismatch_mc_ids'] = $sourceProblem['mc_ids'];
-                $this->addBlocker($readiness, 'SOURCE_SNAPSHOT_MISMATCH', '当前旧表快照与币种事实价格不一致，禁止反向覆盖');
-                $readiness['ready'] = 0;
-                return ['success' => 0, 'readiness' => $readiness];
+            // 强制切（forceSwitch=true，后台使用）跳过源快照一致性校验；
+            // 否则先确认旧三价仍等于当前币种事实，禁止把被其他链路污染的快照反向当作正确价格。
+            if (!$forceSwitch) {
+                $sourceProblem = $this->validateSourceSnapshot($scope, $currentCurrencyCode);
+                if ($sourceProblem['mg_ids'] || $sourceProblem['mc_ids']) {
+                    $readiness['source_mismatch_mg_ids'] = $sourceProblem['mg_ids'];
+                    $readiness['source_mismatch_mc_ids'] = $sourceProblem['mc_ids'];
+                    $this->addBlocker($readiness, 'SOURCE_SNAPSHOT_MISMATCH', '当前旧表快照与币种事实价格不一致，禁止反向覆盖');
+                    $readiness['ready'] = 0;
+                    return ['success' => 0, 'readiness' => $readiness];
+                }
             }
 
             $mgMap = $this->loadMachineGoodsPriceMap($scope['machine_goods'], $targetCurrencyCode);

@@ -158,7 +158,7 @@ class MachineConfigClient extends ManagementClient
         try {
             $mId = intval(isset($postData['m_id']) ? $postData['m_id'] : 0);
             (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
-            $result = (new MachineCurrencySwitchService())->switchCurrency($mId, $postData['currency_code'], true);
+            $result = (new MachineCurrencySwitchService())->switchCurrency($mId, $postData['currency_code'], true, true);
             if (empty($result['success'])) {
                 return $this->r(100, '设备币种切换条件未满足', $result['readiness']);
             }
@@ -186,7 +186,7 @@ class MachineConfigClient extends ManagementClient
         foreach ($mIds as $mId) {
             try {
                 (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
-                $one = (new MachineCurrencySwitchService())->switchCurrency($mId, $postData['currency_code'], true);
+                $one = (new MachineCurrencySwitchService())->switchCurrency($mId, $postData['currency_code'], true, true);
                 if (empty($one['success'])) {
                     $result['failed'][] = ['m_id' => $mId, 'readiness' => $one['readiness']];
                     continue;
