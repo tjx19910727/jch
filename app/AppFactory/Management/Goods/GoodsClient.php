@@ -889,6 +889,8 @@ class GoodsClient extends ManagementClient
                                 $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
                                 if ($currencyPrices) {
                                     (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
+                                    // 核心价落库后补齐设备侧缺失的币种三价事实行（如 HKD），仅缺失时新增，已存在不覆盖
+                                    $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0));
                                 }
                                 Db::commit();
                                 $resultData['update_success']++;
@@ -926,6 +928,8 @@ class GoodsClient extends ManagementClient
                             'lang' => 'zh-cn',
                         ]);
                         (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), true, false);
+                        // 新商品也可能已存在设备绑定历史数据，核心价落库后同样补齐设备侧缺失的币种三价事实行（仅缺失时新增）
+                        $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0));
                         Db::commit();
                         $resultData['insert_success']++;
                     } catch (\Exception $e) {
@@ -1037,6 +1041,181 @@ class GoodsClient extends ManagementClient
             $result[$code] = $triple;
         }
         return $result;
+    }
+
+    /**
+     * 导入完成核心商品币种价落库后，补齐该商品在设备侧缺失的币种价格事实行。
+     *
+     * 遍历绑定本商品（g_id）的 machine_goods / machine_channel（普通单商品货道），
+     * 若 machine_goods_currency_price / machine_channel_currency_price 中缺少对应
+     * 币种（如 HKD）三价记录，则按本次导入后核心商品库中该币种的三价新增；
+     * 已存在的记录不更新，保留设备侧自有维护价，后续由用户在设备商品/货道页面自行维护。
+     * 必须在调用方开启的事务内执行，本方法不自行启停事务。
+     *
+     * @param int   $gId
+     * @param array $currencyPrices 键为币种编码、值为三价数组（导入文档本次携带的币种）
+     * @param int   $operatorId
+     * @return void
+     */
+    protected function ensureMissingMachineCurrencyPriceRows($gId, array $currencyPrices, $operatorId = 0)
+    {
+        $gId = intval($gId);
+        if ($gId <= 0 || !$currencyPrices) {
+            return;
+        }
+        $codes = [];
+        foreach ($currencyPrices as $currencyCode => $triple) {
+            if ($currencyCode === 'CNY' || !is_array($triple)) {
+                // CNY 行在设备商品/货道建立时已默认落库，这里只需补齐导入携带的其它币种（如 HKD）
+                continue;
+            }
+            try {
+                $codes[CurrencyPriceSupport::normalizeCurrencyCode($currencyCode)] = true;
+            } catch (\InvalidArgumentException $e) {
+                // 忽略非法的币种编码
+            }
+        }
+        if (!$codes) {
+            return;
+        }
+        // 直接读落库后的核心币种三价，保证与 goods_currency_price 完全一致（含已有行缺字段合并后的值）
+        $coreRows = Db::name('goods_currency_price')
+            ->where('g_id', $gId)
+            ->whereIn('currency_code', array_keys($codes))
+            ->lock(true)
+            ->select()
+            ->toArray();
+        $priceByCode = [];
+        foreach ($coreRows as $row) {
+            try {
+                $priceByCode[$row['currency_code']] = CurrencyPriceSupport::normalizePriceRow($row);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+        }
+        $operatorId = intval($operatorId);
+        foreach ($priceByCode as $currencyCode => $price) {
+            $this->fillMissingMachineGoodsCurrencyPriceRows($gId, $currencyCode, $price, $operatorId);
+            $this->fillMissingMachineChannelCurrencyPriceRows($gId, $currencyCode, $price, $operatorId);
+        }
+    }
+
+    /**
+     * 给绑定指定商品（g_id）的设备商品补齐缺失的币种三价事实行。
+     * @param int    $gId
+     * @param string $currencyCode
+     * @param array  $price
+     * @param int    $operatorId
+     * @return void
+     */
+    protected function fillMissingMachineGoodsCurrencyPriceRows($gId, $currencyCode, array $price, $operatorId)
+    {
+        $mgRows = Db::name('machine_goods')
+            ->where('g_id', $gId)
+            ->field('mg_id,m_id,g_id')
+            ->select()
+            ->toArray();
+        if (!$mgRows) {
+            return;
+        }
+        $mgIds = array_values(array_unique(array_map('intval', array_column($mgRows, 'mg_id'))));
+        $existRows = Db::name('machine_goods_currency_price')
+            ->whereIn('mg_id', $mgIds)
+            ->where('currency_code', $currencyCode)
+            ->lock(true)
+            ->select()
+            ->toArray();
+        $existIds = [];
+        foreach ($existRows as $row) {
+            $existIds[intval($row['mg_id'])] = true;
+        }
+        $insertRows = [];
+        foreach ($mgRows as $mg) {
+            $mgId = intval($mg['mg_id']);
+            if (isset($existIds[$mgId])) {
+                continue;
+            }
+            $insertRows[] = array_merge($price, [
+                'mg_id' => $mgId,
+                'm_id' => intval($mg['m_id']),
+                'g_id' => intval($mg['g_id']),
+                'currency_code' => $currencyCode,
+                'creator' => $operatorId,
+                'update_id' => $operatorId,
+            ]);
+        }
+        if ($insertRows) {
+            Db::name('machine_goods_currency_price')->insertAll($insertRows);
+            actionLog([
+                'g_id' => $gId,
+                'currency_code' => $currencyCode,
+                'insert_count' => count($insertRows),
+            ], '导入补齐设备商品币种价缺失记录', 'ensureMissingMachineCurrencyPriceRows');
+        }
+    }
+
+    /**
+     * 给绑定指定商品（g_id）的普通单商品货道补齐缺失的币种三价事实行。
+     * 仅处理 g_id>0、mg_id>0、非单货道多商品且无多商品批次数据的货道。
+     * @param int    $gId
+     * @param string $currencyCode
+     * @param array  $price
+     * @param int    $operatorId
+     * @return void
+     */
+    protected function fillMissingMachineChannelCurrencyPriceRows($gId, $currencyCode, array $price, $operatorId)
+    {
+        $mcRows = Db::name('machine_channel')
+            ->where('g_id', $gId)
+            ->where('mg_id', '>', 0)
+            ->whereRaw('IFNULL(is_multi_goods, 2) <> 1')
+            ->field('mc_id,m_id,mg_id,g_id')
+            ->select()
+            ->toArray();
+        if (!$mcRows) {
+            return;
+        }
+        $mcIds = array_values(array_unique(array_map('intval', array_column($mcRows, 'mc_id'))));
+        // 存在多商品批次数据的货道本期不落单商品币种价，与同步接口口径保持一致
+        $hasBatch = [];
+        $batchIds = Db::name('channel_goods_batch')->whereIn('mc_id', $mcIds)->column('mc_id');
+        foreach ($batchIds as $id) {
+            $hasBatch[intval($id)] = true;
+        }
+        $existRows = Db::name('machine_channel_currency_price')
+            ->whereIn('mc_id', $mcIds)
+            ->where('currency_code', $currencyCode)
+            ->lock(true)
+            ->select()
+            ->toArray();
+        $existIds = [];
+        foreach ($existRows as $row) {
+            $existIds[intval($row['mc_id'])] = true;
+        }
+        $insertRows = [];
+        foreach ($mcRows as $mc) {
+            $mcId = intval($mc['mc_id']);
+            if (isset($hasBatch[$mcId]) || isset($existIds[$mcId])) {
+                continue;
+            }
+            $insertRows[] = array_merge($price, [
+                'mc_id' => $mcId,
+                'm_id' => intval($mc['m_id']),
+                'mg_id' => intval($mc['mg_id']),
+                'g_id' => intval($mc['g_id']),
+                'currency_code' => $currencyCode,
+                'creator' => $operatorId,
+                'update_id' => $operatorId,
+            ]);
+        }
+        if ($insertRows) {
+            Db::name('machine_channel_currency_price')->insertAll($insertRows);
+            actionLog([
+                'g_id' => $gId,
+                'currency_code' => $currencyCode,
+                'insert_count' => count($insertRows),
+            ], '导入补齐货道币种价缺失记录', 'ensureMissingMachineCurrencyPriceRows');
+        }
     }
 
     /**
