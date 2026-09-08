@@ -1155,8 +1155,9 @@ class GoodsClient extends ManagementClient
     }
 
     /**
-     * 给绑定指定商品（g_id）的普通单商品货道补齐缺失的币种三价事实行。
-     * 仅处理 g_id>0、mg_id>0、非单货道多商品且无多商品批次数据的货道。
+     * 给绑定指定商品（g_id）的普通货道补齐缺失的币种三价事实行。
+     * 仅排除真正开启单货道多商品（is_multi_goods=1）的货道；
+     * 不因 channel_goods_batch 存在历史/补货批次记录而整批跳过（否则会把带批次记录的普通货道漏掉）。
      * @param int    $gId
      * @param string $currencyCode
      * @param array  $price
@@ -1167,7 +1168,6 @@ class GoodsClient extends ManagementClient
     {
         $mcRows = Db::name('machine_channel')
             ->where('g_id', $gId)
-            ->where('mg_id', '>', 0)
             ->whereRaw('IFNULL(is_multi_goods, 2) <> 1')
             ->field('mc_id,m_id,mg_id,g_id')
             ->select()
@@ -1176,12 +1176,6 @@ class GoodsClient extends ManagementClient
             return;
         }
         $mcIds = array_values(array_unique(array_map('intval', array_column($mcRows, 'mc_id'))));
-        // 存在多商品批次数据的货道本期不落单商品币种价，与同步接口口径保持一致
-        $hasBatch = [];
-        $batchIds = Db::name('channel_goods_batch')->whereIn('mc_id', $mcIds)->column('mc_id');
-        foreach ($batchIds as $id) {
-            $hasBatch[intval($id)] = true;
-        }
         $existRows = Db::name('machine_channel_currency_price')
             ->whereIn('mc_id', $mcIds)
             ->where('currency_code', $currencyCode)
@@ -1195,7 +1189,7 @@ class GoodsClient extends ManagementClient
         $insertRows = [];
         foreach ($mcRows as $mc) {
             $mcId = intval($mc['mc_id']);
-            if (isset($hasBatch[$mcId]) || isset($existIds[$mcId])) {
+            if (isset($existIds[$mcId])) {
                 continue;
             }
             $insertRows[] = array_merge($price, [
