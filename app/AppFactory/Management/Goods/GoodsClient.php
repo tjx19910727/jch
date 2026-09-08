@@ -843,7 +843,7 @@ class GoodsClient extends ManagementClient
     }
 
     /**
-     * 导入Excel有商品ID则更新，目前只更新（bar_code）
+     * 导入Excel有商品ID则更新商品名称、商品图片和条形码
      * @param $data
      * @return array|string
      */
@@ -889,7 +889,7 @@ class GoodsClient extends ManagementClient
                                 $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
                                 if ($currencyPrices) {
                                     (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
-                                    // 核心价落库后补齐设备侧缺失的币种三价事实行（如 HKD），仅缺失时新增，已存在不覆盖
+                                    // 核心价落库后补齐设备侧缺失的币种三价事实行（如人民币/港币），仅缺失时新增，已存在不覆盖
                                     $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0));
                                 }
                                 Db::commit();
@@ -1048,7 +1048,7 @@ class GoodsClient extends ManagementClient
      *
      * 遍历绑定本商品（g_id）的 machine_goods / machine_channel（普通单商品货道），
      * 若 machine_goods_currency_price / machine_channel_currency_price 中缺少对应
-     * 币种（如 HKD）三价记录，则按本次导入后核心商品库中该币种的三价新增；
+     * 币种（如人民币 CNY / 港币 HKD）三价记录，则按本次导入后核心商品库中该币种的三价新增；
      * 已存在的记录不更新，保留设备侧自有维护价，后续由用户在设备商品/货道页面自行维护。
      * 必须在调用方开启的事务内执行，本方法不自行启停事务。
      *
@@ -1065,11 +1065,11 @@ class GoodsClient extends ManagementClient
         }
         $codes = [];
         foreach ($currencyPrices as $currencyCode => $triple) {
-            if ($currencyCode === 'CNY' || !is_array($triple)) {
-                // CNY 行在设备商品/货道建立时已默认落库，这里只需补齐导入携带的其它币种（如 HKD）
+            if (!is_array($triple)) {
                 continue;
             }
             try {
+                // 导入文档携带的人民币(CNY)/港币(HKD)等币种均纳入：缺失即新增、已存在不覆盖
                 $codes[CurrencyPriceSupport::normalizeCurrencyCode($currencyCode)] = true;
             } catch (\InvalidArgumentException $e) {
                 // 忽略非法的币种编码
@@ -1269,8 +1269,7 @@ class GoodsClient extends ManagementClient
             '" WHEN 2 THEN "' . $this->lang("export.status2") .
             '" END) status,
             model,bar_code,sku,sku2,pic,manufacturer,service_phone,length,width,height';
-        $list = $this->getGoodsList($where, 0,
-            $field);
+        $list = $this->getGoodsList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
