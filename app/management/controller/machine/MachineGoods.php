@@ -141,8 +141,10 @@ class MachineGoods extends Common
     }
 
     /**
-     * 设备商品库同步核心商品币种价格（支持一次多个币种，含 HKD）。
-     * 请求参数：m_id + mg_ids[] + currency_codes[]。
+     * 设备商品同步核心商品当前币种价格。
+     * 请求参数：m_id；传 mg_ids（或 mg_id）只同步选中的设备商品及其绑定货道（严格整批，上限200条）；
+     * 不传 mg_ids/mg_id 时同步该设备 machine_goods 全部记录及 machine_channel 中该设备的全部记录
+     * （同一事务内缺价/绑定异常等记录跳过并写入返回的 skipped 明细）。
      * @return array|\think\response\Json
      */
     public function synchronizationGoods()

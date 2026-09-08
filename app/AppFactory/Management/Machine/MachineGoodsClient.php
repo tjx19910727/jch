@@ -372,8 +372,10 @@ class MachineGoodsClient extends ManagementClient
     }
 
     /**
-     * 按设备当前币种自动同步：把核心商品当前币种三价同步到选中的设备商品及其在本机的普通货道。
-     * 请求参数：m_id + mg_ids[]（不再接收币种参数，币种以 machine_config.currency_code 为准，空则按 CNY）。
+     * 按设备当前币种自动同步：把核心商品当前币种三价同步到设备商品及其在本机的普通货道。
+     * 请求参数：m_id。传 mg_ids（或 mg_id）时只处理选中记录（严格整批，单次上限 200 条）；
+     * 未传 mg_ids/mg_id 时处理该设备 machine_goods 全部记录及 machine_channel 中该设备（m_id）的全部记录，
+     * 缺价/绑定异常等跳过并写入结果 skipped 明细（币种以 machine_config.currency_code 为准，空则按 CNY）。
      * @param array $postData
      * @return array|\think\response\Json
      */

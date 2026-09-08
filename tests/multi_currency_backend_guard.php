@@ -162,6 +162,10 @@ $checks['core edit propagation service exists'] = strpos($currencyPriceService, 
 $checks['core edit propagation only pushes changed currencies'] = strpos($goodsClient, 'protected function changedCorePrices') !== false
     && strpos($goodsClient, 'notifySelectedDeviceSnapshots') !== false;
 
+$checks['machine goods sync empty mg ids means full machine scope'] = strpos($currencyPriceService, '$fullMode = empty($mgIds);') !== false;
+$checks['machine goods sync full mode collects skipped detail'] = strpos($currencyPriceService, '$skipped[] = ') !== false;
+$checks['machine goods sync full mode has skip reason samples'] = strpos($currencyPriceService, '货道未绑定有效设备商品或所属设备商品未同步') !== false;
+$checks['machine goods sync explicit selection keeps strict semantics'] = strpos($currencyPriceService, '只同步选中的设备商品及其绑定货道') !== false;
 $failed = [];
 foreach ($checks as $name => $passed) {
     echo sprintf("[%s] %s\n", $passed ? 'PASS' : 'FAIL', $name);
