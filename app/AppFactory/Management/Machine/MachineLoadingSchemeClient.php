@@ -98,6 +98,8 @@ class MachineLoadingSchemeClient extends ManagementClient
                 return $this->templateApiError(500, '已保存方案快照解析失败');
             }
 
+            $snapshot = $this->appendGoodsImages($snapshot);
+
             return $this->templateApiSuccess([
                 'scheme_id' => intval($scheme['scheme_id']),
                 'scheme_code' => (string)$scheme['scheme_code'],
@@ -327,6 +329,50 @@ class MachineLoadingSchemeClient extends ManagementClient
             return $pic;
         }
         return $host . '/' . ltrim($pic, '/');
+    }
+
+    protected function appendGoodsImages(array $snapshot)
+    {
+        if (empty($snapshot['goods_snapshots']) || !is_array($snapshot['goods_snapshots'])) {
+            return $snapshot;
+        }
+
+        $goodsIds = [];
+        foreach ($snapshot['goods_snapshots'] as $goodsSnapshot) {
+            if (!is_array($goodsSnapshot)) {
+                continue;
+            }
+            $goodsId = intval($goodsSnapshot['goods_id'] ?? 0);
+            if ($goodsId > 0) {
+                $goodsIds[$goodsId] = $goodsId;
+            }
+        }
+
+        $imageMap = [];
+        if ($goodsIds) {
+            $query = Db::name('goods')
+                ->whereIn('g_id', array_values($goodsIds));
+            $this->applyGoodsOrganizationScope($query);
+            $rows = $query->field('g_id,pic')->select();
+            foreach ($rows as $goods) {
+                $imageMap[intval($goods['g_id'])] = $this->formatImageUrl($goods['pic'] ?? '');
+            }
+        }
+
+        foreach ($snapshot['goods_snapshots'] as &$goodsSnapshot) {
+            if (!is_array($goodsSnapshot)) {
+                continue;
+            }
+            $goodsId = intval($goodsSnapshot['goods_id'] ?? 0);
+            $snapshotImage = $goodsSnapshot['image_url'] ?? ($goodsSnapshot['pic'] ?? '');
+            $currentImage = $imageMap[$goodsId] ?? '';
+            $goodsSnapshot['image_url'] = $currentImage !== ''
+                ? $currentImage
+                : $this->formatImageUrl($snapshotImage);
+        }
+        unset($goodsSnapshot);
+
+        return $snapshot;
     }
 
     protected function mapPlacementType($placementType)
