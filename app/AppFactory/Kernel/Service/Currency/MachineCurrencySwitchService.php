@@ -54,7 +54,7 @@ class MachineCurrencySwitchService
     /**
      * 汇总切币阻断项。缺价、串价、未完成订单或设备能力不足时均不允许进入切换事务。
      */
-    public function readiness($mId, $targetCurrencyCode)
+    public function readiness($mId, $targetCurrencyCode, $ignoreDeviceReport = false)
     {
         $mId = intval($mId);
         $targetCurrencyCode = $this->catalog->normalizeCode($targetCurrencyCode);
@@ -90,20 +90,23 @@ class MachineCurrencySwitchService
         if (intval($machine['status']) !== 1 || (intval($machine['online']) !== 1 && intval($machine['http_online']) !== 1)) {
             $this->addBlocker($result, 'MACHINE_OFFLINE', '设备不在线，不能切换币种');
         }
-        if (!empty($machine['current_status']) && $machine['current_status'] !== 'normal') {
-            $this->addBlocker($result, 'MACHINE_BUSY', '设备当前不处于空闲状态');
-        }
-
-        $state = cache($this->stateCacheKey($mId));
-        if (!is_array($state) || time() - intval(isset($state['received_at']) ? $state['received_at'] : 0) > $this->stateTtl) {
-            $this->addBlocker($result, 'DEVICE_STATE_STALE', '设备未上报有效期内的币种切换状态');
-        } else {
-            $result['device_state'] = $state;
-            if (intval($state['can_switch_currency']) !== 1 || intval($state['cart_count']) > 0 || intval($state['pending_order_count']) > 0) {
-                $this->addBlocker($result, 'DEVICE_LOCAL_BUSY', '设备存在购物车或本地未完成订单');
+        // 后台切换（ignoreDeviceReport=true）不依赖设备现场上报；设备自主切换仍要求 TTL 内的现场状态。
+        if (!$ignoreDeviceReport) {
+            if (!empty($machine['current_status']) && $machine['current_status'] !== 'normal') {
+                $this->addBlocker($result, 'MACHINE_BUSY', '设备当前不处于空闲状态');
             }
-            if (!in_array($targetCurrencyCode, (array)$state['supported_currency_codes'], true)) {
-                $this->addBlocker($result, 'DEVICE_CURRENCY_UNSUPPORTED', '当前设备版本未声明支持目标币种');
+
+            $state = cache($this->stateCacheKey($mId));
+            if (!is_array($state) || time() - intval(isset($state['received_at']) ? $state['received_at'] : 0) > $this->stateTtl) {
+                $this->addBlocker($result, 'DEVICE_STATE_STALE', '设备未上报有效期内的币种切换状态');
+            } else {
+                $result['device_state'] = $state;
+                if (intval($state['can_switch_currency']) !== 1 || intval($state['cart_count']) > 0 || intval($state['pending_order_count']) > 0) {
+                    $this->addBlocker($result, 'DEVICE_LOCAL_BUSY', '设备存在购物车或本地未完成订单');
+                }
+                if (!in_array($targetCurrencyCode, (array)$state['supported_currency_codes'], true)) {
+                    $this->addBlocker($result, 'DEVICE_CURRENCY_UNSUPPORTED', '当前设备版本未声明支持目标币种');
+                }
             }
         }
 
@@ -158,11 +161,11 @@ class MachineCurrencySwitchService
     /**
      * 在单设备事务中锁定配置、设备商品和货道，并把目标币种事实价格投影为活跃售卖快照。
      */
-    public function switchCurrency($mId, $targetCurrencyCode)
+    public function switchCurrency($mId, $targetCurrencyCode, $ignoreDeviceReport = false)
     {
         $mId = intval($mId);
         $targetCurrencyCode = $this->catalog->normalizeCode($targetCurrencyCode);
-        return Db::transaction(function () use ($mId, $targetCurrencyCode) {
+        return Db::transaction(function () use ($mId, $targetCurrencyCode, $ignoreDeviceReport) {
             $config = Db::name('machine_config')->where('m_id', $mId)->lock(true)->find();
             if (!$config) {
                 throw new \InvalidArgumentException('设备配置不存在');
@@ -179,7 +182,7 @@ class MachineCurrencySwitchService
                 ];
             }
 
-            $readiness = $this->readiness($mId, $targetCurrencyCode);
+            $readiness = $this->readiness($mId, $targetCurrencyCode, $ignoreDeviceReport);
             if (!$readiness['ready']) {
                 return ['success' => 0, 'readiness' => $readiness];
             }
