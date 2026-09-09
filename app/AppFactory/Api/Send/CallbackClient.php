@@ -210,6 +210,8 @@ class CallbackClient extends ApiBaseClient
         if (isset($result['message']) && is_string($result['message']) && trim($result['message']) === 'success') return true;
         if (isset($result['result']) && is_string($result['result']) && trim($result['result']) === 'success') return true;
         if (isset($result['success']) && $result['success'] === true) return true;
+        // 兼容微程 msvc-shop syncGoods 等 {status:{success:true,...}} 响应结构
+        if (isset($result['status']) && is_array($result['status']) && !empty($result['status']['success'])) return true;
 
         return false;
     }

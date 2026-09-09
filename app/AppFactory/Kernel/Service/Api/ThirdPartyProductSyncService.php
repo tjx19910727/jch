@@ -22,12 +22,51 @@ class ThirdPartyProductSyncService
 
     public function __construct()
     {
-        $this->config = (array)config('third_party_sync');
+        $this->config = $this->resolveConfig();
         $this->snapshotService = new ThirdPartyProductSnapshotService();
         $this->payloadBuilder = new ThirdPartyProductSyncPayloadBuilder(
-            $this->config['app_id'] ?? '',
             $this->config['secret'] ?? ''
         );
+    }
+
+    /**
+     * 解析配置（两级）：
+     * 1) config/third_party_sync.php —— 随代码版本携带的默认配置；
+     * 2) runtime/third_party_sync.local.php —— 服务器可写目录中的覆盖文件，
+     *    当 config 目录在服务器上不可读/未更新时作为兜底，文件不存在则忽略。
+     * 两级均不可用时返回空配置（enabled=false，安全禁用，绝不误发）。
+     */
+    private function resolveConfig(): array
+    {
+        $main = (array)config('third_party_sync');
+        $local = $this->loadLocalOverride();
+        $cfg = array_merge($main, $local);
+
+        // 测试/生产接收服务器：与微程支付一致，以 env("CglPay.is_test") 判定。
+        // 显式配置（config 顶层或 runtime local）优先，未配置时按分支选择。
+        $branchUrls = (array)($cfg['urls'][env('CglPay.is_test') ? 'test' : 'prod'] ?? []);
+        foreach (['core_goods_url', 'machine_inventory_url'] as $key) {
+            if (empty($cfg[$key])) {
+                $cfg[$key] = (string)($branchUrls[$key] ?? '');
+            }
+        }
+        unset($cfg['urls']);
+
+        return $cfg;
+    }
+
+    private function loadLocalOverride(): array
+    {
+        $file = root_path() . 'runtime/third_party_sync.local.php';
+        if (!is_file($file)) {
+            return [];
+        }
+        try {
+            $override = @include $file;
+            return is_array($override) ? $override : [];
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     /**
@@ -140,13 +179,10 @@ class ThirdPartyProductSyncService
             } elseif ($syncType === self::TYPE_CORE_GOODS) {
                 $goods = $this->snapshotService->getCoreGoodsSnapshot($aggregateId);
                 $operation = $dirty['operation'] === 'delete' || !$goods ? 'delete' : 'upsert';
-                $payload = $this->payloadBuilder->buildCoreGoods(
+                $payload = $this->payloadBuilder->buildSyncGoods(
                     $aggregateId,
                     $goods,
-                    $operation,
-                    $version,
-                    $eventId,
-                    $timestamp
+                    $operation
                 );
                 $callbackType = self::CALLBACK_CORE_GOODS;
                 $notifyUrl = (string)($this->config['core_goods_url'] ?? '');
@@ -159,7 +195,14 @@ class ThirdPartyProductSyncService
             }
 
             if ($notifyUrl === '') {
-                throw new \RuntimeException('第三方商品同步地址未配置：' . $syncType);
+                // 该类型接收地址未配置（如 syncMachineProduct 报文待文档确认）。
+                // 直接推进水位，避免残留记录长期占用扫描；
+                // 配置完成后可用 think third_party_sync machine|goods all 全量补发。
+                Db::name('third_party_sync_dirty')->where('id', $id)->update([
+                    'dispatched_version' => $version,
+                    'update_time' => time(),
+                ]);
+                return 'skipped';
             }
             $message = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             if ($message === false) {
@@ -213,11 +256,8 @@ class ThirdPartyProductSyncService
         if (empty($this->config['enabled'])) {
             return '第三方商品同步未启用';
         }
-        if (empty($this->config['app_id']) || empty($this->config['secret'])) {
-            return '第三方商品同步 app_id 或 secret 未配置';
-        }
-        if (empty($this->config['machine_inventory_url']) || empty($this->config['core_goods_url'])) {
-            return '第三方商品同步接收地址未完整配置';
+        if (empty($this->config['secret'])) {
+            return '第三方商品同步签名密钥（apisecret）未配置';
         }
         return '';
     }
