@@ -563,7 +563,7 @@ class Machine extends Common
         $machine_id = input("machine_id");
         $light = input("light");
         if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
-        if (!$light) return returnValidate(lang("VMachine.light_require"));
+        if ($light === null || $light === '') return returnValidate(lang("VMachine.light_require"));
         if ($light%10 != 0) return returnValidate(lang("VMachine.light_multiple"));
         $otherData  = ["value" => $light];
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id],"light",$otherData);
