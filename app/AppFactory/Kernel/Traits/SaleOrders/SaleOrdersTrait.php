@@ -318,7 +318,8 @@ trait SaleOrdersTrait
                 ->column('name', 'machine_level');
         }
 
-        return $data->each(function ($item) use ($detailsMap, $hotelMap, $nightlyMap, $unclaimedMap, $machineLevelByMachine, $machineLevelDescMap) {
+        $now = time();
+        return $data->each(function ($item) use ($detailsMap, $hotelMap, $nightlyMap, $unclaimedMap, $machineLevelByMachine, $machineLevelDescMap, $now) {
             $orderId = intval($item['order_id']);
             $item['details'] = $detailsMap[$orderId] ?? [];
             $machineLevel = intval($item['machine_level'] ?? 0);
@@ -340,6 +341,15 @@ trait SaleOrdersTrait
             if (intval($item['out_status'] ?? 0) === 6 && isset($unclaimedMap[$orderId])) {
                 $item['unclaimed_status'] = $unclaimedMap[$orderId];
             }
+            $payTime = intval($item['pay_time'] ?? 0);
+            $item['show_manual_button'] = in_array(intval($item['out_status'] ?? 0), [2, 3, 5, 6], true)
+                && intval($item['http_out_status'] ?? 0) !== 3
+                && in_array((string)($item['pay_status'] ?? ''), ['3', '7'], true)
+                && intval($item['refund_status'] ?? 0) === 1
+                && $payTime > 0
+                && ($now - $payTime) >= 300
+                ? 1
+                : 2;
             unset($item['m_id']);
             return $item;
         });
