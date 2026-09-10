@@ -123,6 +123,8 @@ class Goods extends Common
     public function add()
     {
         $postData = input();
+        if (isset($postData['bar_code'])) $postData['bar_code'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['bar_code']);
+        if (isset($postData['sku'])) $postData['sku'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['sku']);
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
         try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->addG($postData);
@@ -136,6 +138,8 @@ class Goods extends Common
     public function update()
     {
         $postData = input();
+        if (isset($postData['bar_code'])) $postData['bar_code'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['bar_code']);
+        if (isset($postData['sku'])) $postData['sku'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['sku']);
         //'商品库存不允许通过商品编辑接口修改'
         if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
         if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);

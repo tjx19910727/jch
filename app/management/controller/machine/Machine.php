@@ -531,7 +531,7 @@ class Machine extends Common
         $machine_id = input("machine_id");
         $light = input("light");
         if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
-        if (!$light) return returnValidate(lang("VMachine.light_require"));
+        if ($light === null || $light === '') return returnValidate(lang("VMachine.light_require"));
         if ($light%10 != 0) return returnValidate(lang("VMachine.light_multiple"));
         $otherData  = ["value" => $light];
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id],"light",$otherData);
@@ -934,9 +934,9 @@ class Machine extends Common
             if ((string)$order['machine_id'] !== $machineId) {
                 return returnValidate('子单不属于当前设备');
             }
-            if (intval($order['out_status']) !== 5) {
-                return returnValidate('仅出货失败订单允许继续出货或直接回收');
-            }
+            // if (intval($order['out_status']) !== 5) {
+            //     return returnValidate('仅出货失败订单允许继续出货或直接回收');
+            // }
             if (intval($detail['quantity']) !== 1
                 || intval($detail['success_quantity']) !== 1
                 || intval($detail['fail_quantity']) !== 0) {

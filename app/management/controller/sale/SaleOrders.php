@@ -537,7 +537,10 @@ class SaleOrders extends Common
             unset($postData['m_id']);
         }
         if (isset($postData['group'])) {
-            $group = $postData['group'];
+            $group = strtolower(trim((string)$postData['group']));
+            if (!in_array($group, ['', 'day', 'month', 'quarter', 'year'], true)) {
+                return returnState(100, 'group only supports day, month, quarter, year');
+            }
             unset($postData['group']);
         }
         if (isset($postData['order'])) {

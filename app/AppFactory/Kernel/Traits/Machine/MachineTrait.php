@@ -1721,6 +1721,13 @@ trait MachineTrait
      */
     protected function resendUpdateVersionPlanWhenOnline()
     {
+
+        if (!isset($this->message)
+            || !is_array($this->message)
+            || (($this->message['msgType'] ?? '') !== 'heartbeat')) {
+            return;
+        }
+
         try {
             $now = time();
             $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
