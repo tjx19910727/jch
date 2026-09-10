@@ -893,6 +893,7 @@ class SaleOrdersClient extends ManagementClient
     public function getReportList($where, $pageNum, $order = "", $group = "")
     {
         $field = "countDate,";
+        $order = 'create_date desc';
         if ($group) {
             // 日
             if ($group == "day") {
@@ -903,6 +904,18 @@ class SaleOrdersClient extends ManagementClient
             if ($group == "month") {
                 $field = "DATE_FORMAT(countDate ,'%Y-%m') countDate,";
                 $group = " DATE_FORMAT(countDate ,'%Y-%m')";
+            }
+            // 季度
+            if ($group == "quarter") {
+                $field = "CONCAT(
+                    YEAR(countDate), '-',
+                    LPAD((QUARTER(countDate) - 1) * 3 + 1, 2, '0'),
+                    '~',
+                    YEAR(countDate), '-',
+                    LPAD(QUARTER(countDate) * 3, 2, '0')
+                ) countDate,";
+                $group = "YEAR(countDate), QUARTER(countDate)";
+                $order = 'countDate desc';
             }
             // 年
             if ($group == "year") {
@@ -920,7 +933,6 @@ class SaleOrdersClient extends ManagementClient
         SUM(order_num) order_num,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
-        $order = 'create_date desc';
         $data = $this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group);
         return $this->rQ($data);
     }
