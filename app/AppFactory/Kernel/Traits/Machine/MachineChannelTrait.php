@@ -17,11 +17,13 @@ use app\AppFactory\Kernel\Model\Mall\MallModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Support\Validate\Machine\VChannel;
 use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
+use app\AppFactory\Kernel\Traits\ThirdParty\ThirdPartySyncReportTrait;
 use think\facade\Db;
 
 trait MachineChannelTrait
 {
     use MallMachineTrait;
+    use ThirdPartySyncReportTrait;
 
     /**
      * 增加指定字段数值
@@ -32,7 +34,12 @@ trait MachineChannelTrait
      */
     public function setMachineChannelInc($where, $field, $inc = 1)
     {
-        return MachineChannelModel::setInc($where, $field, $inc);
+        // 设备盘点/补货等经 setInc 改库存不刷新 update_time（C 层扫描不到），
+        // 必须在此实时上报（全变化口径）。
+        $machineIds = $this->collectChannelMachineIdsForSync([], $where);
+        $result = MachineChannelModel::setInc($where, $field, $inc);
+        $this->reportMachineIdsChangedForSync($machineIds);
+        return $result;
     }
 
     /**
@@ -44,7 +51,10 @@ trait MachineChannelTrait
      */
     public function setMachineChannelDec($where, $field, $dec = 1)
     {
-        return MachineChannelModel::setDec($where, $field, $dec);
+        $machineIds = $this->collectChannelMachineIdsForSync([], $where);
+        $result = MachineChannelModel::setDec($where, $field, $dec);
+        $this->reportMachineIdsChangedForSync($machineIds);
+        return $result;
     }
 
     public function getMachineChannelCount($where)
@@ -127,18 +137,69 @@ trait MachineChannelTrait
     public function addMachineChannel($insert)
     {
         $data = MachineChannelModel::create($insert);
+        $this->reportMachineChangedToThirdParty($insert['machine_id'] ?? ($data->machine_id ?? ''));
         return $data->mc_id;
     }
 
     public function addMachineMoreChannel($insert)
     {
         $mc = new MachineChannelModel();
-        return $mc->saveAll($insert);
+        $result = $mc->saveAll($insert);
+        if (is_array($insert)) {
+            $machineIds = [];
+            foreach ($insert as $row) {
+                if (is_array($row) && isset($row['machine_id']) && $row['machine_id'] !== '') {
+                    $machineIds[(string)$row['machine_id']] = 1;
+                }
+            }
+            foreach (array_keys($machineIds) as $machineId) {
+                $this->reportMachineChangedToThirdParty($machineId);
+            }
+        }
+        return $result;
     }
 
     public function updateMachineChannel($update, $where = [], $field = [])
     {
-        return MachineChannelModel::update($update, $where, $field);
+        $machineIds = $this->collectChannelMachineIdsForSync($update, $where);
+        $result = MachineChannelModel::update($update, $where, $field);
+        $machineIds = array_merge($machineIds, $this->collectChannelMachineIdsForSync($update, $where));
+        $this->reportMachineIdsChangedForSync($machineIds);
+        return $result;
+    }
+
+    /**
+     * 解析本次写操作影响的 machine_id 集合（update/del 收口使用）。
+     * where 为空时按 update 主键 mc_id 兜底；查询失败不阻断业务。
+     */
+    protected function collectChannelMachineIdsForSync($update = [], $where = [])
+    {
+        $whereForQuery = $where;
+        if (!$whereForQuery && is_array($update) && isset($update['mc_id'])) {
+            $whereForQuery = ['mc_id' => intval($update['mc_id'])];
+        }
+        if (!$whereForQuery) {
+            return [];
+        }
+        try {
+            $machineIds = MachineChannelModel::getColumn($whereForQuery, 'machine_id');
+        } catch (\Throwable $e) {
+            return [];
+        }
+        if (!is_array($machineIds)) {
+            $machineIds = [];
+        }
+        return array_values(array_unique(array_filter(array_map('strval', $machineIds))));
+    }
+
+    /**
+     * 去重上报受影响的设备（经 ThirdPartySyncReportTrait，自动过滤非核心主体）。
+     */
+    protected function reportMachineIdsChangedForSync(array $machineIds)
+    {
+        foreach (array_values(array_unique($machineIds)) as $machineId) {
+            $this->reportMachineChangedToThirdParty($machineId);
+        }
     }
 
     /**
@@ -162,7 +223,9 @@ trait MachineChannelTrait
 
     public function delMachineChannel($where)
     {
+        $machineIds = $this->collectChannelMachineIdsForSync([], $where);
         $result = MachineChannelModel::whereDel($where);
+        $this->reportMachineIdsChangedForSync($machineIds);
         return $result;
     }
 

@@ -13,8 +13,8 @@ return [
 
     // 最终生效地址（运行时由 Service 按 env("CglPay.is_test") 从 urls.test / urls.prod 选择；
     // 若在这里或 runtime local 显式填写则优先使用）。
-    'core_goods_url' => '',
-    'machine_inventory_url' => '',
+    // 'core_goods_url' => '',
+    // 'machine_inventory_url' => '',
 
     // 测试 / 生产接收服务器接口（环境由 env("CglPay.is_test") 判定）：
     //   测试环境 https://test-admin-weicheng.jchtechnologies.com/msvc-shop
@@ -25,11 +25,11 @@ return [
             'core_goods_url' => 'https://test-admin-weicheng.jchtechnologies.com/msvc-shop/v1/jiachaohui/syncGoods',
             // 设备商品 syncMachineProduct：POST {域名}/v1/jiachaohui/syncMachineProduct
             // 报文与签名待第三方文档确认后再启用，避免发送不兼容请求。
-            'machine_inventory_url' => '',
+            'machine_inventory_url' => 'https://test-admin-weicheng.jchtechnologies.com/msvc-shop/v1/jiachaohui/syncMachineProduct',
         ],
         'prod' => [
             'core_goods_url' => 'https://admin-weicheng.jchtechnologies.com/msvc-shop/v1/jiachaohui/syncGoods',
-            'machine_inventory_url' => '',
+            'machine_inventory_url' => 'https://admin-weicheng.jchtechnologies.com/msvc-shop/v1/jiachaohui/syncMachineProduct',
         ],
     ],
 

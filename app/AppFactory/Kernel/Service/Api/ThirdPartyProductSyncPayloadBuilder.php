@@ -3,12 +3,13 @@
 namespace app\AppFactory\Kernel\Service\Api;
 
 /**
- * 构造第三方商品同步请求。
+ * 构造微程 msvc-shop 同步请求（已按接收方实测口径实现）。
  *
- * - 核心商品：对接微程 msvc-shop「嘉潮汇商品同步推送」syncGoods，
- *   扁平字段 + MD5(apisecret + product_id + apisecret) 签名。
- * - 设备商品：syncMachineProduct 的请求/签名结构待第三方文档确认，
- *   暂保留全量快照信封用于本地联调，接入真实地址前必须按文档替换。
+ * - 核心商品 syncGoods：扁平字段 + MD5(apisecret + product_id + apisecret)
+ * - 设备商品 syncMachineProduct：扁平行级字段（一台售卖机 + 一个商品/货道一条），
+ *   签名 MD5(apisecret + machine_id + product_id + apisecret)
+ *
+ * 说明：设备商品是“明细级”接口，dispatch 时按货道逐条生成 api_callback。
  */
 class ThirdPartyProductSyncPayloadBuilder
 {
@@ -22,8 +23,8 @@ class ThirdPartyProductSyncPayloadBuilder
     /**
      * syncGoods 请求体（扁平字段，sign 为 MD5）。
      *
-     * 文档 syncGoods 只做“修改”，没有删除语义；本地删除商品时
-     * 以 status=0 表达下架，需与接收方确认。
+     * 文档 syncGoods 只做“修改”，没有删除语义；本地删除/下架商品时
+     * 以 status=0 表达（已与接收方确认：后台删除视为下架推送）。
      */
     public function buildSyncGoods($productId, array $goods, $operation = 'upsert')
     {
@@ -69,61 +70,70 @@ class ThirdPartyProductSyncPayloadBuilder
     }
 
     /**
-     * 设备商品完整快照信封（syncMachineProduct 文档确认前的过渡实现）。
+     * 设备商品单条明细报文（扁平行级，对接 syncMachineProduct）。
+     *
+     * 字段与签名口径已按接收方实测通过：一台售卖机 + 一个商品（货道）= 一条请求。
+     *
+     * @param array  $item      货道快照（ThirdPartyProductSnapshotService::getMachineInventorySnapshot）
+     * @param string $machineId 微程侧售卖机编号
+     * @return array|null       无有效商品时返回 null（调用方跳过）
      */
-    public function buildMachineInventory($machineId, array $items, $version, $eventId, $timestamp)
+    public function buildMachineProduct(array $item, $machineId)
     {
-        return $this->buildEnvelope('machine_inventory.sync', [
-            'machine_id' => (string)$machineId,
-            'sync_mode' => 'snapshot',
-            'items' => array_values($items),
-        ], $version, $eventId, $timestamp);
+        $machineId = trim((string)$machineId);
+        $productId = (string)intval($item['product_id'] ?? 0);
+        if ($machineId === '' || $productId === '0') {
+            return null;
+        }
+        $stock = intval($item['quantity'] ?? ($item['stock'] ?? 0));
+
+        $body = [
+            'machine_id' => $machineId,
+            'channel_code' => (string)($item['channel_code'] ?? ''),
+            'product_id' => $productId,
+            'out_no' => (string)($item['out_no'] ?? $productId),
+            'g_id' => $productId,
+            'sku' => (string)($item['sku'] ?? ''),
+            'bar_code' => (string)($item['bar_code'] ?? ''),
+            'g_name' => (string)($item['g_name'] ?? ''),
+            'quantity' => $stock,
+            'stock' => $stock,
+            'sale_price' => (string)($item['sale_price'] ?? ''),
+            'market_price' => (string)($item['market_price'] ?? ''),
+            'cost_price' => (string)($item['cost_price'] ?? ''),
+            'status' => (string)($item['status'] ?? ''),
+        ];
+        $body['sign'] = $this->makeMachineProductSign($machineId, $productId);
+
+        return $body;
     }
 
     /**
-     * 信封签名（旧过渡协议的 HMAC-SHA256，待 syncMachineProduct 文档确认后移除）。
+     * 批量构造某台设备的货道明细报文（自动跳过无商品货道）。
+     *
+     * @return array 明细报文列表
      */
-    public function makeSign(array $payload)
+    public function buildMachineProducts($machineId, array $items)
     {
-        unset($payload['sign']);
-        return hash_hmac('sha256', $this->canonicalJson($payload), $this->secret);
+        $payloads = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $payload = $this->buildMachineProduct($item, $machineId);
+            if ($payload !== null) {
+                $payloads[] = $payload;
+            }
+        }
+        return $payloads;
     }
 
-    private function buildEnvelope($eventType, array $data, $version, $eventId, $timestamp)
+    /**
+     * 设备商品签名：MD5(apisecret + machine_id + product_id + apisecret)，32 位小写。
+     */
+    public function makeMachineProductSign($machineId, $productId)
     {
-        $payload = [
-            'event_id' => (string)$eventId,
-            'event_type' => (string)$eventType,
-            'timestamp' => intval($timestamp),
-            'version' => intval($version),
-            'sign_type' => 'HMAC-SHA256',
-            'data' => $data,
-        ];
-        $payload['sign'] = $this->makeSign($payload);
-        return $payload;
-    }
-
-    private function canonicalJson($value)
-    {
-        $value = $this->canonicalize($value);
-        return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    }
-
-    private function canonicalize($value)
-    {
-        if (!is_array($value)) {
-            return $value;
-        }
-
-        // 对象键递归排序以保证双方签名一致；列表保留业务顺序。
-        $isList = $value === [] || array_keys($value) === range(0, count($value) - 1);
-        if (!$isList) {
-            ksort($value, SORT_STRING);
-        }
-        foreach ($value as $key => $item) {
-            $value[$key] = $this->canonicalize($item);
-        }
-        return $value;
+        return md5($this->secret . trim((string)$machineId) . trim((string)$productId) . $this->secret);
     }
 }
 
