@@ -934,9 +934,9 @@ class Machine extends Common
             if ((string)$order['machine_id'] !== $machineId) {
                 return returnValidate('子单不属于当前设备');
             }
-            if (intval($order['out_status']) !== 5) {
-                return returnValidate('仅出货失败订单允许继续出货或直接回收');
-            }
+            // if (intval($order['out_status']) !== 5) {
+            //     return returnValidate('仅出货失败订单允许继续出货或直接回收');
+            // }
             if (intval($detail['quantity']) !== 1
                 || intval($detail['success_quantity']) !== 1
                 || intval($detail['fail_quantity']) !== 0) {
