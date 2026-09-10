@@ -15,13 +15,27 @@ $deletePayload = $builder->buildSyncGoods(
     [],
     'delete'
 );
-$machinePayload = $builder->buildMachineInventory(
-    'M10001',
-    [['product_id' => 1001, 'quantity' => 8]],
-    3,
-    '11111111-2222-3333-4444-555555555555',
-    1788123456
+$machinePayload = $builder->buildMachineProduct(
+    [
+        'mc_id' => 7229,
+        'channel_code' => 'A01',
+        'product_id' => 1001,
+        'sku' => 'SKU001',
+        'bar_code' => 'BAR001',
+        'g_name' => '矿泉水',
+        'quantity' => 8,
+        'sale_price' => '2.50',
+        'market_price' => '3.00',
+        'cost_price' => '1.00',
+        'status' => 1,
+    ],
+    'M10001'
 );
+$machinePayloads = $builder->buildMachineProducts('M10001', [
+    ['channel_code' => 'A01', 'product_id' => 1001, 'quantity' => 8],
+    ['channel_code' => 'A02', 'product_id' => 1002, 'quantity' => 5],
+    ['channel_code' => 'A03', 'product_id' => 0, 'quantity' => 0],
+]);
 
 $checks = [
     'syncGoods 为扁平结构' => !isset($goodsPayload['data'], $goodsPayload['event_type'], $goodsPayload['sign_type']),
@@ -33,11 +47,17 @@ $checks = [
     'syncGoods 签名固定向量正确' => $goodsPayload['sign'] === md5('test-secret' . '1001' . 'test-secret'),
     'syncGoods 签名可复算' => hash_equals($goodsPayload['sign'], $builder->makeSyncGoodsSign(1001)),
     '删除以 status=0 表达下架' => $deletePayload['status'] === '0' && $deletePayload['product_id'] === '1001',
-    '设备事件类型正确' => $machinePayload['event_type'] === 'machine_inventory.sync',
-    '设备使用完整快照模式' => $machinePayload['data']['sync_mode'] === 'snapshot',
-    '设备编号保持字符串' => $machinePayload['data']['machine_id'] === 'M10001',
-    '设备货道列表保持数组' => count($machinePayload['data']['items']) === 1,
-    '设备信封签名可重复计算' => hash_equals($machinePayload['sign'], $builder->makeSign($machinePayload)),
+    '设备报文为扁平行级结构' => !isset($machinePayload['data'], $machinePayload['event_type'], $machinePayload['sign_type']),
+    '设备 machine_id 保持字符串' => $machinePayload['machine_id'] === 'M10001',
+    '设备 product_id 为字符串' => $machinePayload['product_id'] === '1001',
+    '设备携带货道编号' => $machinePayload['channel_code'] === 'A01',
+    '设备库存写入 quantity/stock' => $machinePayload['quantity'] === 8 && $machinePayload['stock'] === 8,
+    '设备售价为字符串' => $machinePayload['sale_price'] === '2.50',
+    '设备签名 32 位小写' => preg_match('/^[a-f0-9]{32}$/', $machinePayload['sign']) === 1,
+    '设备签名固定向量正确' => $machinePayload['sign'] === md5('test-secret' . 'M10001' . '1001' . 'test-secret'),
+    '设备签名可复算' => hash_equals($machinePayload['sign'], $builder->makeMachineProductSign('M10001', 1001)),
+    '批量构造返回全部有效明细' => count($machinePayloads) === 2,
+    '无商品货道被跳过' => isset($machinePayloads[1]) && $machinePayloads[1]['channel_code'] === 'A02',
 ];
 
 $failed = [];

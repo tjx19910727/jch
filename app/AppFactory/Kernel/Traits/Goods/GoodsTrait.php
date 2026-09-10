@@ -14,9 +14,12 @@ use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
 use think\facade\Db;
+use app\AppFactory\Kernel\Traits\ThirdParty\ThirdPartySyncReportTrait;
 
 trait GoodsTrait
 {
+    use ThirdPartySyncReportTrait;
+
     public function getGoodsValue($where,$value)
     {
         return GoodsModel::getFieldValue($where,$value);
@@ -56,6 +59,8 @@ trait GoodsTrait
 
     public function addMoreGoods($data)
     {
+        // 批量新增无法回读自增 g_id，不做 A 层实时上报；
+        // 新增行 update_time 会落在扫描窗口内，由 third_party_sync scan（C 层）兜底。
         return GoodsModel::insertAll($data);
     }
 
@@ -64,6 +69,7 @@ trait GoodsTrait
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
         !isset($this->manager['ao_id']) ? :$insert['ao_id'] = $this->manager['ao_id'];
         $data = GoodsModel::create($insert);
+        $this->reportGoodsChangedToThirdParty($data->g_id);
         return $data->g_id;
     }
 
@@ -71,24 +77,25 @@ trait GoodsTrait
     {
         !isset($this->manager['manager_id']) ? : $update['update_id'] = $this->manager['manager_id'];
         $result = GoodsModel::update($update,$where,$field);
-        if ($result && $updateType) {
-            // ThinkPHP 的 update 返回对象只包含实际更新字段时可能没有主键，必须从更新条件回收 g_id。
-            $gId = $this->resolveUpdatedGoodsId($result, $update, $where);
+        if ($result) {
+            $gId = intval($result['g_id'] ?? 0);
             if ($gId <= 0) {
-                throw new \RuntimeException('更新商品后无法确定商品ID');
+                $gId = intval($update['g_id'] ?? 0);
             }
-            $newGoods = GoodsModel::getFind(['g_id' => $gId],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code');
-            if (!$newGoods) {
-                throw new \RuntimeException('更新后的商品不存在');
+            if ($gId > 0) {
+                // 商品资料/价格/上下架等变化实时上报（内部会自动联动装载该商品的 ao_id=17 设备）。
+                $this->reportGoodsChangedToThirdParty($gId);
             }
-            $new = $newGoods->toArray();
-            MachineGoodsModel::update($new,['g_id' => $gId]);
-            MachineChannelModel::update($new,['g_id' => $gId]);
-            ActivityGoodsModel::update([
-                'g_name' => $new['g_name'],
-                'pic' => $new['pic'],
-                'sku' => $new['sku'],
-            ],['g_id' => $gId]);
+            if ($updateType) {
+                $new = GoodsModel::getFind(['g_id' => $result['g_id']],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code')->toArray();
+                MachineGoodsModel::update($new,['g_id' => $result['g_id']]);
+                MachineChannelModel::update($new,['g_id' => $result['g_id']]);
+                ActivityGoodsModel::update([
+                    'g_name' => $new['g_name'],
+                    'pic' => $new['pic'],
+                    'sku' => $new['sku'],
+                ],['g_id' => $result['g_id']]);
+            }
         }
         return $result;
     }
@@ -122,9 +129,23 @@ trait GoodsTrait
 
     public function delGoods($where)
     {
-        $gIds = GoodsModel::where($where)->column('g_id');
+        // 物理删除前先记录属于核心主体的商品，删除后按 delete 语义上报。
+        $removed = [];
+        try {
+            $rows = GoodsModel::getList($where, 0, 'g_id,ao_id');
+            foreach ($rows as $row) {
+                $row = is_object($row) && method_exists($row, 'toArray') ? $row->toArray() : (array)$row;
+                if (intval($row['ao_id'] ?? 0) === (int)$this->thirdPartySyncCoreAoId) {
+                    $removed[intval($row['g_id'])] = intval($row['ao_id']);
+                }
+            }
+        } catch (\Throwable $e) {
+            $removed = [];
+        }
         $result = GoodsModel::destroy($where);
-        if ($result && $gIds) Db::name('goods_currency_price')->whereIn('g_id', $gIds)->delete();
+        foreach ($removed as $gId => $aoId) {
+            $this->reportGoodsChangedToThirdParty($gId, 'delete', $aoId);
+        }
         return $result;
     }
 }

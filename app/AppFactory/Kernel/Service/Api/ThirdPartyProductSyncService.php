@@ -16,6 +16,9 @@ class ThirdPartyProductSyncService
     public const CALLBACK_MACHINE_INVENTORY = 12;
     public const CALLBACK_CORE_GOODS = 13;
 
+    /** 单台设备一次派发的最多明细数（防止回调膨胀） */
+    public const MAX_MACHINE_DETAILS = 500;
+
     private $config;
     private $snapshotService;
     private $payloadBuilder;
@@ -163,29 +166,23 @@ class ThirdPartyProductSyncService
             $syncType = (string)$dirty['sync_type'];
             $aggregateId = (string)$dirty['aggregate_id'];
             $version = intval($dirty['version']);
-            $eventId = $this->newEventId();
-            $timestamp = time();
 
+            $payloads = [];
             if ($syncType === self::TYPE_MACHINE_INVENTORY) {
-                $payload = $this->payloadBuilder->buildMachineInventory(
-                    $aggregateId,
-                    $this->snapshotService->getMachineInventorySnapshot($aggregateId),
-                    $version,
-                    $eventId,
-                    $timestamp
-                );
-                $callbackType = self::CALLBACK_MACHINE_INVENTORY;
+                // 设备商品为明细级接口：每台设备按货道逐条生成回调（见 PayloadBuilder）。
                 $notifyUrl = (string)($this->config['machine_inventory_url'] ?? '');
+                $items = $notifyUrl === '' ? [] : $this->snapshotService->getMachineInventorySnapshot($aggregateId);
+                $payloads = $this->payloadBuilder->buildMachineProducts($aggregateId, is_array($items) ? $items : []);
+                if (count($payloads) > self::MAX_MACHINE_DETAILS) {
+                    $payloads = array_slice($payloads, 0, self::MAX_MACHINE_DETAILS);
+                }
+                $callbackType = self::CALLBACK_MACHINE_INVENTORY;
             } elseif ($syncType === self::TYPE_CORE_GOODS) {
+                $notifyUrl = (string)($this->config['core_goods_url'] ?? '');
                 $goods = $this->snapshotService->getCoreGoodsSnapshot($aggregateId);
                 $operation = $dirty['operation'] === 'delete' || !$goods ? 'delete' : 'upsert';
-                $payload = $this->payloadBuilder->buildSyncGoods(
-                    $aggregateId,
-                    $goods,
-                    $operation
-                );
+                $payloads = [$this->payloadBuilder->buildSyncGoods($aggregateId, $goods, $operation)];
                 $callbackType = self::CALLBACK_CORE_GOODS;
-                $notifyUrl = (string)($this->config['core_goods_url'] ?? '');
             } else {
                 Db::name('third_party_sync_dirty')->where('id', $id)->update([
                     'dispatched_version' => $version,
@@ -194,28 +191,34 @@ class ThirdPartyProductSyncService
                 return 'skipped';
             }
 
-            if ($notifyUrl === '') {
-                // 该类型接收地址未配置（如 syncMachineProduct 报文待文档确认）。
-                // 直接推进水位，避免残留记录长期占用扫描；
-                // 配置完成后可用 think third_party_sync machine|goods all 全量补发。
+            if ($notifyUrl === '' || !$payloads) {
+                // 接收地址未配置，或该对象当前无可推送明细：推进水位，避免残留长期占用扫描。
                 Db::name('third_party_sync_dirty')->where('id', $id)->update([
                     'dispatched_version' => $version,
                     'update_time' => time(),
                 ]);
                 return 'skipped';
             }
-            $message = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-            if ($message === false) {
-                throw new \RuntimeException('第三方商品同步请求 JSON 编码失败');
-            }
 
-            $callback = ApiCallbackModel::create([
-                'aa_id' => 0,
-                'uuid' => $eventId,
-                'notify_url' => $notifyUrl,
-                'callback_type' => $callbackType,
-                'message' => $message,
-            ]);
+            $count = 0;
+            $firstAcId = 0;
+            foreach ($payloads as $payload) {
+                $message = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                if ($message === false) {
+                    throw new \RuntimeException('第三方商品同步请求 JSON 编码失败');
+                }
+                $callback = ApiCallbackModel::create([
+                    'aa_id' => 0,
+                    'uuid' => $this->newEventId(),
+                    'notify_url' => $notifyUrl,
+                    'callback_type' => $callbackType,
+                    'message' => $message,
+                ]);
+                if ($firstAcId === 0) {
+                    $firstAcId = intval($callback->ac_id ?? 0);
+                }
+                $count++;
+            }
 
             Db::name('third_party_sync_dirty')
                 ->where('id', $id)
@@ -227,11 +230,11 @@ class ThirdPartyProductSyncService
 
             try {
                 actionLog([
-                    'ac_id' => intval($callback->ac_id ?? 0),
-                    'event_id' => $eventId,
+                    'ac_id' => $firstAcId,
                     'sync_type' => $syncType,
                     'aggregate_id' => $aggregateId,
                     'version' => $version,
+                    'callback_count' => $count,
                 ], '生成第三方商品同步回调', 'ThirdPartyProductSync');
             } catch (\Throwable $logException) {
             }

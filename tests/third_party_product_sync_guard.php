@@ -25,7 +25,7 @@ $checks = [
     '回调类型 12 和 13 已配置重试' => strpos($callback, '"12" =>') !== false && strpos($callback, '"13" =>') !== false,
     '新回调使用独立超时配置' => strpos($callback, "config('third_party_sync.connect_timeout')") !== false
         && strpos($callback, "config('third_party_sync.request_timeout')") !== false,
-    '配置默认关闭' => strpos($config, "env('third_party_sync.enabled', false)") !== false,
+    '配置默认关闭' => strpos($config, "'enabled' => false") !== false,
     '控制台命令已注册' => strpos($console, "'third_party_sync' => 'app\\command\\ThirdPartySync'") !== false,
     '数据库聚合键唯一' => strpos($sql, 'UNIQUE KEY `uk_sync_aggregate` (`sync_type`,`aggregate_id`)') !== false,
     '数据库保存已派发版本水位' => strpos($sql, '`dispatched_version` bigint unsigned NOT NULL DEFAULT 0') !== false,
