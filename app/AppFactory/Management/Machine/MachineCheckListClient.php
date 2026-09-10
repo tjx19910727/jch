@@ -8,11 +8,14 @@
 
 namespace app\AppFactory\Management\Machine;
 
+use app\AppFactory\Kernel\Traits\Inspection\InspectionAccountTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\facade\Db;
 
 class MachineCheckListClient extends ManagementClient
 {
+    use InspectionAccountTrait;
+
     /**
      * 获取检查项列表
      */
@@ -242,8 +245,7 @@ class MachineCheckListClient extends ManagementClient
             }
 
             $list = $query
-                ->leftJoin('inspection_staff ist', 'ist.staff_id = cr.manager_id')
-                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level,IFNULL(NULLIF(ist.account_name,\'\'), cr.manager_id) as account_name')
+                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level,' . $this->inspectionPersonNameExpr('cr') . ' as account_name')
                 ->order('cr.records_code desc,cr.id asc')
                 ->select()
                 ->toArray();

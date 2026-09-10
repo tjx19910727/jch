@@ -3,6 +3,7 @@
 namespace app\AppFactory\Mobile\Machine;
 
 use app\AppFactory\Kernel\BaseClient;
+use app\AppFactory\Kernel\Traits\Inspection\InspectionAccountTrait;
 use app\AppFactory\Kernel\Traits\Inspection\InspectionStaffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
@@ -11,7 +12,7 @@ use think\facade\Db;
 
 class InspectionClient extends BaseClient
 {
-    use MachineTrait, InspectionStaffTrait;
+    use MachineTrait, InspectionStaffTrait, InspectionAccountTrait;
 
     const QR_EXPIRES_IN = 120;
     const TOKEN_EXPIRES_IN = 86400;
@@ -240,7 +241,7 @@ class InspectionClient extends BaseClient
                     'records_code' => $recordsCode,
                     'item_id' => intval($itemId),
                     'machine_id' => $this->machine['machine_id'],
-                    'manager_id' => intval($this->staff['staff_id']),
+                    'manager_id' => strval($this->staff['staff_code']),
                     'check_status' => intval($row['check_status']),
                     'check_time' => $checkTime,
                     'notes' => $row['notes'] !== '' ? $row['notes'] : $commonNotes,
@@ -289,7 +290,7 @@ class InspectionClient extends BaseClient
             $pageSize = max(1, intval($postData['pageNum'] ?? ($postData['pageSize'] ?? 15)));
             $where = [
                 ['cr.machine_id', '=', $this->machine['machine_id']],
-                ['cr.manager_id', '=', intval($this->staff['staff_id'])],
+                ['cr.manager_id', 'in', [intval($this->staff['staff_id']), strval($this->staff['staff_code'])]],
             ];
             $pageData = Db::name('check_list_records')
                 ->alias('cr')
@@ -336,7 +337,7 @@ class InspectionClient extends BaseClient
         try {
             $list = $this->getCheckListRecordRows([
                 ['cr.machine_id', '=', $this->machine['machine_id']],
-                ['cr.manager_id', '=', intval($this->staff['staff_id'])],
+                ['cr.manager_id', 'in', [intval($this->staff['staff_id']), strval($this->staff['staff_code'])]],
                 ['cr.records_code', '=', $recordsCode],
             ]);
             if (!$list) {
@@ -356,9 +357,8 @@ class InspectionClient extends BaseClient
         return Db::name('check_list_records')
             ->alias('cr')
             ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
-            ->leftJoin('inspection_staff ist', 'ist.staff_id = cr.manager_id')
             ->where($where)
-            ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level,IFNULL(NULLIF(ist.account_name,''), cr.manager_id) as account_name")
+            ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level," . $this->inspectionPersonNameExpr('cr') . " as account_name")
             ->order('cr.records_code desc,cr.id asc')
             ->select()
             ->toArray();
@@ -457,24 +457,38 @@ class InspectionClient extends BaseClient
         return true;
     }
 
+    /**
+     * 解析"可用"的巡检账号（启用 + 未过期）。
+     * 入参：['staff_code' => 6位]（登录）或 ['staff_id' => int]（token 鉴权）。
+     * 返回与调用方兼容的数组（staff_id/staff_code/account_name/status/expire_time）。
+     */
     protected function getAvailableInspectionStaff($where)
     {
-        $staff = $this->getInspectionStaffFind(
-            $where,
-            'staff_id,staff_code,account_name,mobile,expire_time,ao_id,status'
-        );
-        if (!$staff) {
+        if (!empty($where['staff_code'])) {
+            $identity = $this->resolveInspectionAccount(
+                trim((string)$where['staff_code']),
+                ['require_enabled' => true, 'require_not_expired' => true]
+            );
+        } else {
+            $identity = $this->resolveInspectionAccount(
+                ['staff_id' => intval($where['staff_id'] ?? 0)],
+                ['require_enabled' => true, 'require_not_expired' => true]
+            );
+        }
+        if (empty($identity['ok'])) {
             return [];
         }
-        if (is_object($staff) && method_exists($staff, 'toArray')) {
-            $staff = $staff->toArray();
-        }
-
-        $expireTime = intval($staff['expire_time'] ?? 0);
-        if (intval($staff['status'] ?? 0) !== 1 || ($expireTime > 0 && $expireTime <= time())) {
+        // H5 巡检登录仅支持巡检人员账号（后台账号不放开）
+        if (($identity['source'] ?? '') !== 'inspection_staff') {
             return [];
         }
-        return $staff;
+        return [
+            'staff_id' => $identity['staff_id'],
+            'staff_code' => $identity['account'],
+            'account_name' => $identity['name'],
+            'status' => $identity['status'],
+            'expire_time' => $identity['expire_time'],
+        ];
     }
 
     protected function buildCheckListTree($items)
