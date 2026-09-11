@@ -77,25 +77,32 @@ trait GoodsTrait
     {
         !isset($this->manager['manager_id']) ? : $update['update_id'] = $this->manager['manager_id'];
         $result = GoodsModel::update($update,$where,$field);
-        if ($result) {
-            $gId = intval($result['g_id'] ?? 0);
-            if ($gId <= 0) {
-                $gId = intval($update['g_id'] ?? 0);
+        if (!$result) {
+            return $result;
+        }
+
+        // 更新字段可能不包含 g_id（例如多币种商品编辑），必须从更新条件中回收商品 ID。
+        $gId = $this->resolveUpdatedGoodsId($result, $update, $where);
+        if ($gId <= 0) {
+            throw new \RuntimeException('更新商品后无法确定商品ID');
+        }
+
+        // 商品资料/价格/上下架等变化实时上报（内部会自动联动装载该商品的 ao_id=17 设备）。
+        $this->reportGoodsChangedToThirdParty($gId);
+
+        if ($updateType) {
+            $newGoods = GoodsModel::getFind(['g_id' => $gId],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code');
+            if (!$newGoods) {
+                throw new \RuntimeException('更新后的商品不存在');
             }
-            if ($gId > 0) {
-                // 商品资料/价格/上下架等变化实时上报（内部会自动联动装载该商品的 ao_id=17 设备）。
-                $this->reportGoodsChangedToThirdParty($gId);
-            }
-            if ($updateType) {
-                $new = GoodsModel::getFind(['g_id' => $result['g_id']],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code')->toArray();
-                MachineGoodsModel::update($new,['g_id' => $result['g_id']]);
-                MachineChannelModel::update($new,['g_id' => $result['g_id']]);
-                ActivityGoodsModel::update([
-                    'g_name' => $new['g_name'],
-                    'pic' => $new['pic'],
-                    'sku' => $new['sku'],
-                ],['g_id' => $result['g_id']]);
-            }
+            $new = $newGoods->toArray();
+            MachineGoodsModel::update($new,['g_id' => $gId]);
+            MachineChannelModel::update($new,['g_id' => $gId]);
+            ActivityGoodsModel::update([
+                'g_name' => $new['g_name'],
+                'pic' => $new['pic'],
+                'sku' => $new['sku'],
+            ],['g_id' => $gId]);
         }
         return $result;
     }

@@ -2,6 +2,7 @@
 
 $root = dirname(__DIR__);
 require_once $root . '/app/AppFactory/Kernel/Support/Currency/CurrencyPriceSupport.php';
+require_once $root . '/app/AppFactory/Kernel/Traits/ThirdParty/ThirdPartySyncReportTrait.php';
 require_once $root . '/app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php';
 
 use app\AppFactory\Kernel\Support\Currency\CurrencyPriceSupport;
