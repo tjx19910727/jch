@@ -15,6 +15,7 @@ use app\management\validate\Machine\VMachine;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use think\facade\Db;
 
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 class Machine extends Common
@@ -1049,5 +1050,61 @@ class Machine extends Common
             actionException($e, 1);
             return $this->app->machine->rTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 查询单台设备的货道库存金额统计。
+     *
+     * 金额类数据及缺货数仅统计已绑定商品的货道，空槽数仅统计未绑定商品的货道；
+     * 所有统计均排除已禁用货道。
+     * @return array|string
+     */
+    public function getStockStatistics()
+    {
+        $mId = intval(input('m_id'));
+        if ($mId <= 0) {
+            return returnValidate(lang('VMachine.machine_id_require'));
+        }
+
+        $permitted = $this->app->machine->resolvePermittedMachineIds();
+        if ($permitted !== null && !in_array($mId, $permitted, true)) {
+            return $this->app->machine->rNoData();
+        }
+
+        $machineExists = MachineModel::where('m_id', $mId)->value('m_id');
+        if (!$machineExists) {
+            return $this->app->machine->rFail(lang('VMachine.machine_no_data'));
+        }
+
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $fullChannelCostExpression = $hasCostPriceAuth
+            ? 'IFNULL(SUM(CASE WHEN g_id > 0 THEN IFNULL(capacity, 0) * IFNULL(cost_price, 0) ELSE 0 END), 0)'
+            : '0';
+        $currentStockCostExpression = $hasCostPriceAuth
+            ? 'IFNULL(SUM(CASE WHEN g_id > 0 THEN IFNULL(stock, 0) * IFNULL(cost_price, 0) ELSE 0 END), 0)'
+            : '0';
+
+        $statistics = Db::name('machine_channel')
+            ->where('m_id', $mId)
+            ->where('status', '<>', 2)
+            ->field([
+                'IFNULL(SUM(CASE WHEN g_id > 0 THEN IFNULL(capacity, 0) * IFNULL(retail_price, 0) ELSE 0 END), 0)' => 'full_channel_amount',
+                $fullChannelCostExpression => 'full_channel_cost',
+                'IFNULL(SUM(CASE WHEN g_id > 0 THEN IFNULL(stock, 0) * IFNULL(retail_price, 0) ELSE 0 END), 0)' => 'current_stock_amount',
+                $currentStockCostExpression => 'current_stock_cost',
+                'SUM(CASE WHEN g_id > 0 AND stock = 0 THEN 1 ELSE 0 END)' => 'stock_out_channel_count',
+                'SUM(CASE WHEN g_id = 0 THEN 1 ELSE 0 END)' => 'empty_channel_count',
+            ])
+            ->find();
+
+        $statistics = $statistics ?: [];
+        $statistics['full_channel_amount'] = round((float)($statistics['full_channel_amount'] ?? 0), 2);
+        $statistics['full_channel_cost'] = round((float)($statistics['full_channel_cost'] ?? 0), 2);
+        $statistics['current_stock_amount'] = round((float)($statistics['current_stock_amount'] ?? 0), 2);
+        $statistics['current_stock_cost'] = round((float)($statistics['current_stock_cost'] ?? 0), 2);
+        $statistics['stock_out_channel_count'] = intval($statistics['stock_out_channel_count'] ?? 0);
+        $statistics['empty_channel_count'] = intval($statistics['empty_channel_count'] ?? 0);
+
+        return returnState(200, lang('query_success'), $statistics);
     }
 }
