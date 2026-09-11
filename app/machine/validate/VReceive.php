@@ -71,6 +71,8 @@ class VReceive extends VCommon
         "status" => "integer",
         "org_id" => "require|integer|gt:0",
         "run_mode" => "require|in:1,2",
+        "show_currency_symbol" => "in:0,1",
+        "show_amount_decimals" => "in:0,1",
         "field" => "require",
         "date" => "require",
         "machine_usage" => "require",
@@ -175,6 +177,8 @@ class VReceive extends VCommon
         "type.require" => "回收箱商品变化类型不能为空",
         "type.in" => "回收箱商品变化类型错误",
         "goods_info.require" => "商品信息不能为空",
+        "show_currency_symbol.in" => "显示货币符号参数只能为0或1",
+        "show_amount_decimals.in" => "显示小数点参数只能为0或1",
 
     ];
 
@@ -196,6 +200,7 @@ class VReceive extends VCommon
         "updateMachineGoodsCurrencyPrice" => ["msg_id","machine_id","timestamp","sign","mg_id","currency_code","cost_price","market_price","retail_price"],
         "switchCurrency" => ["msg_id","machine_id","timestamp","sign","currency_code","can_switch_currency","cart_count","pending_order_count","supported_currency_codes"],
         "reportMachineRunMode" => ["msg_id","machine_id","timestamp","sign","run_mode"],
+        "updateAmountDisplayConfig" => ["msg_id","machine_id","timestamp","sign","show_currency_symbol","show_amount_decimals"],
         "getPayTypeList" => ["msg_id","machine_id","timestamp","sign"],
         "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],
         "getAppSettings" => ["msg_id","machine_id","timestamp","sign"],

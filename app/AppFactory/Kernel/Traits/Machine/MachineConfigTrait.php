@@ -32,6 +32,7 @@ trait MachineConfigTrait
     {
         $insert = $this->normalizeOtherOrgGoodsConfig($insert);
         $insert = $this->normalizeSubCarMixConfig($insert);
+        $insert = $this->normalizeAmountDisplayConfig($insert);
         !isset($this->manager['manager_id']) ?: $insert['creator'] = $this->manager['manager_id'];
         $data = MachineConfigModel::create($insert);
         $this->syncMachineRecycleBoxCapacity($insert, ['mc_id' => $data->mc_id]);
@@ -42,6 +43,7 @@ trait MachineConfigTrait
     {
         $update = $this->normalizeOtherOrgGoodsConfig($update);
         $update = $this->normalizeSubCarMixConfig($update);
+        $update = $this->normalizeAmountDisplayConfig($update);
         !isset($this->manager['manager_id']) ?: $update['update_id'] = $this->manager['manager_id'];
         $result = MachineConfigModel::update($update, $where, $field);
         $this->syncMachineRecycleBoxCapacity($update, $where);
@@ -174,6 +176,24 @@ trait MachineConfigTrait
     {
         if (array_key_exists('add_other_org_goods', $data)) {
             $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
+        }
+        return $data;
+    }
+
+    /**
+     * 金额显示开关统一按 0/1 保存，兼容管理端与设备端写入并阻止非法值落库。
+     */
+    protected function normalizeAmountDisplayConfig($data)
+    {
+        $fields = ['show_currency_symbol', 'show_amount_decimals'];
+        foreach ($fields as $field) {
+            if (!array_key_exists($field, $data)) {
+                continue;
+            }
+            if (!in_array($data[$field], [0, 1, '0', '1'], true)) {
+                throw new \InvalidArgumentException($field . '只能为0或1');
+            }
+            $data[$field] = intval($data[$field]);
         }
         return $data;
     }

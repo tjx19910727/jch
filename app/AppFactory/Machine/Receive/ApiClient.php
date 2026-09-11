@@ -1163,6 +1163,14 @@ class ApiClient extends ReceiveBaseClient
         } else {
             $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
         }
+        $data['show_currency_symbol'] = isset($data['show_currency_symbol'])
+            && in_array($data['show_currency_symbol'], [0, 1, '0', '1'], true)
+            ? intval($data['show_currency_symbol'])
+            : 0;
+        $data['show_amount_decimals'] = isset($data['show_amount_decimals'])
+            && in_array($data['show_amount_decimals'], [0, 1, '0', '1'], true)
+            ? intval($data['show_amount_decimals'])
+            : 1;
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
             if ($pay_type) {
@@ -1263,6 +1271,48 @@ class ApiClient extends ReceiveBaseClient
         ], '设备上报修改运行模式', 'reportMachineRunMode');
 
         return $this->rU($result);
+    }
+
+    /**
+     * 设备只允许修改自身的金额显示开关；请求可携带其中一个或两个字段。
+     * @return array|\think\response\Json
+     */
+    public function updateAmountDisplayConfig()
+    {
+        try {
+            $update = [];
+            foreach (['show_currency_symbol', 'show_amount_decimals'] as $field) {
+                if (array_key_exists($field, $this->data)) {
+                    $update[$field] = $this->data[$field];
+                }
+            }
+            if (!$update) {
+                throw new \InvalidArgumentException('至少提交一个金额显示配置');
+            }
+
+            $mId = intval($this->machine['m_id']);
+            $this->updateMachineConfig($update, ['m_id' => $mId]);
+            $config = $this->getMachineConfigFind(
+                ['m_id' => $mId],
+                'show_currency_symbol,show_amount_decimals'
+            );
+            if (!$config) {
+                throw new \InvalidArgumentException('设备配置不存在');
+            }
+            $config = $config->toArray();
+            $data = [
+                'show_currency_symbol' => intval($config['show_currency_symbol']),
+                'show_amount_decimals' => intval($config['show_amount_decimals']),
+            ];
+            actionLog([
+                'machine_id' => $this->machine['machine_id'],
+                'config' => $data,
+            ], '设备修改金额显示配置', 'updateAmountDisplayConfig');
+
+            return $this->r(200, $this->lang('update_success'), $data);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
     }
 
     /**

@@ -1402,6 +1402,19 @@ class Receive extends Common
 
     
     /**
+     * 设备修改金额显示配置。
+     * @return array|string
+     */
+    public function updateAmountDisplayConfig()
+    {
+        try {
+            return $this->app->api->updateAmountDisplayConfig();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+    /**
      * 获取设备主题配置
      * @return array|string
      */
