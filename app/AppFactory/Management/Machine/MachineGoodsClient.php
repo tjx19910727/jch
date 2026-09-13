@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
 use app\AppFactory\Kernel\Support\Tree;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
@@ -142,8 +143,10 @@ class MachineGoodsClient extends ManagementClient
     public function exportMg($where, $hasCostPriceAuth = true)
     {
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        // 可用/不可用/预定量取自 machine_channel 货道库存汇总，与列表接口口径保持一致
+        // （machine_goods 上的同名列已废弃且恒为 0，直接取会导致导出的可用库存为 0）。
         $field = 'pic,g_name,sku,' . $costPriceField . ',market_price,retail_price,
-        (CASE is_shelf WHEN 1 THEN "已上架" ELSE "未上架" END) is_shelf, available_stock,disabled_stock,reserve_stock,standby_stock';
+        (CASE is_shelf WHEN 1 THEN "已上架" ELSE "未上架" END) is_shelf,' . MachineGoodsModel::STOCK_FIELDS . ',standby_stock';
         $list = $this->getMachineGoodsList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
