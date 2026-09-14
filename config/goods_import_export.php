@@ -50,5 +50,34 @@ return [
         '商品型号' => 'model',
         'SKU码'    => 'sku',
         '商品图片' => 'pic',
+        // 目标模板（旧后台导出的商品模板）表头写法：
+        // 表头匹配已做归一化（忽略大小写、去尾部冒号/星号、全角转半角），
+        // 因此 "sku" 与 "SKU"、"关联SKU:" 与 "关联SKU" 都会命中同一字段。
+        'sku'      => 'sku',
+        '关联SKU'  => 'sku2',
+        '供应商'   => 'manufacturer',
+        '联系电话' => 'service_phone',
+        // 其它常见同义写法
+        '厂商'       => 'manufacturer',
+        '供应商名称' => 'manufacturer',
+        '生产商'     => 'manufacturer',
+        '联系方式'   => 'service_phone',
+        '售后电话'   => 'service_phone',
+    ],
+
+    /**
+     * 导入行为开关
+     * - allow_empty_cny_price：新增行（无商品ID或商品ID不存在）整行未提供任何 CNY 价格时，
+     *   是否按 0.000 占位落库。开启后不带价格列的模板也能新增商品，返回体会用
+     *   insert_zero_price / insert_zero_price_list 列出这些行，避免静默产生零价商品；
+     *   关闭时新增行必须有完整 CNY 三价（原行为）。
+     * - update_by_g_id_fields：有商品ID且商品存在时，按“单元格非空才更新”的字段白名单。
+     *   bar_code 与各币种价格不在此列表内（条形码、价格走原有逻辑）。
+     */
+    'allow_empty_cny_price' => true,
+
+    'update_by_g_id_fields' => [
+        'bar_code', 'g_name', 'gc_id', 'gc_name', 'model', 'sku', 'sku2', 'pic',
+        'manufacturer', 'service_phone', 'status', 'length', 'width', 'height',
     ],
 ];

@@ -78,7 +78,28 @@ class GoodsClient extends ManagementClient
         '商品型号' => 'model',
         'SKU码'    => 'sku',
         '商品图片' => 'pic',
+        'sku'      => 'sku',
+        '关联SKU'  => 'sku2',
+        '供应商'   => 'manufacturer',
+        '联系电话' => 'service_phone',
+        '厂商'       => 'manufacturer',
+        '供应商名称' => 'manufacturer',
+        '生产商'     => 'manufacturer',
+        '联系方式'   => 'service_phone',
+        '售后电话'   => 'service_phone',
     ];
+
+    /** 有商品ID时“非空才更新”的字段白名单兜底（与 config/goods_import_export.php 保持一致）。 */
+    protected const UPDATE_BY_G_ID_FIELDS_FALLBACK = [
+        'bar_code', 'g_name', 'gc_id', 'gc_name', 'model', 'sku', 'sku2', 'pic',
+        'manufacturer', 'service_phone', 'status', 'length', 'width', 'height',
+    ];
+
+    /** 新增行整行未提供 CNY 价格时按 0.000 落库的兜底开关。 */
+    protected const ALLOW_EMPTY_CNY_PRICE_FALLBACK = true;
+
+    /** 导入行是否视为空行时用于判断的关键字段（商品ID/名称/sku/条形码/分类/型号全空即空行）。 */
+    protected const IMPORT_EMPTY_ROW_CHECK_FIELDS = ['g_id', 'g_name', 'sku', 'bar_code', 'gc_id', 'gc_name', 'model'];
 
     public function addG($postData)
     {
@@ -865,56 +886,85 @@ class GoodsClient extends ManagementClient
             }
             actionLog($goods, '导入的商品数据');
             if ($goods) {
-                $insertGoods = [];
+                $operatorId = intval($this->manager['manager_id'] ?? 0);
                 $resultData = [
                     'total' => count($goods),
+                    'skip_empty' => 0,
+                    'skip_empty_list' => [],
                     'update_success' => 0,
                     'update_fail' => 0,
                     'insert_total' => 0,
                     'insert_success' => 0,
                     'insert_fail' => 0,
+                    'insert_zero_price' => 0,
+                    'insert_zero_price_list' => [],
                     'insert_fail_list' => [],
                 ];
                 foreach ($goods as $key => $value) {
+                    $rowNo = $key + 2;
                     $value = $this->normalizeGoodsImportRow($value);
+                    // 模板空白行/末尾注释行不参与新增或更新，避免产生无意义的失败行
+                    if ($this->isEmptyGoodsImportRow($value)) {
+                        $resultData['skip_empty']++;
+                        $resultData['skip_empty_list'][] = ['row' => $rowNo];
+                        continue;
+                    }
                     $gId = intval($value['g_id'] ?? 0);
                     if ($gId > 0) {
                         $goodsFind = $this->getGoodsFind(['g_id' => $gId], 'g_id');
                         if ($goodsFind) {
                             try {
+                                // 有商品ID时按白名单“非空才更新”，空白单元格不会清空已有值
+                                $update = $this->buildGoodsUpdateByGId($value, $gId, $rowNo);
                                 $existingCodes = Db::name('goods_currency_price')->where('g_id', $gId)->column('currency_code');
                                 $currencyPrices = $this->fillMissingNonCnyPriceFields($this->extractCurrencyPrices($value, false), $existingCodes);
-                                $update = ['bar_code' => trim(isset($value['bar_code']) ? $value['bar_code'] : '')];
                                 Db::startTrans();
-                                $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
+                                if ($update) {
+                                    $this->updateGoods($update, ['g_id' => $gId]);
+                                }
                                 if ($currencyPrices) {
-                                    (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
+                                    (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, $operatorId, false, false);
                                     // 核心价落库后补齐设备侧缺失的币种三价事实行（如人民币/港币），仅缺失时新增，已存在不覆盖
-                                    $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0));
+                                    $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, $operatorId);
                                 }
                                 Db::commit();
                                 $resultData['update_success']++;
                             } catch (\Exception $e) {
                                 Db::rollback();
                                 $resultData['update_fail']++;
-                                $resultData['insert_fail_list'][] = ['row' => $key + 2, 'error' => $e->getMessage()];
+                                $resultData['insert_fail_list'][] = ['row' => $rowNo, 'error' => $e->getMessage()];
                             }
                             continue;
                         }
                     }
                     unset($value['g_id']);
                     try {
+                        if (isset($value['status']) && trim((string)$value['status']) !== '') {
+                            $value['status'] = $this->normalizeGoodsImportStatus($value['status']);
+                        }
                         validate(VGoods::class)->scene("importExcel")->check($value);
                     } catch (\Exception $e) {
                         $resultData['insert_fail']++;
                         $resultData['insert_fail_list'][] = [
-                            'row' => $key + 2,
+                            'row' => $rowNo,
                             'error' => $e->getMessage(),
                         ];
                         continue;
                     }
                     try {
-                        $currencyPrices = $this->fillMissingNonCnyPriceFields($this->extractCurrencyPrices($value, true));
+                        // 目标模板可能不含价格列：整行未提供 CNY 三价时按 0.000 占位落库，
+                        // 并用 insert_zero_price_list 明确回报行号，避免静默产生零价商品。
+                        $currencyPrices = $this->fillMissingNonCnyPriceFields(
+                            $this->extractCurrencyPrices($value, !$this->goodsImportAllowEmptyCnyPrice())
+                        );
+                        if (!isset($currencyPrices['CNY'])) {
+                            $currencyPrices['CNY'] = ['cost_price' => '0', 'market_price' => '0', 'retail_price' => '0'];
+                            $resultData['insert_zero_price']++;
+                            $resultData['insert_zero_price_list'][] = [
+                                'row' => $rowNo,
+                                'msg' => '未提供人民币(CNY)三价，已按0.000落库，请在商品列表补价',
+                            ];
+                        }
                         $value = array_merge($value, CurrencyPriceSupport::normalizePriceRow($currencyPrices['CNY']));
                         Db::startTrans();
                         $gId = $this->addGoods($value);
@@ -927,15 +977,15 @@ class GoodsClient extends ManagementClient
                             'manufacturer' => isset($value['manufacturer']) ? $value['manufacturer'] : '',
                             'lang' => 'zh-cn',
                         ]);
-                        (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), true, false);
+                        (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, $operatorId, true, false);
                         // 新商品也可能已存在设备绑定历史数据，核心价落库后同样补齐设备侧缺失的币种三价事实行（仅缺失时新增）
-                        $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0));
+                        $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, $operatorId);
                         Db::commit();
                         $resultData['insert_success']++;
                     } catch (\Exception $e) {
                         Db::rollback();
                         $resultData['insert_fail']++;
-                        $resultData['insert_fail_list'][] = ['row' => $key + 2, 'error' => $e->getMessage()];
+                        $resultData['insert_fail_list'][] = ['row' => $rowNo, 'error' => $e->getMessage()];
                     }
                 }
 
@@ -990,12 +1040,118 @@ class GoodsClient extends ManagementClient
         return $titles;
     }
 
+    /**
+     * 导入空行判断：模板空白行、模板末尾“注释行”不参与新增/更新，避免产生无意义的失败行。
+     * 判定口径：商品ID、商品名称、sku、条形码、分类ID、商品分类、型号全为空即视为空行。
+     */
+    protected function isEmptyGoodsImportRow(array $value)
+    {
+        foreach (self::IMPORT_EMPTY_ROW_CHECK_FIELDS as $field) {
+            if (!array_key_exists($field, $value)) continue;
+            if (is_object($value[$field])) return false;
+            if (trim((string)$value[$field]) !== '') return false;
+        }
+        return true;
+    }
+
+    /**
+     * 新增行是否允许整行无 CNY 价格（按 0.000 占位落库）。
+     * 跟随 config/goods_import_export.allow_empty_cny_price，配置缺失时用常量兜底。
+     */
+    protected function goodsImportAllowEmptyCnyPrice()
+    {
+        $value = config('goods_import_export.allow_empty_cny_price');
+        if ($value === null) return self::ALLOW_EMPTY_CNY_PRICE_FALLBACK;
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * 有商品ID的导入行“非空才更新”字段白名单，配置缺失时用常量兜底。
+     */
+    protected function getGoodsUpdateFieldsByGId()
+    {
+        $fields = config('goods_import_export.update_by_g_id_fields');
+        if (!is_array($fields) || !$fields) {
+            $fields = self::UPDATE_BY_G_ID_FIELDS_FALLBACK;
+        }
+        return $fields;
+    }
+
+    /**
+     * 有商品ID且商品存在时的更新数据：只取白名单内的非空单元格（“无数据的请留空”语义，不会清空已有值）。
+     * sku/sku2 需全局唯一，被其它商品占用时直接抛出该行错误，避免静默串号。
+     * @param array $value 已归一化的导入行
+     * @param int   $gId
+     * @param int   $rowNo 行号（仅用于错误提示）
+     * @return array
+     */
+    protected function buildGoodsUpdateByGId(array $value, $gId, $rowNo = 0)
+    {
+        $update = [];
+        foreach ($this->getGoodsUpdateFieldsByGId() as $field) {
+            if (!array_key_exists($field, $value)) continue;
+            $fieldValue = $value[$field];
+            if (is_object($fieldValue)) continue;
+            if (is_string($fieldValue)) $fieldValue = trim($fieldValue);
+            if ($fieldValue === '' || $fieldValue === null) continue;
+            if ($field === 'status') {
+                $fieldValue = $this->normalizeGoodsImportStatus($fieldValue);
+            }
+            if (in_array($field, ['gc_id', 'length', 'width', 'height'], true) && !is_numeric($fieldValue)) {
+                throw new \RuntimeException($field . ' 必须为数字：' . $fieldValue);
+            }
+            $update[$field] = $fieldValue;
+        }
+        foreach (['sku', 'sku2'] as $uniqueField) {
+            if (!isset($update[$uniqueField])) continue;
+            $exist = $this->getGoodsFind([[$uniqueField, '=', $update[$uniqueField]], ['g_id', '<>', $gId]], 'g_id');
+            if ($exist) {
+                throw new \RuntimeException($uniqueField . ' 已被其它商品占用：' . $update[$uniqueField]);
+            }
+        }
+        return $update;
+    }
+
+    /**
+     * 状态取值归一化：1/2 或中文（启用/正常/上架/有效/是、停用/禁用/下架/无效/否）。
+     * 无法识别时抛出明确错误，避免把非法值写进 tinyint 字段报数据库错误。
+     */
+    protected function normalizeGoodsImportStatus($status)
+    {
+        $result = $this->tryNormalizeGoodsImportStatus($status);
+        if ($result === null) {
+            throw new \RuntimeException('状态只能是1(启用)或2(禁用)：' . (is_scalar($status) ? $status : gettype($status)));
+        }
+        return $result;
+    }
+
+    /**
+     * 尝试归一化状态取值，无法识别返回 null（供非严格场景使用）。
+     * @param mixed $status
+     * @return int|null
+     */
+    protected function tryNormalizeGoodsImportStatus($status)
+    {
+        if (is_bool($status)) {
+            return $status ? 1 : 2;
+        }
+        if (is_numeric($status)) {
+            $intStatus = intval($status);
+            return in_array($intStatus, [1, 2], true) ? $intStatus : null;
+        }
+        $statusMap = [
+            '启用' => 1, '正常' => 1, '上架' => 1, '有效' => 1, '是' => 1,
+            '停用' => 2, '禁用' => 2, '下架' => 2, '无效' => 2, '否' => 2,
+        ];
+        $text = trim((string)$status);
+        return isset($statusMap[$text]) ? $statusMap[$text] : null;
+    }
+
     protected function normalizeGoodsImportRow(array $row)
     {
         if (isset($row['status']) && !is_numeric($row['status'])) {
-            $statusText = trim((string)$row['status']);
-            if (in_array($statusText, ['启用', '正常', '上架'], true)) $row['status'] = 1;
-            if (in_array($statusText, ['停用', '禁用', '下架'], true)) $row['status'] = 2;
+            $status = $this->tryNormalizeGoodsImportStatus($row['status']);
+            if ($status !== null) $row['status'] = $status;
         }
         // 导出模板 g_type 为中文（普通商品/酒店商品/门票商品），转回数字。
         if (isset($row['g_type']) && !is_numeric($row['g_type'])) {
