@@ -77,15 +77,19 @@ trait GoodsTrait
     {
         !isset($this->manager['manager_id']) ? : $update['update_id'] = $this->manager['manager_id'];
         $result = GoodsModel::update($update,$where,$field);
-        if ($result && $updateType) {
+        if ($result) {
             // ThinkPHP 的 update 返回对象只包含实际更新字段时可能没有主键，必须从更新条件回收 g_id。
             $gId = $this->resolveUpdatedGoodsId($result, $update, $where);
-            if ($gId <= 0) {
+            if ($gId <= 0 && $updateType) {
                 throw new \RuntimeException('更新商品后无法确定商品ID');
             }
             if ($gId > 0) {
                 // 商品资料/价格/上下架等变化实时上报（内部会自动联动装载该商品的 ao_id=17 设备）。
                 $this->reportGoodsChangedToThirdParty($gId);
+            }
+            // updateType仅控制本地关联资料更新，不能跳过核心商品变更上报。
+            if (!$updateType) {
+                return $result;
             }
             $newGoods = GoodsModel::getFind(['g_id' => $gId],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code');
             if (!$newGoods) {

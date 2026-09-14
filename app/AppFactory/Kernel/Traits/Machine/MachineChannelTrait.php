@@ -224,9 +224,10 @@ trait MachineChannelTrait
     public function delMachineChannel($where)
     {
         $machineIds = $this->collectChannelMachineIdsForSync([], $where);
+        // 物理删除后无法再查回货道ID，必须提前收集以清理关联币种价格。
+        $mcIds = MachineChannelModel::where($where)->column('mc_id');
         $result = MachineChannelModel::whereDel($where);
         $this->reportMachineIdsChangedForSync($machineIds);
-        $mcIds = MachineChannelModel::where($where)->column('mc_id');
         if ($result && $mcIds) Db::name('machine_channel_currency_price')->whereIn('mc_id', $mcIds)->delete();
         return $result;
     }
