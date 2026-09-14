@@ -77,6 +77,76 @@ class GoodsHitClient extends ManagementClient
         return $this->rQ($list);
     }
 
+    /**
+     * Aggregate sales once and join the result to the versioned behavior data.
+     * This keeps V2 result semantics without executing a correlated sales
+     * subquery for every behavior row.
+     */
+    public function getTotalListV3($where,$pageNum = 0,$groupType = 'goods',$sortName = '',$sortOrder = 'desc')
+    {
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
+
+        $groupType = $this->normalizeGoodsHitGroupType($groupType);
+        $internalGroupType = $groupType === 'machine' ? 'device' : 'goods';
+        $behaviorQuery = $this->buildVersionedGoodsHitQuery($where, $internalGroupType);
+        $metricQuery = Db::table($behaviorQuery->buildSql() . ' hit_stats');
+
+        if ($internalGroupType === 'device') {
+            $saleQuery = $this->buildGoodsHitDeviceSaleAggregateQuery($where);
+            $metricQuery
+                ->leftJoin([$saleQuery->buildSql() => 'sale_stats'], 'sale_stats.m_id = hit_stats.m_id')
+                ->fieldRaw('hit_stats.*,IFNULL(sale_stats.saleNum,0) saleNum');
+        } else {
+            $offlineSaleQuery = $this->buildGoodsHitOfflineSaleAggregateQuery($where);
+            $onlineSaleQuery = $this->buildGoodsHitOnlineSaleAggregateQuery($where);
+            $metricQuery
+                ->leftJoin(
+                    [$offlineSaleQuery->buildSql() => 'offline_sale_stats'],
+                    'hit_stats.is_online <> 1 AND offline_sale_stats.g_id = hit_stats.g_id'
+                )
+                ->leftJoin(
+                    [$onlineSaleQuery->buildSql() => 'online_sale_stats'],
+                    "hit_stats.is_online = 1 AND online_sale_stats.out_no = hit_stats.goods_out_no"
+                )
+                ->fieldRaw(
+                    'hit_stats.*,CASE WHEN hit_stats.is_online = 1 '
+                    . 'THEN IFNULL(online_sale_stats.saleNum,0) '
+                    . 'ELSE IFNULL(offline_sale_stats.saleNum,0) END saleNum'
+                );
+        }
+
+        $query = Db::table($metricQuery->buildSql() . ' metric_stats')
+            ->fieldRaw(
+                'metric_stats.*,CASE WHEN metric_stats.hits > 0 AND metric_stats.saleNum > 0 '
+                . 'THEN metric_stats.saleNum / metric_stats.hits * 100 ELSE 0 END conversion_rate_value'
+            );
+        $query->orderRaw($this->buildGoodsHitMetricOrder($groupType, $sortName, $sortOrder));
+
+        if ($pageNum) {
+            // Count behavior groups only. Counting the metric query would parse
+            // and aggregate all order JSON a second time.
+            $total = Db::table($behaviorQuery->buildSql() . ' hit_count_stats')->count();
+            $list = $query->paginate([
+                'list_rows' => $pageNum,
+                'query' => request()->param(),
+            ], intval($total));
+        } else {
+            $list = $query->select();
+        }
+
+        if (method_exists($list, 'each')) {
+            $list = $list->each(function ($item) {
+                $item['saleNum'] = intval($item['saleNum'] ?? 0);
+                $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
+                unset($item['conversion_rate_value'], $item['goods_out_no']);
+                return $item;
+            });
+        }
+
+        return $this->rQ($list);
+    }
+
     public function getHitList($where,$pageNum = 0,$field = "*",$order = "",$eachFun = "",$group = "")
     {
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
@@ -426,6 +496,70 @@ class GoodsHitClient extends ManagementClient
         return $query->fieldRaw(
             'IFNULL(SUM(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)),0)'
         );
+    }
+
+    /**
+     * Aggregate net sales by device for the device report.
+     */
+    protected function buildGoodsHitDeviceSaleAggregateQuery($where)
+    {
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3);
+        $this->applyGoodsHitSaleWhere($query, $where);
+        return $query
+            ->fieldRaw(
+                'so.m_id,SUM(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)) saleNum'
+            )
+            ->group('so.m_id');
+    }
+
+    /**
+     * Aggregate ordinary-goods net sales by goods ID.
+     */
+    protected function buildGoodsHitOfflineSaleAggregateQuery($where)
+    {
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3);
+        $this->applyGoodsHitSaleWhere($query, $where);
+        return $query
+            ->fieldRaw(
+                'sod.g_id,SUM(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)) saleNum'
+            )
+            ->group('sod.g_id');
+    }
+
+    /**
+     * Expand online-order JSON once, de-duplicate repeated out_no values in a
+     * detail row, and then aggregate net sales by out_no.
+     */
+    protected function buildGoodsHitOnlineSaleAggregateQuery($where)
+    {
+        $jsonTable = "JSON_TABLE("
+            . "IF(JSON_VALID(sod.wc_order_no),sod.wc_order_no,JSON_OBJECT()),"
+            . "'$.*' COLUMNS ("
+            . "out_no VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci "
+            . "PATH '$.out_no' NULL ON EMPTY NULL ON ERROR"
+            . ")) jt";
+
+        $detailQuery = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->join($jsonTable, 'TRUE')
+            ->where('so.pay_status', 3)
+            ->whereNotNull('jt.out_no')
+            ->where('jt.out_no', '<>', '');
+        $this->applyGoodsHitSaleWhere($detailQuery, $where);
+        $detailQuery
+            ->fieldRaw(
+                'sod.sod_id,jt.out_no,'
+                . 'MAX(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)) net_quantity'
+            )
+            ->group('sod.sod_id,jt.out_no');
+
+        return Db::table($detailQuery->buildSql() . ' online_sale_rows')
+            ->fieldRaw('out_no,SUM(net_quantity) saleNum')
+            ->group('out_no');
     }
 
     /**
