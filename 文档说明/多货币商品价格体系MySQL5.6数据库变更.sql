@@ -75,7 +75,9 @@ CREATE TABLE IF NOT EXISTS `machine_channel_currency_price` (
 
 ALTER TABLE `machine_config`
   ADD COLUMN `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'CNY' COMMENT '设备当前展示及交易币种',
-  ADD COLUMN `currency_version` int(11) unsigned NOT NULL DEFAULT '1' COMMENT '设备当前完整售卖快照版本';
+  ADD COLUMN `currency_version` int(11) unsigned NOT NULL DEFAULT '1' COMMENT '设备当前完整售卖快照版本',
+  ADD COLUMN `show_currency_symbol` tinyint unsigned NOT NULL DEFAULT '0' COMMENT '是否显示货币符号：0不显示 1显示',
+  ADD COLUMN `show_amount_decimals` tinyint unsigned NOT NULL DEFAULT '1' COMMENT '金额是否显示小数点：1显示 0不显示';
 
 ALTER TABLE `sale_orders`
   ADD COLUMN `currency_code` char(3) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT '下单币种快照',
