@@ -29,7 +29,7 @@ class Goods extends Common
         $postData = input();
         $where = $this->getWhere($postData);
         $this->field .= ",`desc`,details_pic";
-        $result = $this->app->goods->getFind($where,$this->field);
+        $result = $this->app->goods->getFindWithCurrencyPrices($where, $this->field, $this->hasCostPriceAuth());
         return $result;
     }
 
@@ -52,10 +52,10 @@ class Goods extends Common
             }
         }
         if(!empty($postData['machine_id'])||!empty($postData['sale_check'])){
-            $result = $this->app->goods->getAuthList($where,$pageNum,$field,'g_id desc',$postData);
+            $result = $this->app->goods->getAuthList($where,$pageNum,$field,'g_id desc',$postData,$hasCostPriceAuth);
             return $result;
         }
-        $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        $result = $this->app->goods->getListWithCurrencyPrices($where, $pageNum, $field, 'g_id desc', $hasCostPriceAuth);
         return $result;
     }
 
@@ -93,7 +93,7 @@ class Goods extends Common
             }
         }
 
-        return $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        return $this->app->goods->getListWithCurrencyPrices($where,$pageNum,$field,'g_id desc',$hasCostPriceAuth);
     }
 
     /**
@@ -125,8 +125,21 @@ class Goods extends Common
         $postData = input();
         if (isset($postData['bar_code'])) $postData['bar_code'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['bar_code']);
         if (isset($postData['sku'])) $postData['sku'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['sku']);
+        if (!$this->hasCostPriceAuth() && $this->containsCurrencyCostPrice($postData)) {
+            return returnState(100, '当前账号无成本价修改权限');
+        }
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
-        try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        try {
+            $releaseTime = $this->releaseTimeToTimestampOrNull($postData['release_time'] ?? '');
+            if ($releaseTime === null) {
+                unset($postData['release_time']);
+            } else {
+                $postData['release_time'] = $releaseTime;
+            }
+            $this->validate($postData,$this->validatePath . 'add');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
         $result = $this->app->goods->addG($postData);
         return $result;
     }
@@ -140,14 +153,69 @@ class Goods extends Common
         $postData = input();
         if (isset($postData['bar_code'])) $postData['bar_code'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['bar_code']);
         if (isset($postData['sku'])) $postData['sku'] = preg_replace('/[\s\p{Z}]+/u', '', $postData['sku']);
+        if (!$this->hasCostPriceAuth() && $this->containsCurrencyCostPrice($postData)) {
+            return returnState(100, '当前账号无成本价修改权限');
+        }
         //'商品库存不允许通过商品编辑接口修改'
         if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
         if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);
         if (array_key_exists('available_stocks', $postData)) unset($postData['available_stocks']);
-        try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        $result = $this->app->goods->updateForEdit($postData);
+        try {
+            if (array_key_exists('release_time', $postData)) {
+                $releaseTime = $this->releaseTimeToTimestampOrNull($postData['release_time']);
+                if ($releaseTime === null) {
+                    unset($postData['release_time']);
+                } else {
+                    $postData['release_time'] = $releaseTime;
+                }
+            }
+            $this->validate($postData,$this->validatePath . 'update');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $result = $this->app->goods->updateForEdit($postData, $this->hasCostPriceAuth());
         //$result = $this->app->goods->update($postData);
         return $result;
+    }
+
+    /**
+     * 发售时间宽松解析：空值/非法值不报错，返回 null 表示忽略该入参；
+     * 数字时间戳直写、日期字符串经 strtotime 转秒，避免字符串直写 INT 触发 1265。
+     *
+     * @param mixed $value
+     * @return int|null
+     */
+    protected function releaseTimeToTimestampOrNull($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (is_int($value)) {
+            $timestamp = $value;
+        } elseif (is_string($value) && preg_match('/^-?\d+$/D', trim($value))) {
+            $timestamp = intval(trim($value));
+        } else {
+            $timestamp = strtotime((string)$value);
+            if ($timestamp === false) {
+                return null;
+            }
+        }
+        if ($timestamp < 0 || $timestamp > 2147483647) {
+            return null;
+        }
+        return $timestamp;
+    }
+
+    private function containsCurrencyCostPrice($postData)
+    {
+        foreach (['cost_price', 'cny_cost_price', 'hkd_cost_price'] as $field) {
+            if (isset($postData[$field]) && trim((string)$postData[$field]) !== '') return true;
+        }
+        $prices = isset($postData['currency_prices']) ? json2arr($postData['currency_prices']) : [];
+        foreach ((array)$prices as $price) {
+            if (is_array($price) && isset($price['cost_price']) && trim((string)$price['cost_price']) !== '') return true;
+        }
+        return false;
     }
 
     /**
@@ -157,7 +225,7 @@ class Goods extends Common
     public function getPriceDiff()
     {
         $postData = input();
-        return $this->app->goods->getPriceDiff($postData);
+        return $this->app->goods->getPriceDiff($postData, $this->hasCostPriceAuth());
     }
 
     /**
@@ -186,7 +254,7 @@ class Goods extends Common
     public function importExcel()
     {
         $postData = input();
-        return $this->app->goods->importExcelV2($postData);
+        return $this->app->goods->importExcelV2($postData, $this->hasCostPriceAuth());
     }
 
     /**
@@ -205,7 +273,8 @@ class Goods extends Common
                 $where[] = ['bar_code','like','69%'];
             }
         }
-        return $this->app->goods->exportExcel($where, $hasCostPriceAuth);
+        $exportImg = !(isset($postData['export_img']) && in_array($postData['export_img'], [0, '0', false, 'false'], true));
+        return $this->app->goods->exportExcel($where, $hasCostPriceAuth, $exportImg);
     }
 
     /**
@@ -217,7 +286,8 @@ class Goods extends Common
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
-        return $this->app->goods->exportAllGoodsToExcel($where, $hasCostPriceAuth);
+        $exportImg = !(isset($postData['export_img']) && in_array($postData['export_img'], [0, '0', false, 'false'], true));
+        return $this->app->goods->exportAllGoodsToExcel($where, $hasCostPriceAuth, $exportImg);
     }
 
     
@@ -231,7 +301,8 @@ class Goods extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
         $where[] = ['bar_code','not like','69%'];
-        return $this->app->goods->exportAbnormalBarCodeExcel($where, $hasCostPriceAuth);
+        $exportImg = !(isset($postData['export_img']) && in_array($postData['export_img'], [0, '0', false, 'false'], true));
+        return $this->app->goods->exportAbnormalBarCodeExcel($where, $hasCostPriceAuth, $exportImg);
     }
 
     /**

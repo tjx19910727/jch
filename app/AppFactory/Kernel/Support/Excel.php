@@ -16,6 +16,119 @@ class Excel
 {
 
     /**
+     * 表头文本归一化：BOM、全角字符、首尾空白、尾部冒号/星号等噪声。
+     * 仅用于“识别表头”，不影响单元格写入值。
+     * @param string $header
+     * @return string
+     */
+    public static function normalizeHeaderText($header)
+    {
+        $header = (string)$header;
+        // 去 BOM（xlsx 首格常见：UTF-8 BOM / UTF-16 BOM）
+        $header = str_replace(["\xEF\xBB\xBF", "\xFF\xFE", "\xFE\xFF"], '', $header);
+        // 全角字母数字 → 半角（如 ＳＫＵ → SKU）；扩展缺失时跳过
+        if (function_exists('mb_convert_kana')) {
+            $header = mb_convert_kana($header, 'as');
+        }
+        // 全角标点 → 半角
+        $header = str_replace(
+            ['：', '（', '）', '，', '　', '．', '／', '＊', '＃', '？', '！'],
+            [':', '(', ')', ',', ' ', '.', '/', '*', '#', '?', '!'],
+            $header
+        );
+        // 首尾空白与尾部噪声字符（部分模板用 “状态*”“关联SKU:” 标注）。
+        // 注意：trim/rtrim 的字符集合按字节匹配，这里只能使用 ASCII 字符，
+        // 否则会截断以中文结尾的表头（如“状态”末字节 0x81 会被误删）。
+        return trim(rtrim(trim($header), ":*#?!"));
+    }
+
+    /**
+     * 构建表头查找表：原始键精确匹配 + 归一化（忽略大小写/冒号）匹配。
+     * @param array $headerMap 表头 => 字段
+     * @return array [rawMap, normalizedMap]
+     */
+    protected static function buildHeaderLookup(array $headerMap)
+    {
+        $rawMap = [];
+        $normalizedMap = [];
+        foreach ($headerMap as $header => $field) {
+            $rawMap[(string)$header] = $field;
+            $normalizedMap[strtolower(self::normalizeHeaderText($header))] = $field;
+        }
+        return [$rawMap, $normalizedMap];
+    }
+
+    /**
+     * 命中表头对应字段：先原样精确匹配，再归一化（忽略大小写、忽略尾部冒号）匹配。
+     * @param string $header
+     * @param array  $lookup
+     * @return string|null
+     */
+    protected static function matchHeaderField($header, array $lookup)
+    {
+        $raw = trim((string)$header);
+        if ($raw !== '' && isset($lookup[0][$raw])) {
+            return $lookup[0][$raw];
+        }
+        $normalized = strtolower(self::normalizeHeaderText($raw));
+        if ($normalized !== '' && isset($lookup[1][$normalized])) {
+            return $lookup[1][$normalized];
+        }
+        return null;
+    }
+
+    /**
+     * 按首行标题识别字段，允许列顺序调整并忽略未知列。
+     *
+     * 兼容规则（保证历史/旧模板、目标模板都能导入）：
+     * - 表头匹配忽略大小写、忽略尾部冒号（如 sku/SKU、关联SKU:/关联SKU）；
+     * - 同一字段被多列命中（如同时存在 SKU 与 sku）时，保留最左列，其余列忽略并写日志，
+     *   避免“后出现的列覆盖先出现列”的隐式行为。
+     */
+    public static function importExcelByHeader($filePath, array $headerMap, $other = [], $startRow = 2, $imageFields = null)
+    {
+        if (!file_exists($filePath)) return [];
+        require_once root_path() . '/extend/PHPExcel/PHPExcel.php';
+        require_once root_path() . '/extend/PHPExcel/PHPExcel/Writer/Excel2007.php';
+        $reader = new \PHPExcel_Reader_Excel2007();
+        $excel = $reader->load($filePath, 'utf-8');
+        $sheet = $excel->getSheet(0);
+        $highestColumn = \PHPExcel_Cell::columnIndexFromString($sheet->getHighestColumn());
+        $lookup = self::buildHeaderLookup($headerMap);
+        $fields = [];
+        $ignoredHeaders = [];
+        $duplicatedHeaders = [];
+        for ($index = 0; $index < $highestColumn; $index++) {
+            $rawHeader = (string)$sheet->getCellByColumnAndRow($index, 1)->getValue();
+            $field = self::matchHeaderField($rawHeader, $lookup);
+            if ($field === null) {
+                $fields[] = '__ignore_' . $index;
+                if (trim($rawHeader) !== '') {
+                    $ignoredHeaders[] = ['column' => $index + 1, 'header' => trim($rawHeader)];
+                }
+                continue;
+            }
+            if (in_array($field, $fields, true)) {
+                $duplicatedHeaders[] = ['column' => $index + 1, 'header' => trim($rawHeader), 'field' => $field];
+                $fields[] = '__ignore_' . $index;
+                continue;
+            }
+            $fields[] = $field;
+        }
+        $rows = self::importExcel($filePath, $fields, $other, $startRow, $imageFields);
+        if (!is_array($rows)) return $rows;
+        foreach ($rows as &$row) {
+            foreach (array_keys($row) as $field) {
+                if (strpos($field, '__ignore_') === 0) unset($row[$field]);
+            }
+        }
+        unset($row);
+        if ($ignoredHeaders) actionLog($ignoredHeaders, 'importExcelByHeader_ignored_headers');
+        if ($duplicatedHeaders) actionLog($duplicatedHeaders, 'importExcelByHeader_duplicated_headers');
+        return $rows;
+    }
+
+    /**
      * 功能：导入excel表格
      * @param $filePath
      * @param array $list
@@ -37,7 +150,8 @@ class Excel
 
                 $imageFilePath =  './uploads/excel_img/'.date('Ymd').'/';//图片在本地存储的路径
                 if (!file_exists($imageFilePath)) {
-                    @mkdir("$imageFilePath");
+                    // 递归创建：首次部署时 uploads/excel_img 上级目录可能尚不存在，非递归 mkdir 会导致整份表格导入失败
+                    @mkdir($imageFilePath, 0777, true);
                     @chmod($imageFilePath,0777);
                 }
                 $imgList = self::getImg($sheet,$imageFilePath);
@@ -53,8 +167,14 @@ class Excel
                             if (isset($imgList[$cellName])) {
                                 $ignoredImgList[] = ['cell' => $cellName, 'field' => $value, 'image' => $imgList[$cellName]];
                             }
-                            $row[$value] = $objPHPExcel->getActiveSheet()->getCell($cellName)->getValue();
-                            if ($row[$value] === null) $row[$value] = "";
+                            $cellValue = $objPHPExcel->getActiveSheet()->getCell($cellName)->getValue();
+                            // 富文本单元格取值为 PHPExcel_RichText 对象，转纯文本后再使用，
+                            // 否则后续校验/入库会出现“对象无法转换为字符串”的错误。
+                            if ($cellValue instanceof \PHPExcel_RichText) {
+                                $cellValue = $cellValue->getPlainText();
+                            }
+                            if ($cellValue === null) $cellValue = "";
+                            $row[$value] = $cellValue;
                         }
                     }
                     if ($other) {

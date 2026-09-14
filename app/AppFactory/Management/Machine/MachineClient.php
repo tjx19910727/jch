@@ -538,7 +538,11 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
-            $machineConfig = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode,is_multi_goods');
+            $machineConfig = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode,is_multi_goods,currency_code,currency_name,currency_symbol');
+            // 返回当前设备配置中的币种快照，缺配置时留空，避免误报其他币种。
+            $item['currency_code'] = (string)($machineConfig['currency_code'] ?? '');
+            $item['currency_name'] = (string)($machineConfig['currency_name'] ?? '');
+            $item['currency_symbol'] = (string)($machineConfig['currency_symbol'] ?? '');
             $item['run_mode'] = $machineConfig ? intval($machineConfig['run_mode']) : 1;
             $item['is_multi_goods'] = $machineConfig && intval($machineConfig['is_multi_goods']) === 1 ? 1 : 2;
             $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';

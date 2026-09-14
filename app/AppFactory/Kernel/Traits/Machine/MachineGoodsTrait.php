@@ -11,6 +11,8 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
 use app\AppFactory\Kernel\Support\Validate\Machine\VMachineGoods;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
+use think\facade\Db;
 
 trait MachineGoodsTrait
 {
@@ -36,7 +38,14 @@ trait MachineGoodsTrait
 
     public function getMachineGoodsFind($where,$field = "*",$order = "")
     {
-        return MachineGoodsModel::getFind($where,$field,$order);
+        $clean = MachineGoodsModel::stripWhereAliasPrefix($where);
+        try {
+            // 详情 field 含 a.m_id 子查询（如 machine_name），必须 alias a，与列表一致。
+            return MachineGoodsModel::alias('a')->where($clean)->field($field)->order($order)->find();
+        } catch (\Throwable $e) {
+            @file_put_contents(root_path().'runtime/mgfind_debug.log', date('Y-m-d H:i:s')."\nWHERE=".var_export($where,true)."\nCLEAN=".var_export($clean,true)."\nMSG=".$e->getMessage()."\n", FILE_APPEND);
+            throw $e;
+        }
     }
 
     public function getMachineGoodsList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = '')
@@ -67,7 +76,9 @@ trait MachineGoodsTrait
 
     public function delMachineGoods($where)
     {
+        $mgIds = MachineGoodsModel::where($where)->column('mg_id');
         $result = MachineGoodsModel::whereDel($where);
+        if ($result && $mgIds) Db::name('machine_goods_currency_price')->whereIn('mg_id', $mgIds)->delete();
         return $result;
     }
 
@@ -97,16 +108,26 @@ trait MachineGoodsTrait
                 }
                 if ($value['mg_id']) {
                     $mg_id = $value['mg_id'];
-                    $result = $this->updateMachineGoods($value);
+                    $allowed = ['available_stock', 'disabled_stock', 'reserve_stock', 'standby_stock', 'pre_loading_stock', 'is_shelf'];
+                    $safeUpdate = array_intersect_key($value, array_flip($allowed));
+                    $result = $safeUpdate ? $this->updateMachineGoods($safeUpdate, ['mg_id' => $mg_id, 'm_id' => $this->machine['m_id']]) : true;
                     if (!$result) {
                         $this->rollbackTrans();
                         return $this->rFail($this->lang("VMachineGoods.update_machine_goods_fail"));
                     }
                 } else {
                     if (isset($value['mg_id'])) unset($value['mg_id']);
-                    $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price,ao_id');
+                    $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,ao_id');
                     if ($g) {
                         $g = obj2arr($g);
+                        $config = (new MachineCurrencyPriceService())->getMachineCurrency($this->machine['m_id']);
+                        $price = Db::name('goods_currency_price')->where(['g_id' => intval($g['g_id']), 'currency_code' => $config['currency_code']])->find();
+                        if (!$price) throw new \InvalidArgumentException('核心商品缺少当前设备币种价格');
+                        $g = array_merge($g, [
+                            'cost_price' => $price['cost_price'],
+                            'market_price' => $price['market_price'],
+                            'retail_price' => $price['retail_price'],
+                        ]);
                         $g['pic'] = str_replace($this->host,'',$g['pic']);
                         $checkMg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'], 'g_id' => $g['g_id']]);
                         if (!$checkMg) {
@@ -119,6 +140,18 @@ trait MachineGoodsTrait
                             ];
                             $mg = array_merge($mg, $value, $g);
                             $mg_id = $this->addMachineGoods($mg);
+                            if (!$mg_id) throw new \RuntimeException('新增设备商品失败');
+                            Db::name('machine_goods_currency_price')->insert([
+                                'mg_id' => intval($mg_id),
+                                'm_id' => intval($this->machine['m_id']),
+                                'g_id' => intval($g['g_id']),
+                                'currency_code' => $config['currency_code'],
+                                'cost_price' => $price['cost_price'],
+                                'market_price' => $price['market_price'],
+                                'retail_price' => $price['retail_price'],
+                                'creator' => 0,
+                                'update_id' => 0,
+                            ]);
                         } else {
                             $mgList[] = $checkMg;
                             continue;

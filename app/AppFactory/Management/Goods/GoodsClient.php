@@ -13,6 +13,10 @@ use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
+use app\AppFactory\Kernel\Service\Currency\GoodsCurrencyPriceService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyAccessService;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
+use app\AppFactory\Kernel\Support\Currency\CurrencyPriceSupport;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -32,11 +36,84 @@ class GoodsClient extends ManagementClient
 
     protected $priceFields = ['cost_price', 'market_price', 'retail_price'];
 
+    /**
+     * 商品导入/导出列标题兜底值（与 config/goods_import_export.php 保持一致）。
+     * 防止运行环境未同步该配置文件时导出标题为空、生成空白 Excel。
+     * 调整列标题请优先改 config/goods_import_export.php，再同步这里。
+     */
+    protected const EXPORT_COLUMN_FALLBACK = [
+        'g_name'            => '商品名称',
+        'g_type'            => '商品类型',
+        'gc_id'             => '分类ID',
+        'gc_name'           => '商品分类',
+        'model'             => '型号',
+        'sku'               => 'SKU',
+        'sku2'              => 'SKU2',
+        'pic'               => '图片',
+        'bar_code'          => '条形码',
+        'cny_cost_price'    => '人民币成本价',
+        'cny_market_price'  => '人民币市场价',
+        'cny_retail_price'  => '人民币零售价',
+        'hkd_cost_price'    => '港币成本价',
+        'hkd_market_price'  => '港币市场价',
+        'hkd_retail_price'  => '港币零售价',
+        'manufacturer'      => '生产厂家',
+        'service_phone'     => '售后电话',
+        'status'            => '状态',
+        'length'            => '长',
+        'width'             => '宽',
+        'height'            => '高',
+        'gift_points'       => '赠送积分',
+        'cost_points'       => '消费积分',
+        'g_id'              => 'g_id',
+    ];
+
+    /** 导入兼容别名兜底（与 config/goods_import_export.php 保持一致）。 */
+    protected const IMPORT_ALIAS_FALLBACK = [
+        '成本价'   => 'cost_price',
+        '市场价'   => 'market_price',
+        '零售价'   => 'retail_price',
+        '售卖价'   => 'retail_price',
+        '商品ID'   => 'g_id',
+        '商品型号' => 'model',
+        'SKU码'    => 'sku',
+        '商品图片' => 'pic',
+        'sku'      => 'sku',
+        '关联SKU'  => 'sku2',
+        '供应商'   => 'manufacturer',
+        '联系电话' => 'service_phone',
+        '厂商'       => 'manufacturer',
+        '供应商名称' => 'manufacturer',
+        '生产商'     => 'manufacturer',
+        '联系方式'   => 'service_phone',
+        '售后电话'   => 'service_phone',
+    ];
+
+    /** 有商品ID时“非空才更新”的字段白名单兜底（与 config/goods_import_export.php 保持一致）。 */
+    protected const UPDATE_BY_G_ID_FIELDS_FALLBACK = [
+        'bar_code', 'g_name', 'gc_id', 'gc_name', 'model', 'sku', 'sku2', 'pic',
+        'manufacturer', 'service_phone', 'status', 'length', 'width', 'height',
+    ];
+
+    /** 新增行整行未提供 CNY 价格时按 0.000 落库的兜底开关。 */
+    protected const ALLOW_EMPTY_CNY_PRICE_FALLBACK = true;
+
+    /** 导入行是否视为空行时用于判断的关键字段（商品ID/名称/sku/条形码/分类/型号全空即空行）。 */
+    protected const IMPORT_EMPTY_ROW_CHECK_FIELDS = ['g_id', 'g_name', 'sku', 'bar_code', 'gc_id', 'gc_name', 'model'];
+
     public function addG($postData)
     {
         unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
-        $g_id = $this->addGoods($postData);
-        if ($g_id) {
+        try {
+            $priceService = new GoodsCurrencyPriceService();
+            $currencyPrices = $this->extractCurrencyPrices($postData, true);
+            $cnyPrice = CurrencyPriceSupport::normalizePriceRow($currencyPrices['CNY']);
+            $postData = array_merge($postData, $cnyPrice);
+            Db::startTrans();
+            $g_id = $this->addGoods($postData);
+            if (!$g_id) {
+                throw new \RuntimeException('新增商品失败');
+            }
             $insertLang = [
                 "g_id" => $g_id,
                 "g_name" => $postData['g_name'] ?? "",
@@ -48,8 +125,32 @@ class GoodsClient extends ManagementClient
                 "lang" => "zh-cn",
             ];
             $this->addGoodsLang($insertLang);
+            $priceService->savePrices($g_id, $currencyPrices, intval($this->manager['manager_id'] ?? 0), true, false);
+            Db::commit();
+            return $this->rA($g_id);
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'addGoodsCurrencyPrice');
+            return $this->rValidate($e->getMessage());
         }
-        return $this->rA($g_id);
+    }
+
+    public function getListWithCurrencyPrices($where, $pageNum, $field, $order, $hasCostPriceAuth = true)
+    {
+        $data = $this->getGoodsList($where, $pageNum, $field, $order);
+        return $this->rQ($this->appendCurrencyPrices($data, $hasCostPriceAuth));
+    }
+
+    public function getFindWithCurrencyPrices($where, $field, $hasCostPriceAuth = true)
+    {
+        $data = $this->getGoodsFind($where, $field);
+        if (!$data) {
+            return $this->rQ($data);
+        }
+        $gId = intval($data['g_id']);
+        $prices = (new GoodsCurrencyPriceService())->getPrices($gId);
+        $data['currency_prices'] = $this->mapCurrencyPricesByCode($prices, $hasCostPriceAuth);
+        return $this->rQ($data);
     }
 
     public function getPageList($where, $pageNum = 0, $field = "*", $order = "")
@@ -89,7 +190,7 @@ class GoodsClient extends ManagementClient
         return $this->rQ($list);
     }
 
-    public function getAuthList($where,$pageNum,$field,$order,$input){
+    public function getAuthList($where,$pageNum,$field,$order,$input,$hasCostPriceAuth = true){
         $whereG = [];
         if(!empty($input['machine_id'])) $whereG[] = ['machine_id','in',$input['machine_id']];
         if($input['sale_check']){
@@ -106,17 +207,17 @@ class GoodsClient extends ManagementClient
         }
         
         $where[] = ['g_id','in',$g_id];
-        $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        $result = $this->getListWithCurrencyPrices($where,$pageNum,$field,'g_id desc',$hasCostPriceAuth);
         return $result;
     }
 
     /**
-     * 商品编辑：主表价格正常更新，设备商品/货道价格仅按传入的 mg_id、mc_id 覆盖
-     * 不走通用 update 入口，控制器直接调用本方法。
+     * 商品编辑维护核心商品与核心币种价；若传入 mg_id/mc_id，按设备当前币种隐式覆盖
+     * 所选设备商品/货道：写对应币种货币价格事实行，设备当前币种命中时回写活跃快照（版本+1、通知一次）。
      * @param array $postData
      * @return mixed
      */
-    public function updateForEdit($postData)
+    public function updateForEdit($postData, $hasCostPriceAuth = true)
     {
         if (array_key_exists('stocks', $postData) || array_key_exists('locked_stocks', $postData) || array_key_exists('available_stocks', $postData)) {
             return $this->r(100, '商品库存不允许通过商品编辑接口修改');
@@ -126,139 +227,357 @@ class GoodsClient extends ManagementClient
             return $this->r(100, '参数有误');
         }
 
-        $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
+        $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id');
         if (!$oldGoods) {
             return $this->r(100, '商品不存在');
         }
-        $oldGoods = $oldGoods->toArray();
-
         $selectedMgIds = $this->parseIds($postData['mg_id'] ?? []);
         $selectedMcIds = $this->parseIds($postData['mc_id'] ?? []);
         unset($postData['mg_id'], $postData['mc_id']);
-
-        $priceChanged = false;
-        foreach ($this->priceFields as $fieldName) {
-            if (array_key_exists($fieldName, $postData) && (string)$postData[$fieldName] !== (string)$oldGoods[$fieldName]) {
-                $priceChanged = true;
-                break;
+        // 勾选设备商品/货道时按“核心改价隐式覆盖”处理：事务内写货币价格事实行 + 当前币种活跃快照，提交后统一通知
+        $deviceSyncResults = [];
+        $deviceSyncSkipped = [];
+        try {
+            $currencyPrices = $this->extractCurrencyPrices($postData, false);
+            foreach (array_merge($this->priceFields, ['cny_cost_price', 'cny_market_price', 'cny_retail_price', 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price']) as $field) {
+                unset($postData[$field]);
             }
-        }
-
-        $result = $this->updateGoods($postData, ['g_id' => $gId]);
-        if (!$result) {
-            return $this->r(100, '更新失败');
-        }
-
-        if ($priceChanged) {
-            $priceUpdate = [];
-            foreach ($this->priceFields as $fieldName) {
-                if (array_key_exists($fieldName, $postData)) {
-                    $priceUpdate[$fieldName] = $postData[$fieldName];
+            Db::startTrans();
+            $coreRowsBefore = Db::name('goods_currency_price')->where('g_id', $gId)->lock(true)->select()->toArray();
+            $result = true;
+            $updateData = $postData;
+            unset($updateData['g_id']);
+            if ($updateData) {
+                $result = $this->updateGoods($updateData, ['g_id' => $gId]);
+                if (!$result) {
+                    throw new \RuntimeException('更新商品失败');
                 }
             }
-
-            if ($priceUpdate) {
-                if ($selectedMgIds) {
-                    $whereMg = [];
-                    $whereMg[] = ['g_id', '=', $gId];
-                    $whereMg[] = ['mg_id', 'in', $selectedMgIds];
-                    $this->updateMachineGoods($priceUpdate, $whereMg, array_keys($priceUpdate));
-                }
-                if ($selectedMcIds) {
-                    $whereMc = [];
-                    $whereMc[] = ['g_id', '=', $gId];
-                    $whereMc[] = ['mc_id', 'in', $selectedMcIds];
-                    $this->updateMachineChannel($priceUpdate, $whereMc, array_keys($priceUpdate));
+            if ($currencyPrices) {
+                (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, intval($this->manager['manager_id'] ?? 0), false, false);
+                if ($selectedMgIds || $selectedMcIds) {
+                    $changedPrices = $this->changedCorePrices($currencyPrices, $coreRowsBefore);
+                    if ($changedPrices) {
+                        $this->propagateCorePricesToSelectedGoods(
+                            $gId,
+                            $changedPrices,
+                            $selectedMgIds,
+                            $selectedMcIds,
+                            $deviceSyncResults,
+                            $deviceSyncSkipped
+                        );
+                    }
                 }
             }
+            Db::commit();
+            $this->pushGoodsUpdate($gId);
+            if ($deviceSyncResults) {
+                $this->notifySelectedDeviceSnapshots($deviceSyncResults);
+            }
+            $detailField = 'g_id,g_name,gc_id,gc_name,g_type,model,bar_code,sku,sku2,pic,'
+                . ($hasCostPriceAuth ? 'cost_price' : '0 cost_price')
+                . ',market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,'
+                . 'exter_url,expire_notice,sell_by_date,is_gift,is_recommend,recoverable,heat,release_time,'
+                . 'length,width,height,group_quantity,status,creator,create_time,update_time';
+            return $this->getFindWithCurrencyPrices(['g_id' => $gId], $detailField, $hasCostPriceAuth);
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'updateGoodsCurrencyPrice');
+            return $this->rValidate($e->getMessage());
         }
-
-        $this->pushGoodsUpdate($gId);
-        // if ($priceChanged && ($selectedMgIds || $selectedMcIds)) {
-        //     $this->pushGoodsUpdateV2($gId, $selectedMgIds, $selectedMcIds);
-        // }
-
-        return $this->r(200, 'success', $result);
     }
 
     /**
-     * 查询与最新输入价格不同的设备商品、货道列表
+     * 只取本次提交中相对核心商品库“确有变化（或新增）”的币种三价，避免纯资料编辑被当成隐式覆盖。
+     * @param array $submitted     键为币种、值为三价数组
+     * @param array $existingRows  goods_currency_price 当前行
+     * @return array
+     */
+    protected function changedCorePrices(array $submitted, array $existingRows)
+    {
+        $existing = [];
+        foreach ($existingRows as $row) {
+            if (!isset($row['currency_code']) || !isset($row['cost_price'], $row['market_price'], $row['retail_price'])) {
+                continue;
+            }
+            try {
+                $existing[CurrencyPriceSupport::normalizeCurrencyCode($row['currency_code'])] = CurrencyPriceSupport::normalizePriceRow($row);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+        }
+        $changed = [];
+        foreach ($submitted as $currencyCode => $triple) {
+            if (!is_array($triple)) {
+                continue;
+            }
+            try {
+                $currencyCode = CurrencyPriceSupport::normalizeCurrencyCode($currencyCode);
+                $triple = CurrencyPriceSupport::normalizePriceRow($triple);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+            if (!isset($existing[$currencyCode]) || !CurrencyPriceSupport::pricesEqual($existing[$currencyCode], $triple)) {
+                $changed[$currencyCode] = $triple;
+            }
+        }
+        return $changed;
+    }
+
+    /**
+     * 把“确有变化”的核心商品多币种价按设备当前币种隐式覆盖到勾选的设备商品/货道。
+     * 逐设备调用 MachineCurrencyPriceService，必须位于商品保存的外层事务内（manageTransaction=false）。
+     * @param int   $gId
+     * @param array $changedPrices 键为币种、值为变化后的三价
+     * @param array $mgIds
+     * @param array $mcIds
+     * @param array $deviceResults 输出：逐设备同步结果
+     * @param array $deviceSkipped 输出：被跳过的记录说明
+     * @return void
+     */
+    protected function propagateCorePricesToSelectedGoods($gId, array $changedPrices, array $mgIds, array $mcIds, array &$deviceResults, array &$deviceSkipped)
+    {
+        $mgByDevice = [];
+        $mcByDevice = [];
+        if ($mgIds) {
+            $rows = Db::name('machine_goods')->whereIn('mg_id', $mgIds)->field('mg_id,m_id,g_id')->select()->toArray();
+            $found = [];
+            foreach ($rows as $row) {
+                $found[intval($row['mg_id'])] = true;
+                if (intval($row['g_id']) !== intval($gId)) {
+                    $deviceSkipped[] = 'mg_id:' . intval($row['mg_id']) . '(非本商品)';
+                    continue;
+                }
+                $mgByDevice[intval($row['m_id'])][] = intval($row['mg_id']);
+            }
+            foreach ($mgIds as $mgId) {
+                if (!isset($found[intval($mgId)])) {
+                    $deviceSkipped[] = 'mg_id:' . intval($mgId) . '(不存在)';
+                }
+            }
+        }
+        if ($mcIds) {
+            $rows = Db::name('machine_channel')->whereIn('mc_id', $mcIds)->field('mc_id,m_id,g_id')->select()->toArray();
+            $found = [];
+            foreach ($rows as $row) {
+                $found[intval($row['mc_id'])] = true;
+                if (intval($row['g_id']) !== intval($gId)) {
+                    $deviceSkipped[] = 'mc_id:' . intval($row['mc_id']) . '(非本商品)';
+                    continue;
+                }
+                $mcByDevice[intval($row['m_id'])][] = intval($row['mc_id']);
+            }
+            foreach ($mcIds as $mcId) {
+                if (!isset($found[intval($mcId)])) {
+                    $deviceSkipped[] = 'mc_id:' . intval($mcId) . '(不存在)';
+                }
+            }
+        }
+
+        $mIds = array_values(array_unique(array_merge(array_keys($mgByDevice), array_keys($mcByDevice))));
+        foreach ($mIds as $mId) {
+            (new MachineCurrencyAccessService())->assertManagementAccess($mId, $this->manager);
+            $result = (new MachineCurrencyPriceService())->applyCorePricesToSelectedGoods(
+                $mId,
+                $gId,
+                $changedPrices,
+                isset($mgByDevice[$mId]) ? $mgByDevice[$mId] : [],
+                isset($mcByDevice[$mId]) ? $mcByDevice[$mId] : [],
+                intval($this->manager['manager_id'] ?? 0),
+                false
+            );
+            $deviceResults[] = $result;
+            foreach ($result['skipped'] as $skip) {
+                $deviceSkipped[] = $skip;
+            }
+        }
+        if ($deviceSkipped) {
+            actionLog($deviceSkipped, '商品编辑隐式覆盖跳过记录', 'propagateCorePricesToSelectedGoods');
+        }
+    }
+
+    /**
+     * 对活跃快照发生变化的设备，在商品保存事务提交后统一发送一次快照版本通知。
+     * @param array $deviceResults
+     * @return void
+     */
+    protected function notifySelectedDeviceSnapshots(array $deviceResults)
+    {
+        foreach ($deviceResults as $result) {
+            if (intval($result['active_snapshot_changed'] ?? 0) !== 1 || empty($result['machine_id'])) {
+                continue;
+            }
+            $this->sendToMachine(
+                ['machine_id' => $result['machine_id']],
+                'currencySnapshotUpdated',
+                ['currency_code' => $result['active_currency_code'], 'currency_version' => intval($result['currency_version'])]
+            );
+        }
+    }
+
+    /**
+     * 一次对比商品全部币种价与设备商品/货道现有币种价的差异。
+     * 入参 g_id 必填；可传 currency_prices（以币种为键的最新三价）参与预览，未传则读取核心商品库当前全部币种价。
+     * 返回的 mg_diff_list/mc_diff_list 按币种键控，含 CNY/HKD 等多个币种。
      * @param array $postData
+     * @param bool $hasCostPriceAuth
      * @return array|\think\response\Json
      */
-    public function getPriceDiff($postData)
+    public function getPriceDiff($postData, $hasCostPriceAuth = true)
     {
-        $gId = $postData['g_id'] ?? 0;
+        $gId = intval($postData['g_id'] ?? 0);
         if (!$gId) {
             return $this->rFail($this->lang('VGoods.g_id_require'));
         }
-
-        $goods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
-        if (!$goods) {
+        try {
+            $bases = $this->resolvePriceDiffBases($postData, $gId);
+        } catch (\InvalidArgumentException $e) {
+            return $this->rValidate($e->getMessage());
+        }
+        if (!$bases) {
             return $this->rFail($this->lang('goods_no_data'));
         }
-        $goods = $goods->toArray();
+        $mgDiffList = [];
+        $mcDiffList = [];
+        $mgDiffCount = [];
+        $mcDiffCount = [];
+        foreach ($bases as $currencyCode => $triple) {
+            $diff = $this->collectPriceDiffByCode(
+                $gId,
+                $currencyCode,
+                isset($triple['cost_price']) ? $triple['cost_price'] : '',
+                isset($triple['market_price']) ? $triple['market_price'] : '',
+                isset($triple['retail_price']) ? $triple['retail_price'] : ''
+            );
+            $mgDiffList[$currencyCode] = $diff['mg_diff'];
+            $mcDiffList[$currencyCode] = $diff['mc_diff'];
+            $mgDiffCount[$currencyCode] = count($diff['mg_diff']);
+            $mcDiffCount[$currencyCode] = count($diff['mc_diff']);
+        }
+        return $this->r(200, 'success', [
+            'g_id' => $gId,
+            'currency_prices' => $this->mapCurrencyPricesByCode((new GoodsCurrencyPriceService())->getPrices($gId), $hasCostPriceAuth),
+            'mg_diff_list' => $mgDiffList,
+            'mc_diff_list' => $mcDiffList,
+            'mg_diff_count' => $mgDiffCount,
+            'mc_diff_count' => $mcDiffCount,
+        ]);
+    }
 
-        $latestCost = $postData['cost_price'] ?? $goods['cost_price'];
-        $latestMarket = $postData['market_price'] ?? $goods['market_price'];
-        $latestRetail = $postData['retail_price'] ?? $goods['retail_price'];
+    /**
+     * 构造各币种对比基准：优先取请求 currency_prices（以币种为键），否则读核心商品库。
+     * @param array $postData
+     * @param int $gId
+     * @return array
+     */
+    protected function resolvePriceDiffBases(array $postData, $gId)
+    {
+        if (empty($postData['currency_prices'])) {
+            $rows = (new GoodsCurrencyPriceService())->getPrices($gId);
+            $bases = [];
+            foreach ($rows as $row) {
+                $currencyCode = isset($row['currency_code']) ? $row['currency_code'] : '';
+                if ($currencyCode !== '' && array_key_exists('cost_price', $row) && array_key_exists('market_price', $row) && array_key_exists('retail_price', $row)) {
+                    $bases[$currencyCode] = [
+                        'cost_price' => $row['cost_price'],
+                        'market_price' => $row['market_price'],
+                        'retail_price' => $row['retail_price'],
+                    ];
+                }
+            }
+            return $bases;
+        }
+        $prices = is_string($postData['currency_prices'])
+            ? json2arr($postData['currency_prices'])
+            : $postData['currency_prices'];
+        if (!is_array($prices)) {
+            throw new \InvalidArgumentException('currency_prices格式错误');
+        }
+        $bases = [];
+        foreach ($prices as $currencyCode => $triple) {
+            if (!is_array($triple)) {
+                continue;
+            }
+            $currencyCode = CurrencyPriceSupport::normalizeCurrencyCode($currencyCode);
+            if (!array_key_exists('cost_price', $triple) || !array_key_exists('market_price', $triple) || !array_key_exists('retail_price', $triple)) {
+                continue;
+            }
+            $bases[$currencyCode] = [
+                'cost_price' => $triple['cost_price'],
+                'market_price' => $triple['market_price'],
+                'retail_price' => $triple['retail_price'],
+            ];
+        }
+        return $bases;
+    }
 
+    /**
+     * 对比单币种最新核心价与设备商品、货道现有价，返回差异列表。
+     * @return array{mg_diff:array,mc_diff:array}
+     */
+    protected function collectPriceDiffByCode($gId, $currencyCode, $latestCost, $latestMarket, $latestRetail)
+    {
+        // 缺币种价行仍列为待配置差异：CNY回退本表三价，外币展示0，不借用本表价格。
+        // 使用价格行主键判断缺行，避免把已配置的0误认为缺价；状态计算复用返回的零售价。
+        $mgPriceFields = [];
+        $mcPriceFields = [];
+        foreach ($this->priceFields as $field) {
+            $mgFallback = $currencyCode === 'CNY' ? 'COALESCE(mg.' . $field . ',0)' : '0';
+            $mcFallback = $currencyCode === 'CNY' ? 'COALESCE(mc.' . $field . ',0)' : '0';
+            $mgPriceFields[] = 'CASE WHEN p.mgcp_id IS NULL THEN ' . $mgFallback . ' ELSE p.' . $field . ' END AS ' . $field;
+            $mcPriceFields[] = 'CASE WHEN p.mccp_id IS NULL THEN ' . $mcFallback . ' ELSE p.' . $field . ' END AS ' . $field;
+        }
         $mgDiff = Db::name('machine_goods')->alias('mg')
             ->join('machine m', 'm.m_id = mg.m_id')
+            ->leftJoin('machine_goods_currency_price p', 'p.mg_id=mg.mg_id AND p.currency_code="' . $currencyCode . '"')
             ->where('mg.g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
-                $query->where('mg.cost_price', '<>', $latestCost)
-                    ->whereOr('mg.market_price', '<>', $latestMarket)
-                    ->whereOr('mg.retail_price', '<>', $latestRetail);
+                $query->whereNull('p.mgcp_id')->whereOr('p.cost_price', '<>', $latestCost)
+                    ->whereOr('p.market_price', '<>', $latestMarket)->whereOr('p.retail_price', '<>', $latestRetail);
             })
-            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,mg.cost_price,mg.market_price,mg.retail_price')
+            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,' . implode(',', $mgPriceFields) . ',p.updated_at')
             ->order('mg.mg_id desc')
             ->limit(200)
             ->select()
             ->toArray();
-
         foreach ($mgDiff as $key => $item) {
-            if ($latestRetail > $item['retail_price']) {
-                $mgDiff[$key]['goods_status'] = 1;
-            } elseif ($latestRetail < $item['retail_price']) {
-                $mgDiff[$key]['goods_status'] = 2;
-            } else {
-                $mgDiff[$key]['goods_status'] = 3;
-            }
+            $mgDiff[$key]['goods_status'] = $this->priceDiffStatus($latestRetail, isset($item['retail_price']) ? $item['retail_price'] : null);
         }
-
         $mcDiff = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
+            ->leftJoin('machine_channel_currency_price p', 'p.mc_id=mc.mc_id AND p.currency_code="' . $currencyCode . '"')
             ->where('mc.g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
-                $query->where('mc.cost_price', '<>', $latestCost)
-                    ->whereOr('mc.market_price', '<>', $latestMarket)
-                    ->whereOr('mc.retail_price', '<>', $latestRetail);
+                $query->whereNull('p.mccp_id')->whereOr('p.cost_price', '<>', $latestCost)
+                    ->whereOr('p.market_price', '<>', $latestMarket)->whereOr('p.retail_price', '<>', $latestRetail);
             })
-            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,mc.cost_price,mc.market_price,mc.retail_price,mc.update_price as update_status')
+            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,' . implode(',', $mcPriceFields) . ',p.updated_at,mc.update_price as update_status')
             ->order('mc.mc_id desc')
             ->limit(200)
             ->select()
             ->toArray();
-
         foreach ($mcDiff as $key => $item) {
-            if ($latestRetail > $item['retail_price']) {
-                $mcDiff[$key]['goods_status'] = 1;
-            } elseif ($latestRetail < $item['retail_price']) {
-                $mcDiff[$key]['goods_status'] = 2;
-            } else {
-                $mcDiff[$key]['goods_status'] = 3;
-            }
+            $mcDiff[$key]['goods_status'] = $this->priceDiffStatus($latestRetail, isset($item['retail_price']) ? $item['retail_price'] : null);
         }
-
-        return $this->r(200, 'success', [
-            'mg_diff_list' => $mgDiff,
-            'mc_diff_list' => $mcDiff,
-            'mg_diff_count' => count($mgDiff),
-            'mc_diff_count' => count($mcDiff),
-        ]);
+        return ['mg_diff' => $mgDiff, 'mc_diff' => $mcDiff];
     }
 
+    /**
+     * 按最新零售价与当前零售价比较商品状态：1=最新价更高，2=最新价更低，3=一致。
+     * @param mixed $latestRetail
+     * @param mixed $currentRetail
+     * @return int
+     */
+    protected function priceDiffStatus($latestRetail, $currentRetail)
+    {
+        if ($currentRetail === null || $latestRetail > $currentRetail) {
+            return 1;
+        }
+        if ($latestRetail < $currentRetail) {
+            return 2;
+        }
+        return 3;
+    }
     protected function parseIds($ids)
     {
         if (is_array($ids)) {
@@ -271,6 +590,97 @@ class GoodsClient extends ManagementClient
             return $item !== '';
         });
         return array_values(array_unique($idList));
+    }
+
+    protected function appendCurrencyPrices($data, $hasCostPriceAuth)
+    {
+        if (!$data) {
+            return $data;
+        }
+        $gIds = [];
+        foreach ($data as $item) {
+            $gIds[] = intval($item['g_id']);
+        }
+        $priceMap = (new GoodsCurrencyPriceService())->getPriceMapByGoodsIds($gIds);
+        return $data->each(function ($item) use ($priceMap, $hasCostPriceAuth) {
+            $prices = isset($priceMap[intval($item['g_id'])]) ? $priceMap[intval($item['g_id'])] : [];
+            $item['currency_prices'] = $this->mapCurrencyPricesByCode($prices, $hasCostPriceAuth);
+            return $item;
+        });
+    }
+
+    /**
+     * 把币种价行列表转换为以 currency_code 为键的对象，便于前端按币种取值。
+     * 无成本价权限时 cost_price 置空。
+     * @param array $prices
+     * @param bool $hasCostPriceAuth
+     * @return array
+     */
+    protected function mapCurrencyPricesByCode(array $prices, $hasCostPriceAuth)
+    {
+        $mapped = [];
+        foreach ($prices as $price) {
+            $currencyCode = isset($price['currency_code']) ? $price['currency_code'] : '';
+            if ($currencyCode === '') {
+                continue;
+            }
+            $mapped[$currencyCode] = [
+                'cost_price' => isset($price['cost_price']) ? $price['cost_price'] : '',
+                'market_price' => isset($price['market_price']) ? $price['market_price'] : '',
+                'retail_price' => isset($price['retail_price']) ? $price['retail_price'] : '',
+                'currency_name' => isset($price['currency_name']) ? $price['currency_name'] : '',
+                'currency_symbol' => isset($price['currency_symbol']) ? $price['currency_symbol'] : '',
+                'decimal_places' => isset($price['decimal_places']) ? intval($price['decimal_places']) : 2,
+                'status' => isset($price['status']) ? intval($price['status']) : 1,
+                'updated_at' => isset($price['updated_at']) ? $price['updated_at'] : '',
+            ];
+            if (!$hasCostPriceAuth) {
+                $mapped[$currencyCode]['cost_price'] = '';
+            }
+        }
+        return $mapped;
+    }
+
+    /**
+     * currency_prices 承载任意启用币种；CNY/HKD 平面字段仅用于兼容现有表单和 Excel 模板。
+     */
+    protected function extractCurrencyPrices(array &$postData, $requireCny)
+    {
+        $prices = [];
+        if (isset($postData['currency_prices'])) {
+            $prices = (new GoodsCurrencyPriceService())->normalizePriceCollection($postData['currency_prices']);
+            unset($postData['currency_prices']);
+        }
+        $flatCny = [];
+        foreach ($this->priceFields as $field) {
+            if (array_key_exists($field, $postData)) {
+                $flatCny[$field] = $postData[$field];
+            }
+            $named = 'cny_' . $field;
+            if (array_key_exists($named, $postData) && $postData[$named] !== '') {
+                $flatCny[$field] = $postData[$named];
+            }
+        }
+        if ($flatCny) {
+            $prices['CNY'] = array_merge($flatCny, isset($prices['CNY']) ? $prices['CNY'] : []);
+        }
+        $flatHkd = [];
+        foreach ($this->priceFields as $field) {
+            $named = 'hkd_' . $field;
+            if (array_key_exists($named, $postData) && $postData[$named] !== '') {
+                $flatHkd[$field] = $postData[$named];
+            }
+        }
+        if ($flatHkd) {
+            $prices['HKD'] = array_merge($flatHkd, isset($prices['HKD']) ? $prices['HKD'] : []);
+        }
+        foreach (['cny_cost_price', 'cny_market_price', 'cny_retail_price', 'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price'] as $field) {
+            unset($postData[$field]);
+        }
+        if ($requireCny && !isset($prices['CNY'])) {
+            throw new \InvalidArgumentException('新商品必须配置CNY三价');
+        }
+        return $prices;
     }
 
     /**
@@ -454,78 +864,132 @@ class GoodsClient extends ManagementClient
     }
 
     /**
-     * 导入Excel有商品ID则更新商品名称、商品图片和条形码
+     * 导入Excel：有商品ID且商品存在时，按白名单“非空才更新”商品字段并写入本行币种三价；否则按新增处理
      * @param $data
      * @return array|string
      */
-    public function importExcelV2($data)
+    public function importExcelV2($data, $hasCostPriceAuth = true)
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height',"g_id"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
-            $goods = Excel::importExcel($path, $title, $other, 2, ['pic']);
+            $goods = Excel::importExcelByHeader($path, $this->getGoodsImportHeaderMap(), $other, 2, ['pic']);
             if (is_object($goods)) return $goods;
+            if (!$hasCostPriceAuth) {
+                foreach ($goods as $row) {
+                    foreach (['cost_price', 'cny_cost_price', 'hkd_cost_price'] as $costField) {
+                        if (isset($row[$costField]) && trim((string)$row[$costField]) !== '') {
+                            return $this->r(100, '当前账号无成本价权限，请清空人民币/港币成本价列后重试');
+                        }
+                    }
+                }
+            }
             actionLog($goods, '导入的商品数据');
             if ($goods) {
-                $insertGoods = [];
+                $operatorId = intval($this->manager['manager_id'] ?? 0);
                 $resultData = [
                     'total' => count($goods),
+                    'skip_empty' => 0,
+                    'skip_empty_list' => [],
                     'update_success' => 0,
                     'update_fail' => 0,
                     'insert_total' => 0,
                     'insert_success' => 0,
                     'insert_fail' => 0,
+                    'insert_zero_price' => 0,
+                    'insert_zero_price_list' => [],
                     'insert_fail_list' => [],
                 ];
                 foreach ($goods as $key => $value) {
+                    $rowNo = $key + 2;
+                    $value = $this->normalizeGoodsImportRow($value);
+                    // 模板空白行/末尾注释行不参与新增或更新，避免产生无意义的失败行
+                    if ($this->isEmptyGoodsImportRow($value)) {
+                        $resultData['skip_empty']++;
+                        $resultData['skip_empty_list'][] = ['row' => $rowNo];
+                        continue;
+                    }
                     $gId = intval($value['g_id'] ?? 0);
                     if ($gId > 0) {
                         $goodsFind = $this->getGoodsFind(['g_id' => $gId], 'g_id');
                         if ($goodsFind) {
-                            $update = [
-                                'bar_code' => trim((string)($value['bar_code'] ?? '')),
-                            ];
-                            $goodsName = trim((string)($value['g_name'] ?? ''));
-                            $goodsPic = trim((string)($value['pic'] ?? ''));
-                            if ($goodsName !== '') $update['g_name'] = $goodsName;
-                            if ($goodsPic !== '') $update['pic'] = $goodsPic;
-                            $updateResult = $this->updateGoods(
-                                ['g_id' => $gId] + $update,
-                                ['g_id' => $gId],
-                                array_keys($update)
-                            );
-                            if ($updateResult) {
+                            try {
+                                // 有商品ID时按白名单“非空才更新”，空白单元格不会清空已有值
+                                $update = $this->buildGoodsUpdateByGId($value, $gId, $rowNo);
+                                $existingCodes = Db::name('goods_currency_price')->where('g_id', $gId)->column('currency_code');
+                                $currencyPrices = $this->fillMissingNonCnyPriceFields($this->extractCurrencyPrices($value, false), $existingCodes);
+                                Db::startTrans();
+                                if ($update) {
+                                    $this->updateGoods($update, ['g_id' => $gId]);
+                                }
+                                if ($currencyPrices) {
+                                    (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, $operatorId, false, false);
+                                    // 核心价落库后补齐设备侧缺失的币种三价事实行（如人民币/港币），仅缺失时新增，已存在不覆盖
+                                    $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, $operatorId);
+                                }
+                                Db::commit();
                                 $resultData['update_success']++;
-                            } else {
+                            } catch (\Exception $e) {
+                                Db::rollback();
                                 $resultData['update_fail']++;
+                                $resultData['insert_fail_list'][] = ['row' => $rowNo, 'error' => $e->getMessage()];
                             }
                             continue;
                         }
                     }
                     unset($value['g_id']);
                     try {
+                        if (isset($value['status']) && trim((string)$value['status']) !== '') {
+                            $value['status'] = $this->normalizeGoodsImportStatus($value['status']);
+                        }
                         validate(VGoods::class)->scene("importExcel")->check($value);
                     } catch (\Exception $e) {
                         $resultData['insert_fail']++;
                         $resultData['insert_fail_list'][] = [
-                            'row' => $key + 2,
+                            'row' => $rowNo,
                             'error' => $e->getMessage(),
                         ];
                         continue;
                     }
-                    $insertGoods[] = $value;
-                }
-
-                $resultData['insert_total'] = count($insertGoods);
-                if ($insertGoods) {
-                    $insertResult = $this->addMoreGoods($insertGoods);
-                    if ($insertResult) {
-                        $resultData['insert_success'] = count($insertGoods);
-                    } else {
-                        $resultData['insert_fail'] += count($insertGoods);
+                    try {
+                        // 目标模板可能不含价格列：整行未提供 CNY 三价时按 0.000 占位落库，
+                        // 并用 insert_zero_price_list 明确回报行号，避免静默产生零价商品。
+                        $currencyPrices = $this->fillMissingNonCnyPriceFields(
+                            $this->extractCurrencyPrices($value, !$this->goodsImportAllowEmptyCnyPrice())
+                        );
+                        if (!isset($currencyPrices['CNY'])) {
+                            $currencyPrices['CNY'] = ['cost_price' => '0', 'market_price' => '0', 'retail_price' => '0'];
+                            $resultData['insert_zero_price']++;
+                            $resultData['insert_zero_price_list'][] = [
+                                'row' => $rowNo,
+                                'msg' => '未提供人民币(CNY)三价，已按0.000落库，请在商品列表补价',
+                            ];
+                        }
+                        $value = array_merge($value, CurrencyPriceSupport::normalizePriceRow($currencyPrices['CNY']));
+                        Db::startTrans();
+                        $gId = $this->addGoods($value);
+                        if (!$gId) throw new \RuntimeException('新增商品失败');
+                        $this->addGoodsLang([
+                            'g_id' => $gId,
+                            'g_name' => isset($value['g_name']) ? $value['g_name'] : '',
+                            'gc_id' => isset($value['gc_id']) ? $value['gc_id'] : 0,
+                            'gc_name' => isset($value['gc_name']) ? $value['gc_name'] : '',
+                            'manufacturer' => isset($value['manufacturer']) ? $value['manufacturer'] : '',
+                            'lang' => 'zh-cn',
+                        ]);
+                        (new GoodsCurrencyPriceService())->savePrices($gId, $currencyPrices, $operatorId, true, false);
+                        // 新商品也可能已存在设备绑定历史数据，核心价落库后同样补齐设备侧缺失的币种三价事实行（仅缺失时新增）
+                        $this->ensureMissingMachineCurrencyPriceRows($gId, $currencyPrices, $operatorId);
+                        Db::commit();
+                        $resultData['insert_success']++;
+                    } catch (\Exception $e) {
+                        Db::rollback();
+                        $resultData['insert_fail']++;
+                        $resultData['insert_fail_list'][] = ['row' => $rowNo, 'error' => $e->getMessage()];
                     }
                 }
+
+                $resultData['insert_total'] = $resultData['insert_success'] + $resultData['insert_fail'];
 
                 return $this->r(200, '导入完成', $resultData);
             }
@@ -537,52 +1001,403 @@ class GoodsClient extends ManagementClient
     }
 
     /**
+     * 导入识别表头：由 config('goods_import_export') 统一派生。
+     * - columns 反转即标准表头；import_aliases 提供历史/旧模板的兼容别名。
+     */
+    protected function getGoodsImportHeaderMap()
+    {
+        $columns = (array)config('goods_import_export.columns');
+        if (!$columns) {
+            $columns = self::EXPORT_COLUMN_FALLBACK;
+        }
+        $aliases = (array)config('goods_import_export.import_aliases');
+        if (!$aliases) {
+            $aliases = self::IMPORT_ALIAS_FALLBACK;
+        }
+        $map = [];
+        foreach ($columns as $field => $header) {
+            $map[(string)$header] = $field;
+        }
+        return array_merge($map, $aliases);
+    }
+
+    /**
+     * 按给定字段顺序生成导出列标题，标题取自 config('goods_import_export.columns')。
+     * 导出与导入共用同一标题源，保证导出的文件可以直接回导。
+     */
+    protected function getGoodsExportColumnTitles(array $fields)
+    {
+        $columns = (array)config('goods_import_export.columns');
+        if (!$columns) {
+            $columns = self::EXPORT_COLUMN_FALLBACK;
+        }
+        $titles = [];
+        foreach ($fields as $field) {
+            if (isset($columns[$field])) {
+                $titles[$field] = $columns[$field];
+            }
+        }
+        return $titles;
+    }
+
+    /**
+     * 导入空行判断：模板空白行、模板末尾“注释行”不参与新增/更新，避免产生无意义的失败行。
+     * 判定口径：商品ID、商品名称、sku、条形码、分类ID、商品分类、型号全为空即视为空行。
+     */
+    protected function isEmptyGoodsImportRow(array $value)
+    {
+        foreach (self::IMPORT_EMPTY_ROW_CHECK_FIELDS as $field) {
+            if (!array_key_exists($field, $value)) continue;
+            if (is_object($value[$field])) return false;
+            if (trim((string)$value[$field]) !== '') return false;
+        }
+        return true;
+    }
+
+    /**
+     * 新增行是否允许整行无 CNY 价格（按 0.000 占位落库）。
+     * 跟随 config/goods_import_export.allow_empty_cny_price，配置缺失时用常量兜底。
+     */
+    protected function goodsImportAllowEmptyCnyPrice()
+    {
+        $value = config('goods_import_export.allow_empty_cny_price');
+        if ($value === null) return self::ALLOW_EMPTY_CNY_PRICE_FALLBACK;
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * 有商品ID的导入行“非空才更新”字段白名单，配置缺失时用常量兜底。
+     */
+    protected function getGoodsUpdateFieldsByGId()
+    {
+        $fields = config('goods_import_export.update_by_g_id_fields');
+        if (!is_array($fields) || !$fields) {
+            $fields = self::UPDATE_BY_G_ID_FIELDS_FALLBACK;
+        }
+        return $fields;
+    }
+
+    /**
+     * 有商品ID且商品存在时的更新数据：只取白名单内的非空单元格（“无数据的请留空”语义，不会清空已有值）。
+     * sku/sku2 需全局唯一，被其它商品占用时直接抛出该行错误，避免静默串号。
+     * @param array $value 已归一化的导入行
+     * @param int   $gId
+     * @param int   $rowNo 行号（仅用于错误提示）
+     * @return array
+     */
+    protected function buildGoodsUpdateByGId(array $value, $gId, $rowNo = 0)
+    {
+        $update = [];
+        foreach ($this->getGoodsUpdateFieldsByGId() as $field) {
+            if (!array_key_exists($field, $value)) continue;
+            $fieldValue = $value[$field];
+            if (is_object($fieldValue)) continue;
+            if (is_string($fieldValue)) $fieldValue = trim($fieldValue);
+            if ($fieldValue === '' || $fieldValue === null) continue;
+            if ($field === 'status') {
+                $fieldValue = $this->normalizeGoodsImportStatus($fieldValue);
+            }
+            if (in_array($field, ['gc_id', 'length', 'width', 'height'], true) && !is_numeric($fieldValue)) {
+                throw new \RuntimeException($field . ' 必须为数字：' . $fieldValue);
+            }
+            $update[$field] = $fieldValue;
+        }
+        foreach (['sku', 'sku2'] as $uniqueField) {
+            if (!isset($update[$uniqueField])) continue;
+            $exist = $this->getGoodsFind([[$uniqueField, '=', $update[$uniqueField]], ['g_id', '<>', $gId]], 'g_id');
+            if ($exist) {
+                throw new \RuntimeException($uniqueField . ' 已被其它商品占用：' . $update[$uniqueField]);
+            }
+        }
+        return $update;
+    }
+
+    /**
+     * 状态取值归一化：1/2 或中文（启用/正常/上架/有效/是、停用/禁用/下架/无效/否）。
+     * 无法识别时抛出明确错误，避免把非法值写进 tinyint 字段报数据库错误。
+     */
+    protected function normalizeGoodsImportStatus($status)
+    {
+        $result = $this->tryNormalizeGoodsImportStatus($status);
+        if ($result === null) {
+            throw new \RuntimeException('状态只能是1(启用)或2(禁用)：' . (is_scalar($status) ? $status : gettype($status)));
+        }
+        return $result;
+    }
+
+    /**
+     * 尝试归一化状态取值，无法识别返回 null（供非严格场景使用）。
+     * @param mixed $status
+     * @return int|null
+     */
+    protected function tryNormalizeGoodsImportStatus($status)
+    {
+        if (is_bool($status)) {
+            return $status ? 1 : 2;
+        }
+        if (is_numeric($status)) {
+            $intStatus = intval($status);
+            return in_array($intStatus, [1, 2], true) ? $intStatus : null;
+        }
+        $statusMap = [
+            '启用' => 1, '正常' => 1, '上架' => 1, '有效' => 1, '是' => 1,
+            '停用' => 2, '禁用' => 2, '下架' => 2, '无效' => 2, '否' => 2,
+        ];
+        $text = trim((string)$status);
+        return isset($statusMap[$text]) ? $statusMap[$text] : null;
+    }
+
+    protected function normalizeGoodsImportRow(array $row)
+    {
+        if (isset($row['status']) && !is_numeric($row['status'])) {
+            $status = $this->tryNormalizeGoodsImportStatus($row['status']);
+            if ($status !== null) $row['status'] = $status;
+        }
+        // 导出模板 g_type 为中文（普通商品/酒店商品/门票商品），转回数字。
+        if (isset($row['g_type']) && !is_numeric($row['g_type'])) {
+            $gTypeText = trim((string)$row['g_type']);
+            $gTypeMap = [1 => '普通商品', 2 => '酒店商品', 3 => '门票商品'];
+            foreach ($gTypeMap as $gTypeValue => $gTypeLabel) {
+                if ($gTypeText === $gTypeLabel) {
+                    $row['g_type'] = $gTypeValue;
+                    break;
+                }
+            }
+        }
+        return $row;
+    }
+
+    /**
+     * 导入时非 CNY 币种（如 HKD）三价允许部分填写。
+     * - 该商品该币种已有价格行：缺失字段保留旧值，不被覆盖；
+     * - 该币种尚不存在（首次导入）：缺失字段补 0，避免整行报缺价失败。
+     * CNY 保持原规则（新行必须完整 CNY 三价 / 已有 CNY 行缺失字段沿用旧值）。
+     * @param array $prices
+     * @param array $existingCodes
+     * @return array
+     */
+    protected function fillMissingNonCnyPriceFields(array $prices, array $existingCodes = [])
+    {
+        $result = [];
+        $existingCodes = array_map('strtoupper', array_map('trim', $existingCodes));
+        foreach ($prices as $code => $triple) {
+            if ($code === 'CNY' || !is_array($triple)) {
+                $result[$code] = $triple;
+                continue;
+            }
+            if (in_array($code, $existingCodes, true)) {
+                $result[$code] = $triple;
+                continue;
+            }
+            foreach (['cost_price', 'market_price', 'retail_price'] as $field) {
+                if (!array_key_exists($field, $triple) || trim((string)$triple[$field]) === '') {
+                    $triple[$field] = '0.000';
+                }
+            }
+            $result[$code] = $triple;
+        }
+        return $result;
+    }
+
+    /**
+     * 导入完成核心商品币种价落库后，补齐该商品在设备侧缺失的币种价格事实行。
+     *
+     * 遍历绑定本商品（g_id）的 machine_goods / machine_channel（普通单商品货道），
+     * 若 machine_goods_currency_price / machine_channel_currency_price 中缺少对应
+     * 币种（如人民币 CNY / 港币 HKD）三价记录，则按本次导入后核心商品库中该币种的三价新增；
+     * 已存在的记录不更新，保留设备侧自有维护价，后续由用户在设备商品/货道页面自行维护。
+     * 必须在调用方开启的事务内执行，本方法不自行启停事务。
+     *
+     * @param int   $gId
+     * @param array $currencyPrices 键为币种编码、值为三价数组（导入文档本次携带的币种）
+     * @param int   $operatorId
+     * @return void
+     */
+    protected function ensureMissingMachineCurrencyPriceRows($gId, array $currencyPrices, $operatorId = 0)
+    {
+        $gId = intval($gId);
+        if ($gId <= 0 || !$currencyPrices) {
+            return;
+        }
+        $codes = [];
+        foreach ($currencyPrices as $currencyCode => $triple) {
+            if (!is_array($triple)) {
+                continue;
+            }
+            try {
+                // 导入文档携带的人民币(CNY)/港币(HKD)等币种均纳入：缺失即新增、已存在不覆盖
+                $codes[CurrencyPriceSupport::normalizeCurrencyCode($currencyCode)] = true;
+            } catch (\InvalidArgumentException $e) {
+                // 忽略非法的币种编码
+            }
+        }
+        if (!$codes) {
+            return;
+        }
+        // 直接读落库后的核心币种三价，保证与 goods_currency_price 完全一致（含已有行缺字段合并后的值）
+        $coreRows = Db::name('goods_currency_price')
+            ->where('g_id', $gId)
+            ->whereIn('currency_code', array_keys($codes))
+            ->lock(true)
+            ->select()
+            ->toArray();
+        $priceByCode = [];
+        foreach ($coreRows as $row) {
+            try {
+                $priceByCode[$row['currency_code']] = CurrencyPriceSupport::normalizePriceRow($row);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+        }
+        $operatorId = intval($operatorId);
+        foreach ($priceByCode as $currencyCode => $price) {
+            $this->fillMissingMachineGoodsCurrencyPriceRows($gId, $currencyCode, $price, $operatorId);
+            $this->fillMissingMachineChannelCurrencyPriceRows($gId, $currencyCode, $price, $operatorId);
+        }
+    }
+
+    /**
+     * 给绑定指定商品（g_id）的设备商品补齐缺失的币种三价事实行。
+     * @param int    $gId
+     * @param string $currencyCode
+     * @param array  $price
+     * @param int    $operatorId
+     * @return void
+     */
+    protected function fillMissingMachineGoodsCurrencyPriceRows($gId, $currencyCode, array $price, $operatorId)
+    {
+        $mgRows = Db::name('machine_goods')
+            ->where('g_id', $gId)
+            ->field('mg_id,m_id,g_id')
+            ->select()
+            ->toArray();
+        if (!$mgRows) {
+            return;
+        }
+        $mgIds = array_values(array_unique(array_map('intval', array_column($mgRows, 'mg_id'))));
+        $existRows = Db::name('machine_goods_currency_price')
+            ->whereIn('mg_id', $mgIds)
+            ->where('currency_code', $currencyCode)
+            ->lock(true)
+            ->select()
+            ->toArray();
+        $existIds = [];
+        foreach ($existRows as $row) {
+            $existIds[intval($row['mg_id'])] = true;
+        }
+        $insertRows = [];
+        foreach ($mgRows as $mg) {
+            $mgId = intval($mg['mg_id']);
+            if (isset($existIds[$mgId])) {
+                continue;
+            }
+            $insertRows[] = array_merge($price, [
+                'mg_id' => $mgId,
+                'm_id' => intval($mg['m_id']),
+                'g_id' => intval($mg['g_id']),
+                'currency_code' => $currencyCode,
+                'creator' => $operatorId,
+                'update_id' => $operatorId,
+            ]);
+        }
+        if ($insertRows) {
+            Db::name('machine_goods_currency_price')->insertAll($insertRows);
+            actionLog([
+                'g_id' => $gId,
+                'currency_code' => $currencyCode,
+                'insert_count' => count($insertRows),
+            ], '导入补齐设备商品币种价缺失记录', 'ensureMissingMachineCurrencyPriceRows');
+        }
+    }
+
+    /**
+     * 给绑定指定商品（g_id）的普通货道补齐缺失的币种三价事实行。
+     * 仅排除真正开启单货道多商品（is_multi_goods=1）的货道；
+     * 不因 channel_goods_batch 存在历史/补货批次记录而整批跳过（否则会把带批次记录的普通货道漏掉）。
+     * @param int    $gId
+     * @param string $currencyCode
+     * @param array  $price
+     * @param int    $operatorId
+     * @return void
+     */
+    protected function fillMissingMachineChannelCurrencyPriceRows($gId, $currencyCode, array $price, $operatorId)
+    {
+        $mcRows = Db::name('machine_channel')
+            ->where('g_id', $gId)
+            ->whereRaw('IFNULL(is_multi_goods, 2) <> 1')
+            ->field('mc_id,m_id,mg_id,g_id')
+            ->select()
+            ->toArray();
+        if (!$mcRows) {
+            return;
+        }
+        $mcIds = array_values(array_unique(array_map('intval', array_column($mcRows, 'mc_id'))));
+        $existRows = Db::name('machine_channel_currency_price')
+            ->whereIn('mc_id', $mcIds)
+            ->where('currency_code', $currencyCode)
+            ->lock(true)
+            ->select()
+            ->toArray();
+        $existIds = [];
+        foreach ($existRows as $row) {
+            $existIds[intval($row['mc_id'])] = true;
+        }
+        $insertRows = [];
+        foreach ($mcRows as $mc) {
+            $mcId = intval($mc['mc_id']);
+            if (isset($existIds[$mcId])) {
+                continue;
+            }
+            $insertRows[] = array_merge($price, [
+                'mc_id' => $mcId,
+                'm_id' => intval($mc['m_id']),
+                'mg_id' => intval($mc['mg_id']),
+                'g_id' => intval($mc['g_id']),
+                'currency_code' => $currencyCode,
+                'creator' => $operatorId,
+                'update_id' => $operatorId,
+            ]);
+        }
+        if ($insertRows) {
+            Db::name('machine_channel_currency_price')->insertAll($insertRows);
+            actionLog([
+                'g_id' => $gId,
+                'currency_code' => $currencyCode,
+                'insert_count' => count($insertRows),
+            ], '导入补齐货道币种价缺失记录', 'ensureMissingMachineCurrencyPriceRows');
+        }
+    }
+
+    /**
      * 导出商品
      * @param $where
      * @return array|string
      */
-    public function exportExcel($where, $hasCostPriceAuth = true)
+    public function exportExcel($where, $hasCostPriceAuth = true, $exportImg = true)
     {
-        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
         $field = 'g_id,g_name,gc_name,gift_points,cost_points,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
-            model,sku,bar_code,pic,' . $costPriceField . ',market_price,retail_price';
+            model,sku,bar_code,pic';
         $list = $this->getGoodsList($where, 0,
             $field);
         if ($list) {
             $list = $list->toArray();
-            $title = [
-                'g_id' => $this->lang("export.g_id"),
-                'g_name' => $this->lang("export.g_name") ,
-                'g_type' => $this->lang("export.g_type"),
-                'gc_name' => $this->lang("export.gc_name"),
-                'model' => $this->lang("export.model"),
-                'sku' => $this->lang("export.sku"),
-                'bar_code' => $this->lang("export.bar_code"),
-                'pic' => $this->lang("export.pic"),
-                'market_price' => $this->lang("export.market_price"),
-                'retail_price' => $this->lang("export.retail_price"),
-                'gift_points' => $this->lang("export.gift_points"),
-                'cost_points' => $this->lang("export.cost_points"),
-            ];
-            if ($hasCostPriceAuth) {
-                $title['cost_price'] = $this->lang("export.cost_price");
-                // $title = array_merge(
-                //     array_slice($title, 0, 7, true),
-                //     ['cost_price' => $this->lang("export.cost_price")],
-                //     array_slice($title, 7, null, true)
-                // );
+            $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
+            $title = $this->getGoodsExportColumnTitles([
+                'g_name', 'g_type', 'gc_name', 'model', 'sku', 'bar_code', 'pic',
+                'cny_cost_price', 'cny_market_price', 'cny_retail_price',
+                'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price',
+                'gift_points', 'cost_points', 'g_id',
+            ]);
+            if (!$title) {
+                return $this->r(100, '导出标题缺失，请检查商品导入导出列标题配置');
             }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
-            $result = $this->sendToExport(
-                $this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"),
-                $filename,
-                $title,
-                $list
-            );
+            if (!$exportImg) { $list = $this->stripExportImageFields($list); }
+            $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));
@@ -593,10 +1408,9 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportAllGoodsToExcel($where, $hasCostPriceAuth = true)
+    public function exportAllGoodsToExcel($where, $hasCostPriceAuth = true, $exportImg = true)
     {
-        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
-        $field = 'g_id,g_name,gc_name,
+        $field = 'g_id,g_name,gc_id,gc_name,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
@@ -604,45 +1418,67 @@ class GoodsClient extends ManagementClient
             (case status when 1 THEN "' . $this->lang("export.status1") .
             '" WHEN 2 THEN "' . $this->lang("export.status2") .
             '" END) status,
-            model,bar_code,sku,pic,' . $costPriceField . ',market_price,retail_price,manufacturer,service_phone,length,width,height';
-        $list = $this->getGoodsList([], 0,
-            $field);
+            model,bar_code,sku,sku2,pic,manufacturer,service_phone,length,width,height';
+        $list = $this->getGoodsList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
-            $title = [
-                'g_id' => $this->lang("export.g_id"),
-                'g_name' => $this->lang("export.g_name") ,
-                'g_type' => $this->lang("export.g_type"),
-                'gc_name' => $this->lang("export.gc_name"),
-                'model' => $this->lang("export.model"),
-                'bar_code' => $this->lang("export.bar_code"),
-                'sku' => $this->lang("export.sku"),
-                'pic' => $this->lang("export.pic"),
-                'market_price' => $this->lang("export.market_price"),
-                'retail_price' => $this->lang("export.retail_price"),
-                'status' => $this->lang("export.status"),
-                'manufacturer' => $this->lang("export.manufacturer"),
-                'service_phone' => $this->lang("export.service_phone"),
-                'length' => $this->lang("export.length"),
-                'width' => $this->lang("export.width"),
-                'height' => $this->lang("export.height"),
-            ];
-            if ($hasCostPriceAuth) {
-                $title['cost_price'] = $this->lang("export.cost_price");
-                // $title = array_merge(
-                //     array_slice($title, 0, 8, true),
-                //     ['cost_price' => $this->lang("export.cost_price")],
-                //     array_slice($title, 8, null, true)
-                // );
+            $list = $this->appendCurrencyPriceExportColumns($list, $hasCostPriceAuth);
+            $title = $this->getGoodsExportColumnTitles([
+                'g_name', 'gc_id', 'gc_name', 'model', 'sku', 'sku2', 'pic', 'bar_code',
+                'cny_cost_price', 'cny_market_price', 'cny_retail_price',
+                'hkd_cost_price', 'hkd_market_price', 'hkd_retail_price',
+                'manufacturer', 'service_phone', 'status',
+                'length', 'width', 'height', 'g_id',
+            ]);
+            if (!$title) {
+                return $this->r(100, '导出标题缺失，请检查商品导入导出列标题配置');
             }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
+            if (!$exportImg) { $list = $this->stripExportImageFields($list); }
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));
     }
 
+    protected function appendCurrencyPriceExportColumns(array $list, $hasCostPriceAuth)
+    {
+        $gIds = array_values(array_unique(array_filter(array_map('intval', array_column($list, 'g_id')))));
+        $priceMap = (new GoodsCurrencyPriceService())->getPriceMapByGoodsIds($gIds);
+        foreach ($list as &$row) {
+            $byCode = [];
+            foreach (isset($priceMap[intval($row['g_id'])]) ? $priceMap[intval($row['g_id'])] : [] as $price) {
+                $byCode[$price['currency_code']] = $price;
+            }
+            foreach (['CNY' => 'cny', 'HKD' => 'hkd'] as $code => $prefix) {
+                foreach ($this->priceFields as $field) {
+                    $row[$prefix . '_' . $field] = isset($byCode[$code][$field]) ? $byCode[$code][$field] : '';
+                }
+                if (!$hasCostPriceAuth) $row[$prefix . '_cost_price'] = '';
+            }
+        }
+        unset($row);
+        return $list;
+    }
+
     
+    /**
+     * 导出不携带图片时保留列但清空图片值，避免文档过大。
+     * @param array $list
+     * @return array
+     */
+    protected function stripExportImageFields(array $list)
+    {
+        foreach ($list as &$row) {
+            foreach (['pic', 'banner', 'details_pic'] as $field) {
+                if (array_key_exists($field, $row)) {
+                    $row[$field] = '';
+                }
+            }
+        }
+        unset($row);
+        return $list;
+    }
     /**
      * 导入条形码
      * @param $data
@@ -710,7 +1546,7 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportAbnormalBarCodeExcel($where, $hasCostPriceAuth = true)
+    public function exportAbnormalBarCodeExcel($where, $hasCostPriceAuth = true, $exportImg = true)
     {
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
         $field = 'g_id,g_name,bar_code,' . $costPriceField;
@@ -724,6 +1560,7 @@ class GoodsClient extends ManagementClient
             ];
             if ($hasCostPriceAuth) $title['cost_price'] = $this->lang("export.cost_price");
             $filename = '异常条形码商品列表-' . date("Ymd");
+            if (!$exportImg) { $list = $this->stripExportImageFields($list); }
             return $this->sendToExport('商品管理-异常条形码商品列表', $filename, $title, $list);
         }
         return $this->r(100, $this->lang("action_fail"));

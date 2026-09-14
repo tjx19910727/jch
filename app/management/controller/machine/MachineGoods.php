@@ -8,7 +8,6 @@
 
 namespace app\management\controller\machine;
 
-
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineGoods;
 use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
@@ -29,14 +28,16 @@ class MachineGoods extends Common
         $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->getMgList($where, $pageNum, $field);
+        return $this->app->machineGoods->getMgList($where, $pageNum, $field, '', '', $hasCostPriceAuth);
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineGoods->getFind($where, $this->field);
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
+        return $this->app->machineGoods->getMgFindCurrency($where, $field, '', $hasCostPriceAuth);
     }
 
     /**
@@ -139,12 +140,17 @@ class MachineGoods extends Common
     }
 
     /**
-     * 设备商品库同步商品库价格
+     * 设备商品同步核心商品当前币种价格。
+     * 请求参数：m_id；传 mg_ids（或 mg_id）只同步选中的设备商品及其绑定货道（严格整批，上限200条）；
+     * 不传 mg_ids/mg_id 时同步该设备 machine_goods 全部记录及 machine_channel 中该设备的全部记录
+     * （同一事务内缺价/绑定异常等记录跳过并写入返回的 skipped 明细）。
      * @return array|\think\response\Json
      */
     public function synchronizationGoods()
     {
         $postData = input();
+        if (!$this->hasCostPriceAuth()) return returnState(100, '当前账号无成本价同步权限');
         return $this->app->machineGoods->synchronizationGoodsPrice($postData);
     }
+
 }
