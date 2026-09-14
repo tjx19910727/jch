@@ -1089,6 +1089,19 @@ class ApiClient extends ReceiveBaseClient
         } else {
             $data['add_other_org_goods'] = intval($data['add_other_org_goods']);
         }
+        if (!isset($data['shelf_capture_exposure'])
+            || !is_numeric($data['shelf_capture_exposure'])
+            || (float)$data['shelf_capture_exposure'] < -0.8
+            || (float)$data['shelf_capture_exposure'] > 0.8) {
+            $data['shelf_capture_exposure'] = '-0.4';
+        } else {
+            $data['shelf_capture_exposure'] = number_format(
+                (float)$data['shelf_capture_exposure'],
+                1,
+                '.',
+                ''
+            );
+        }
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
             if ($pay_type) {
