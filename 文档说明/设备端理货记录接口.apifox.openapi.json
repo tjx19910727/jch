@@ -1,0 +1,819 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "设备端理货记录接口",
+    "version": "1.0.0",
+    "description": "镭射设备一次性上传完整理货批次，并分页查询当前设备的历史理货批次；列表中的每个批次都包含该批次全部记录。所有接口均返回 HTTP 200，实际处理结果以响应体 state 为准。使用前需由开发或运维人员执行《设备理货记录数据库变更.sql》。\n\n鉴权及签名：\n1. 请求头 mac 必须与设备资料中的 MAC 地址完全一致。\n2. machine_id、msg_id、timestamp、sign 放在 JSON 顶层；timestamp 为当前 Unix 秒级时间戳，允许偏差以服务端配置为准且不小于 120 秒。\n3. 每次 HTTP 请求都必须使用新的 msg_id，包括同一理货批次的幂等重传和查询请求。\n4. 计算签名时先移除 sign，对剩余顶层字段按字段名升序排序；数组或对象使用 JSON 编码，再拼成 k1=v1&k2=v2&...&key=设备签名密钥，最后取小写 MD5。\n5. uploadTallyRecords 的 records 中可能含中文。Flutter/设备端 JSON 编码必须保留中文和斜杠，即等价于 PHP 的 JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES；整个签名过程中的数组 JSON 必须使用紧凑格式，不能添加缩进或空格。\n6. 同一 machine_id + batchId 重传相同 records 时按幂等成功处理；内容不同则返回 state=100。"
+  },
+  "tags": [
+    {
+      "name": "设备理货",
+      "description": "设备端理货批次上传和查询"
+    }
+  ],
+  "paths": {
+    "/machine/laser/uploadTallyRecords": {
+      "post": {
+        "summary": "上传完整理货批次",
+        "description": "一次请求必须上传当前批次的全部 item，并且必须且只能包含一条 summary。summary 通常放在 records 最后一项。单批最多 2000 条记录（包含 summary）。同一设备、同一 batchId、相同 records 可使用新的 msg_id 重传；若 records 内容变化则拒绝覆盖。",
+        "operationId": "uploadMachineTallyRecords",
+        "tags": [
+          "设备理货"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MacHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadTallyRequest"
+              },
+              "examples": {
+                "完整批次": {
+                  "summary": "两条成功明细和一条汇总",
+                  "value": {
+                    "machine_id": "JCHH2D-030",
+                    "msg_id": "7d08cb77-96c1-45d3-a209-e51cd8575ca1",
+                    "timestamp": 1789119250,
+                    "records": [
+                      {
+                        "time": "2026-09-11T17:35:30.597045",
+                        "kind": "item",
+                        "batchId": "1789119250146288",
+                        "batchStartedAt": "2026-09-11T17:34:10.146288",
+                        "mode": "order",
+                        "slotId": "C02",
+                        "success": true
+                      },
+                      {
+                        "time": "2026-09-11T17:35:41.039209",
+                        "kind": "item",
+                        "batchId": "1789119250146288",
+                        "batchStartedAt": "2026-09-11T17:34:10.146288",
+                        "mode": "order",
+                        "slotId": "D01",
+                        "success": true
+                      },
+                      {
+                        "time": "2026-09-11T17:38:12.950140",
+                        "kind": "summary",
+                        "batchId": "1789119250146288",
+                        "batchStartedAt": "2026-09-11T17:34:10.146288",
+                        "batchEndedAt": "2026-09-11T17:38:12.950140",
+                        "mode": "order",
+                        "slotId": "",
+                        "success": true,
+                        "successCount": 2,
+                        "failureCount": 0,
+                        "interrupted": false
+                      }
+                    ],
+                    "sign": "{{sign}}"
+                  }
+                },
+                "包含中文失败原因": {
+                  "summary": "签名时中文不能转成 Unicode 转义序列",
+                  "value": {
+                    "machine_id": "JCHH2D-030",
+                    "msg_id": "c964761d-53fa-4efc-a95e-837dfd5be887",
+                    "timestamp": 1789119250,
+                    "records": [
+                      {
+                        "time": "2026-09-11T17:35:30.597045",
+                        "kind": "item",
+                        "batchId": "1789119250146289",
+                        "batchStartedAt": "2026-09-11T17:34:10.146288",
+                        "mode": "order",
+                        "slotId": "C02",
+                        "success": false,
+                        "errorCode": "CHANNEL_JAMMED",
+                        "errorMessage": "货道卡货"
+                      },
+                      {
+                        "time": "2026-09-11T17:38:12.950140",
+                        "kind": "summary",
+                        "batchId": "1789119250146289",
+                        "batchStartedAt": "2026-09-11T17:34:10.146288",
+                        "batchEndedAt": "2026-09-11T17:38:12.950140",
+                        "mode": "order",
+                        "slotId": "",
+                        "success": false,
+                        "successCount": 0,
+                        "failureCount": 1,
+                        "interrupted": false
+                      }
+                    ],
+                    "sign": "{{sign}}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应。state=200 表示保存成功或幂等命中；state=100 表示参数、设备、签名或批次冲突；state=300 表示认证或系统处理失败。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TallyBusinessResponse"
+                },
+                "examples": {
+                  "上传成功": {
+                    "value": {
+                      "state": 200,
+                      "msg": "理货记录上传成功",
+                      "data": {
+                        "machineId": "JCHH2D-030",
+                        "batchId": "1789119250146288",
+                        "batchStartedAt": "2026-09-11T17:34:10.146288",
+                        "batchEndedAt": "2026-09-11T17:38:12.950140",
+                        "mode": "order",
+                        "success": true,
+                        "successCount": 2,
+                        "failureCount": 0,
+                        "actualSuccessCount": 2,
+                        "actualFailureCount": 0,
+                        "itemCount": 2,
+                        "interrupted": false,
+                        "countMatched": true,
+                        "dataStatus": 2,
+                        "records": [
+                          {
+                            "time": "2026-09-11T17:35:30.597045",
+                            "kind": "item",
+                            "batchId": "1789119250146288",
+                            "batchStartedAt": "2026-09-11T17:34:10.146288",
+                            "mode": "order",
+                            "slotId": "C02",
+                            "success": true
+                          },
+                          {
+                            "time": "2026-09-11T17:35:41.039209",
+                            "kind": "item",
+                            "batchId": "1789119250146288",
+                            "batchStartedAt": "2026-09-11T17:34:10.146288",
+                            "mode": "order",
+                            "slotId": "D01",
+                            "success": true
+                          },
+                          {
+                            "time": "2026-09-11T17:38:12.950140",
+                            "kind": "summary",
+                            "batchId": "1789119250146288",
+                            "batchStartedAt": "2026-09-11T17:34:10.146288",
+                            "batchEndedAt": "2026-09-11T17:38:12.950140",
+                            "mode": "order",
+                            "slotId": "",
+                            "success": true,
+                            "successCount": 2,
+                            "failureCount": 0,
+                            "interrupted": false
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "批次内容冲突": {
+                    "value": {
+                      "state": 100,
+                      "msg": "该理货批次已经存在，但本次上传内容与原批次不一致",
+                      "data": []
+                    }
+                  },
+                  "验签失败": {
+                    "value": {
+                      "state": 100,
+                      "msg": "验签失败",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/machine/laser/getTallyRecords": {
+      "post": {
+        "summary": "分页查询理货批次列表",
+        "description": "按当前鉴权设备分页查询历史理货批次，按批次开始时间和批次主键倒序返回。每个 list 元素代表一个批次，其 records 包含该批次全部 item，最后一条为 summary。pageNum 默认 15，最大 100。",
+        "operationId": "getMachineTallyRecords",
+        "tags": [
+          "设备理货"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MacHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetTallyRequest"
+              },
+              "example": {
+                "machine_id": "JCHH2D-030",
+                "msg_id": "6bd9b2fc-efaf-43e7-a782-ddd75b16403e",
+                "timestamp": 1789119500,
+                "page": 1,
+                "pageNum": 15,
+                "sign": "{{sign}}"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应。state=200 时 data.list 为批次列表，data.pagination 为分页信息。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TallyListBusinessResponse"
+                },
+                "examples": {
+                  "查询成功": {
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": {
+                        "list": [
+                          {
+                            "machineId": "JCHH2D-030",
+                            "batchId": "1789119250146288",
+                            "batchStartedAt": "2026-09-11T17:34:10.146288",
+                            "batchEndedAt": "2026-09-11T17:38:12.950140",
+                            "mode": "order",
+                            "success": true,
+                            "successCount": 2,
+                            "failureCount": 0,
+                            "actualSuccessCount": 2,
+                            "actualFailureCount": 0,
+                            "itemCount": 2,
+                            "interrupted": false,
+                            "countMatched": true,
+                            "dataStatus": 2,
+                            "records": [
+                              {
+                                "time": "2026-09-11T17:35:30.597045",
+                                "kind": "item",
+                                "batchId": "1789119250146288",
+                                "batchStartedAt": "2026-09-11T17:34:10.146288",
+                                "mode": "order",
+                                "slotId": "C02",
+                                "success": true
+                              },
+                              {
+                                "time": "2026-09-11T17:35:41.039209",
+                                "kind": "item",
+                                "batchId": "1789119250146288",
+                                "batchStartedAt": "2026-09-11T17:34:10.146288",
+                                "mode": "order",
+                                "slotId": "D01",
+                                "success": true
+                              },
+                              {
+                                "time": "2026-09-11T17:38:12.950140",
+                                "kind": "summary",
+                                "batchId": "1789119250146288",
+                                "batchStartedAt": "2026-09-11T17:34:10.146288",
+                                "batchEndedAt": "2026-09-11T17:38:12.950140",
+                                "mode": "order",
+                                "slotId": "",
+                                "success": true,
+                                "successCount": 2,
+                                "failureCount": 0,
+                                "interrupted": false
+                              }
+                            ]
+                          }
+                        ],
+                        "pagination": {
+                          "page": 1,
+                          "pageSize": 15,
+                          "total": 1,
+                          "totalPage": 1
+                        }
+                      }
+                    }
+                  },
+                  "空列表": {
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": {
+                        "list": [],
+                        "pagination": {
+                          "page": 1,
+                          "pageSize": 15,
+                          "total": 0,
+                          "totalPage": 0
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "MacHeader": {
+        "name": "mac",
+        "in": "header",
+        "required": true,
+        "description": "设备 MAC 地址，必须与后台设备资料中的 mac_address 完全一致。",
+        "schema": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "example": "04:2B:58:12:16:3A"
+      }
+    },
+    "schemas": {
+      "DeviceAuthProperties": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "msg_id",
+          "timestamp",
+          "sign"
+        ],
+        "properties": {
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号",
+            "example": "JCHH2D-030"
+          },
+          "msg_id": {
+            "type": "string",
+            "description": "本次 HTTP 请求的唯一消息 ID；每次请求必须更换",
+            "example": "7d08cb77-96c1-45d3-a209-e51cd8575ca1"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "发起请求时的 Unix 秒级时间戳，不能固定使用示例值",
+            "example": 1789119250
+          },
+          "sign": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{32}$",
+            "description": "请求签名：移除 sign 后按顶层字段名升序拼接并追加 key，再计算小写 MD5。上传接口中的数组 JSON 要保留中文和斜杠。",
+            "example": "{{sign}}"
+          }
+        }
+      },
+      "UploadTallyRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DeviceAuthProperties"
+          },
+          {
+            "type": "object",
+            "required": [
+              "records"
+            ],
+            "properties": {
+              "records": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 2000,
+                "description": "完整批次记录；必须且只能有一条 kind=summary，其余均为 kind=item。",
+                "items": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/TallyItem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TallySummary"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "GetTallyRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DeviceAuthProperties"
+          },
+          {
+            "type": "object",
+            "required": [
+              "page"
+            ],
+            "properties": {
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1,
+                "description": "当前页码",
+                "example": 1
+              },
+              "pageNum": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 15,
+                "description": "每页批次数量；也兼容字段名 pageSize 和 page_size",
+                "example": 15
+              }
+            }
+          }
+        ]
+      },
+      "TallyItem": {
+        "type": "object",
+        "required": [
+          "time",
+          "kind",
+          "batchId",
+          "batchStartedAt",
+          "mode",
+          "slotId",
+          "success"
+        ],
+        "properties": {
+          "time": {
+            "$ref": "#/components/schemas/DeviceDateTime"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "item"
+            ],
+            "description": "明细记录固定为 item"
+          },
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "理货批次 ID；必须与 summary 一致"
+          },
+          "batchStartedAt": {
+            "$ref": "#/components/schemas/DeviceDateTime"
+          },
+          "mode": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "理货模式；必须与 summary 一致",
+            "example": "order"
+          },
+          "slotId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32,
+            "description": "设备端槽位或货道编号",
+            "example": "C02"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "该槽位理货是否成功"
+          },
+          "itemId": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "可选，设备端明细唯一 ID；建议传入以便追踪"
+          },
+          "mcId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "可选，后台货道主键；slotId 重复时用于辅助匹配"
+          },
+          "channelPosition": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "可选，货道位置；slotId 重复时用于辅助匹配"
+          },
+          "errorCode": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "可选，失败代码"
+          },
+          "errorMessage": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "可选，失败原因；允许中文"
+          }
+        },
+        "additionalProperties": true
+      },
+      "TallySummary": {
+        "type": "object",
+        "required": [
+          "time",
+          "kind",
+          "batchId",
+          "batchStartedAt",
+          "batchEndedAt",
+          "mode",
+          "slotId",
+          "success",
+          "successCount",
+          "failureCount",
+          "interrupted"
+        ],
+        "properties": {
+          "time": {
+            "$ref": "#/components/schemas/DeviceDateTime"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "summary"
+            ],
+            "description": "汇总记录固定为 summary"
+          },
+          "batchId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "description": "理货批次 ID"
+          },
+          "batchStartedAt": {
+            "$ref": "#/components/schemas/DeviceDateTime"
+          },
+          "batchEndedAt": {
+            "$ref": "#/components/schemas/DeviceDateTime"
+          },
+          "mode": {
+            "type": "string",
+            "maxLength": 32,
+            "description": "理货模式",
+            "example": "order"
+          },
+          "slotId": {
+            "type": "string",
+            "description": "汇总记录建议传空字符串",
+            "example": ""
+          },
+          "success": {
+            "type": "boolean",
+            "description": "设备端汇报的整批执行结果"
+          },
+          "successCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "设备端统计的成功 item 数量"
+          },
+          "failureCount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "设备端统计的失败 item 数量"
+          },
+          "interrupted": {
+            "type": "boolean",
+            "description": "批次是否被中断"
+          }
+        },
+        "additionalProperties": true
+      },
+      "DeviceDateTime": {
+        "type": "string",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}[T ]\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})?$",
+        "description": "设备事件时间，支持 T 或空格分隔、1 至 6 位微秒以及可选时区；示例格式为 yyyy-MM-ddTHH:mm:ss.SSSSSS",
+        "example": "2026-09-11T17:35:30.597045"
+      },
+      "TallyBatchData": {
+        "type": "object",
+        "required": [
+          "machineId",
+          "batchId",
+          "batchStartedAt",
+          "batchEndedAt",
+          "mode",
+          "success",
+          "successCount",
+          "failureCount",
+          "actualSuccessCount",
+          "actualFailureCount",
+          "itemCount",
+          "interrupted",
+          "countMatched",
+          "dataStatus",
+          "records"
+        ],
+        "properties": {
+          "machineId": {
+            "type": "string",
+            "description": "设备编号"
+          },
+          "batchId": {
+            "type": "string",
+            "description": "设备端理货批次 ID"
+          },
+          "batchStartedAt": {
+            "type": "string",
+            "description": "批次开始时间"
+          },
+          "batchEndedAt": {
+            "type": "string",
+            "description": "批次结束时间"
+          },
+          "mode": {
+            "type": "string",
+            "description": "理货模式"
+          },
+          "success": {
+            "type": "boolean",
+            "description": "设备 summary 上报的 success"
+          },
+          "successCount": {
+            "type": "integer",
+            "description": "设备 summary 上报的成功数"
+          },
+          "failureCount": {
+            "type": "integer",
+            "description": "设备 summary 上报的失败数"
+          },
+          "actualSuccessCount": {
+            "type": "integer",
+            "description": "后台根据 item 重新计算的成功数"
+          },
+          "actualFailureCount": {
+            "type": "integer",
+            "description": "后台根据 item 重新计算的失败数"
+          },
+          "itemCount": {
+            "type": "integer",
+            "description": "item 总数，不包含 summary"
+          },
+          "interrupted": {
+            "type": "boolean",
+            "description": "是否中断"
+          },
+          "countMatched": {
+            "type": "boolean",
+            "description": "summary 中的成功、失败数量是否与后台按 item 计算的一致"
+          },
+          "dataStatus": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "description": "数据状态：1 接收中，2 完整且汇总数量一致，3 汇总数量不一致，4 批次已中断"
+          },
+          "records": {
+            "type": "array",
+            "description": "当前批次全部原始记录，item 按上传顺序排列，summary 位于最后",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/TallyItem"
+                },
+                {
+                  "$ref": "#/components/schemas/TallySummary"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "TallyBusinessResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "msg",
+          "data"
+        ],
+        "properties": {
+          "state": {
+            "type": "integer",
+            "enum": [
+              100,
+              200,
+              300
+            ],
+            "description": "业务状态：200 成功，100 参数或业务失败，300 认证或系统失败"
+          },
+          "msg": {
+            "type": "string",
+            "description": "处理结果说明"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TallyBatchData"
+              },
+              {
+                "type": "array",
+                "maxItems": 0,
+                "description": "失败时通常为空数组"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "部分认证错误可能返回服务端时间等辅助信息"
+              }
+            ]
+          }
+        }
+      },
+      "TallyListData": {
+        "type": "object",
+        "required": [
+          "list",
+          "pagination"
+        ],
+        "properties": {
+          "list": {
+            "type": "array",
+            "description": "当前页理货批次；每个批次包含其全部理货记录",
+            "items": {
+              "$ref": "#/components/schemas/TallyBatchData"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "required": [
+              "page",
+              "pageSize",
+              "total",
+              "totalPage"
+            ],
+            "properties": {
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "当前页码"
+              },
+              "pageSize": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "每页批次数量"
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "当前设备的理货批次总数"
+              },
+              "totalPage": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "总页数"
+              }
+            }
+          }
+        }
+      },
+      "TallyListBusinessResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "msg",
+          "data"
+        ],
+        "properties": {
+          "state": {
+            "type": "integer",
+            "enum": [
+              100,
+              200,
+              300
+            ],
+            "description": "业务状态：200 成功，100 参数或业务失败，300 认证或系统失败"
+          },
+          "msg": {
+            "type": "string",
+            "description": "处理结果说明"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TallyListData"
+              },
+              {
+                "type": "array",
+                "maxItems": 0,
+                "description": "失败时通常为空数组"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "部分认证错误可能返回服务端时间等辅助信息"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
