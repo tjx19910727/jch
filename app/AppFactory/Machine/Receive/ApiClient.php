@@ -40,6 +40,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsMultipleMachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsMultipleTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
+use app\AppFactory\Kernel\Traits\Inspection\InspectionAccountTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineAppSettingsTrait;
@@ -114,6 +115,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleTrait,
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
+        InspectionAccountTrait,
         MachineViewTrait,
         MachineAppSettingsTrait,
         MachineCalibrationConfigTrait,
@@ -4706,36 +4708,43 @@ class ApiClient extends ReceiveBaseClient
                 return $this->rFail('检查项已禁用:' . implode(',', $disabledIds));
             }
 
+            // 未提交 check_status 的必填项：不中断提交，按"异常(2)"补记
+            $missingIds = [];
             $missingStatusItems = [];
             foreach ($requiredItemIds as $itemId) {
                 $enabledItem = $enabledMap[$itemId] ?? [];
                 if (!isset($submittedMap[$itemId])) {
+                    $missingIds[] = intval($itemId);
                     $missingStatusItems[] = [
-                        'item_id' => $itemId,
+                        'item_id' => intval($itemId),
                         'item_name' => $enabledItem['item_name'] ?? '',
                         'reason' => '未提交check_status',
                     ];
                 }
             }
+            // 提交了非法状态值：保持原有严格校验（文案与字段名不变）
             if ($invalidStatusItems) {
-                $missingStatusItems = array_merge($missingStatusItems, array_values($invalidStatusItems));
-            }
-            if ($missingStatusItems) {
                 return $this->r(300, '存在未提交check_status的信息', [
-                    'missing_check_status_items' => $missingStatusItems,
+                    'missing_check_status_items' => array_values($invalidStatusItems),
                 ]);
             }
 
             $recordsCode = date('YmdHi');
             $staffCode = trim(strval($this->data['manager_id'] ?? ''));
-            if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
-                return $this->rValidate('巡检账号必须为首位非0的6位数字');
+            if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode) && !preg_match('/^[1-9][0-9]{7}$/', $staffCode)) {
+                return $this->rValidate('巡检账号必须为首位非0的6位或8位数字');
             }
+            // 统一解析：巡检人员表 / 后台账号（6/8 位后缀，status=1）
             $inspectionStaff = $this->getEnabledInspectionStaff($staffCode);
-            if (!$inspectionStaff) {
+            if (empty($inspectionStaff['ok'])) {
+                if (($inspectionStaff['reason'] ?? '') === 'ambiguous') {
+                    return $this->r(300, '后台存在多个类似账号，请继续输入更完整的账号（8位）', [
+                        'need_more' => true,
+                        'matched_count' => $inspectionStaff['matched_count'] ?? 0,
+                    ]);
+                }
                 return $this->rFail('巡检人员不存在或已禁用');
             }
-            $staffId = intval($inspectionStaff['staff_id']);
             $notes = trim(strval($this->data['notes'] ?? ''));
             $checkTime = date('Y-m-d H:i:s');
 
@@ -4747,10 +4756,25 @@ class ApiClient extends ReceiveBaseClient
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
-                    'manager_id' => $staffId,
+                    'manager_id' => $inspectionStaff['account'],
                     'check_status' => $rowStatus,
                     'check_time' => $checkTime,
                     'notes' => $rowNotes !== '' ? $rowNotes : $notes,
+                ];
+            }
+            // 缺失项补记为异常(2)
+            foreach ($missingIds as $missingItemId) {
+                if (isset($submittedMap[$missingItemId])) {
+                    continue;
+                }
+                $insertAll[] = [
+                    'records_code' => $recordsCode,
+                    'item_id' => intval($missingItemId),
+                    'machine_id' => $this->machine['machine_id'],
+                    'manager_id' => $inspectionStaff['account'],
+                    'check_status' => 2,
+                    'check_time' => $checkTime,
+                    'notes' => $notes,
                 ];
             }
 
@@ -4766,6 +4790,8 @@ class ApiClient extends ReceiveBaseClient
                 'records_code' => $recordsCode,
                 'machine_id' => $this->machine['machine_id'],
                 'count' => count($insertAll),
+                'missing_check_status_items' => $missingStatusItems,
+                'missing_abnormal_count' => count($missingIds),
             ]);
         } catch (\Throwable $e) {
             Db::rollback();
@@ -4846,9 +4872,8 @@ class ApiClient extends ReceiveBaseClient
             $list = Db::name('check_list_records')
                 ->alias('cr')
                 ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
-                ->leftJoin('inspection_staff ist', 'ist.staff_id = cr.manager_id')
                 ->where($where)
-                ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level,IFNULL(NULLIF(ist.account_name,''), cr.manager_id) as account_name")
+                ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level," . $this->inspectionPersonNameExpr('cr') . " as account_name")
                 ->order('cr.records_code desc,cr.id asc')
                 ->select()
                 ->toArray();
@@ -4943,8 +4968,12 @@ class ApiClient extends ReceiveBaseClient
             $itemCol = trim($match[3]);
             $maintainerId = trim($match[4]);
             $inspectionStaff = $this->getEnabledInspectionStaff($maintainerId);
-            if (!$inspectionStaff) {
-                $errors[] = "巡检人员不存在或已禁用: {$maintainerId}";
+            if (empty($inspectionStaff['ok'])) {
+                if (($inspectionStaff['reason'] ?? '') === 'ambiguous') {
+                    $errors[] = "后台存在多个类似账号，请继续输入更完整的账号（8位）: {$maintainerId}";
+                } else {
+                    $errors[] = "巡检人员不存在或已禁用: {$maintainerId}";
+                }
                 continue;
             }
 
@@ -4985,7 +5014,7 @@ class ApiClient extends ReceiveBaseClient
                 'records_code' => $recordsCode,
                 'item_id' => intval($itemId),
                 'machine_id' => $machineId,
-                'manager_id' => trim($maintainerId),
+                'manager_id' => $inspectionStaff['account'],
                 'check_status' => $checkStatus,
                 'check_time' => $checkTime,
                 'notes' => '',
@@ -5100,47 +5129,59 @@ class ApiClient extends ReceiveBaseClient
                 'staff_code' => $staffCode,
             ]);
         }
-        if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
-            return $this->rValidate('巡检账号必须为首位非0的6位数字');
+
+        // 统一解析（查询场景不要求启用，返回 status/expire_time 供前端判断）
+        $identity = $this->resolveInspectionAccount($staffCode, ['require_enabled' => false]);
+
+        switch ($identity['reason']) {
+            case 'ok':
+                if ($identity['source'] === 'auth_manager') {
+                    return $this->r(200, '账户存在', [
+                        'exists' => 1,
+                        'source' => 'auth_manager',
+                        'manager_id' => $identity['manager_id'],
+                        'account' => $identity['account'],
+                        'nickname' => $identity['name'],
+                        'status' => $identity['status'],
+                        'matched_by' => $identity['matched_by'],
+                        'staff_code' => $staffCode,
+                    ]);
+                }
+                return $this->r(200, '账户存在', [
+                    'exists' => 1,
+                    'source' => 'inspection_staff',
+                    'staff_id' => $identity['staff_id'],
+                    'staff_code' => $identity['account'],
+                    'account_name' => $identity['name'],
+                    'status' => $identity['status'],
+                    'expire_time' => $identity['expire_time'],
+                ]);
+            case 'ambiguous':
+                // 后台账号后缀多命中：不自动选择，要求继续输入更完整的账号
+                return $this->r(300, '后台存在多个类似账号，请继续输入更完整的账号（8位）', [
+                    'exists' => 0,
+                    'need_more' => true,
+                    'matched_count' => $identity['matched_count'],
+                    'matched_by' => $identity['matched_by'],
+                    'staff_code' => $staffCode,
+                ]);
+            case 'invalid_format':
+                return $this->rValidate('巡检账号必须为首位非0的6位或8位数字');
+            default:
+                return $this->r(100, '账户不存在', [
+                    'exists' => 0,
+                    'staff_code' => $staffCode,
+                ]);
         }
-
-        $staff = Db::name('inspection_staff')
-            ->where(['staff_code' => $staffCode])
-            ->field('staff_id,staff_code,account_name,status,expire_time')
-            ->find();
-
-        if (!$staff) {
-            return $this->r(100, '账户不存在', [
-                'exists' => 0,
-                'staff_code' => $staffCode,
-            ]);
-        }
-
-        return $this->r(200, '账户存在', [
-            'exists' => 1,
-            'staff_id' => intval($staff['staff_id']),
-            'staff_code' => $staff['staff_code'],
-            'account_name' => $staff['account_name'] ?? '',
-            'status' => intval($staff['status'] ?? 0),
-            'expire_time' => intval($staff['expire_time'] ?? 0),
-        ]);
     }
 
+    /**
+     * 解析"可用（启用）"的巡检/维护账号，供提交/导入复用。
+     * 返回统一结构；失败时 ok=false 且带 reason（ambiguous/disabled/not_found/invalid_format）。
+     */
     protected function getEnabledInspectionStaff($staffCode)
     {
-        $staffCode = trim((string)$staffCode);
-        if ($staffCode === '') {
-            return [];
-        }
-
-        $staff = Db::name('inspection_staff')
-            ->where([
-                'staff_code' => $staffCode,
-                'status' => 1,
-            ])
-            ->field('staff_id,staff_code,account_name')
-            ->find();
-        return $staff ?: [];
+        return $this->resolveInspectionAccount($staffCode, ['require_enabled' => true]);
     }
 
     /**

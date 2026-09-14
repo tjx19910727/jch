@@ -20,6 +20,16 @@ class MachineGoodsModel extends BaseModel
     protected $name = "machine_goods";
 
     /**
+     * 设备商品库存查询字段（可用库存/不可用库存/预定量）。
+     * 注意：machine_goods 表上虽存在同名列，但属历史遗留且不再维护（恒为 0），
+     * 真实库存以 machine_channel 货道库存汇总为准；列表与导出必须共用本常量，避免口径不一致。
+     * 使用前提：查询必须 alias('a')。
+     */
+    const STOCK_FIELDS = '(SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status = 1 AND mc.mg_id = a.mg_id) available_stock,'
+        . '(SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status > 1 AND mc.mg_id = a.mg_id) disabled_stock,'
+        . '(SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock';
+
+    /**
      * 新增后下发通知设备更新
      * @param Model $model
      */
