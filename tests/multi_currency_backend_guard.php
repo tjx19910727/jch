@@ -90,6 +90,13 @@ $checks = [
         && strpos($channel, "getGoodsFind(['g_id' => \$value['g_id']],'cost_price,market_price,retail_price')") === false,
     'currency enabled list bypasses permission isolation' => strpos($authManagerRoleClient, '"/management/currency.currency/getEnabledList",') !== false
         && strpos($managementCommonController, '"/management/currency.currency/getEnabledList",') !== false,
+    'channel batch guard only counts active batches' => strpos($currencyPriceService, 'protected function countActiveChannelBatch($mcIds)') !== false
+        && substr_count($currencyPriceService, "->whereIn('status', [1, 2, 3])") >= 2
+        && strpos($currencyPriceService, "Db::name('channel_goods_batch')->where('mc_id', intval(\$mc['mc_id']))->count()") === false
+        && strpos($currencyPriceService, "Db::name('channel_goods_batch')->whereIn('mc_id', \$mcIds)->count()") === false,
+    'channel batch guard requires device multi goods switch' => strpos($currencyPriceService, 'protected function isDeviceMultiGoodsEnabled($config)') !== false
+        && substr_count($currencyPriceService, '$this->assertOrdinaryChannels(') === 3
+        && substr_count($currencyPriceService, '$this->isDeviceMultiGoodsEnabled($config)') >= 4,
     'multi currency sync entrypoints exist' => strpos($machineGoodsController, 'public function synchronizationGoods') !== false
         && strpos($machineChannelController, 'public function synchronizationMachineGoodsPrice') !== false
         && strpos($machineGoodsClient, 'public function synchronizationGoodsPrice') !== false
@@ -172,6 +179,36 @@ $checks['machine goods sync empty mg ids means full machine scope'] = strpos($cu
 $checks['machine goods sync full mode collects skipped detail'] = strpos($currencyPriceService, '$skipped[] = ') !== false;
 $checks['machine goods sync full mode has skip reason samples'] = strpos($currencyPriceService, '货道未绑定有效设备商品或所属设备商品未同步') !== false;
 $checks['machine goods sync explicit selection keeps strict semantics'] = strpos($currencyPriceService, '只同步选中的设备商品及其绑定货道') !== false;
+// —— 行为级校验：设备未开启单货道多商品时，批次残留不会再拦截普通货道改价/同步 ——
+$priceServiceProbe = new \app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService();
+$deviceSwitchProbe = new ReflectionMethod($priceServiceProbe, 'isDeviceMultiGoodsEnabled');
+$deviceSwitchProbe->setAccessible(true);
+$assertChannelProbe = new ReflectionMethod($priceServiceProbe, 'assertOrdinaryChannel');
+$assertChannelProbe->setAccessible(true);
+
+// 线上排查用例：mc_id=35438（m_id=236）设备级 is_multi_goods=2，货道 is_multi_goods=2
+$ordinaryChannelProbe = ['mc_id' => 35438, 'm_id' => 236, 'mg_id' => 13766, 'g_id' => 883, 'is_multi_goods' => 2];
+
+$ordinaryChannelPassed = true;
+try {
+    $assertChannelProbe->invoke($priceServiceProbe, $ordinaryChannelProbe, false);
+} catch (Exception $e) {
+    $ordinaryChannelPassed = false;
+}
+$checks['ordinary channel passes when device multi goods is off'] = $ordinaryChannelPassed;
+
+$multiGoodsChannelRejected = false;
+try {
+    $assertChannelProbe->invoke($priceServiceProbe, array_merge($ordinaryChannelProbe, ['is_multi_goods' => 1]), false);
+} catch (InvalidArgumentException $e) {
+    $multiGoodsChannelRejected = strpos($e->getMessage(), '本期不支持单货道多商品') !== false;
+}
+$checks['multi goods channel is still rejected'] = $multiGoodsChannelRejected;
+
+$checks['device multi goods switch parser'] = $deviceSwitchProbe->invoke($priceServiceProbe, ['is_multi_goods' => 1]) === true
+    && $deviceSwitchProbe->invoke($priceServiceProbe, ['is_multi_goods' => 2]) === false
+    && $deviceSwitchProbe->invoke($priceServiceProbe, []) === false;
+
 $failed = [];
 foreach ($checks as $name => $passed) {
     echo sprintf("[%s] %s\n", $passed ? 'PASS' : 'FAIL', $name);

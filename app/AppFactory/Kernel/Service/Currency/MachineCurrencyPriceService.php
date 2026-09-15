@@ -115,7 +115,7 @@ class MachineCurrencyPriceService
         $save = function () use ($mId, $mcId, $currencyCode, $priceInput, $operatorId) {
             $config = $this->getMachineCurrency($mId, true);
             $mc = Db::name('machine_channel')->where(['m_id' => intval($mId), 'mc_id' => intval($mcId)])->lock(true)->find();
-            $this->assertOrdinaryChannel($mc);
+            $this->assertOrdinaryChannel($mc, $this->isDeviceMultiGoodsEnabled($config));
             $existing = Db::name('machine_channel_currency_price')
                 ->where(['mc_id' => intval($mcId), 'currency_code' => $currencyCode])
                 ->lock(true)
@@ -250,7 +250,7 @@ class MachineCurrencyPriceService
             if (count($rows) !== count($mcIds)) {
                 throw new \InvalidArgumentException('选中的货道包含不存在或不属于当前设备的记录');
             }
-            $this->assertOrdinaryChannels($rows);
+            $this->assertOrdinaryChannels($rows, $this->isDeviceMultiGoodsEnabled($config));
             $mgIds = array_values(array_unique(array_map(function ($row) {
                 return intval($row['mg_id']);
             }, $rows)));
@@ -375,7 +375,7 @@ class MachineCurrencyPriceService
         return true;
     }
 
-    protected function assertOrdinaryChannel($mc)
+    protected function assertOrdinaryChannel($mc, $deviceMultiGoodsEnabled = false)
     {
         if (!$mc) {
             throw new \InvalidArgumentException('货道不存在或不属于当前设备');
@@ -386,11 +386,40 @@ class MachineCurrencyPriceService
         if (intval(isset($mc['is_multi_goods']) ? $mc['is_multi_goods'] : 2) === 1) {
             throw new \InvalidArgumentException('本期不支持单货道多商品的多币种价格');
         }
-        // 历史批次数据也视为多商品货道，避免缺少 batch_id 维度时发生串价。
-        $batchCount = Db::name('channel_goods_batch')->where('mc_id', intval($mc['mc_id']))->count();
-        if ($batchCount > 0) {
+        // 历史批次数据也视为多商品货道，避免缺少 batch_id 维度时发生串价；
+        // 但设备未开启单货道多商品时批次不参与售卖（与设备端“设备开关 + 货道标记”双重判定一致），
+        // 已取消批次（status=4）同样不参与售卖，两者都不应把普通货道拦成多商品货道。
+        if ($deviceMultiGoodsEnabled && $this->countActiveChannelBatch(intval($mc['mc_id'])) > 0) {
             throw new \InvalidArgumentException('货道存在多商品批次，本期不支持同步币种价格');
         }
+    }
+
+    /**
+     * 设备级“单货道多商品”开关（machine_config.is_multi_goods）。
+     * @param array $config getMachineCurrency() 返回的设备配置
+     * @return bool
+     */
+    protected function isDeviceMultiGoodsEnabled($config)
+    {
+        return intval(isset($config['is_multi_goods']) ? $config['is_multi_goods'] : 2) === 1;
+    }
+
+    /**
+     * 统计货道下仍在售卖队列中的多商品批次数量。
+     * status：1 队首售卖中、2 等待、3 无库存、4 已取消（取消后不再参与售卖）。
+     * @param array|int $mcIds
+     * @return int
+     */
+    protected function countActiveChannelBatch($mcIds)
+    {
+        $mcIds = array_values(array_unique(array_filter(array_map('intval', (array)$mcIds))));
+        if (!$mcIds) {
+            return 0;
+        }
+        return Db::name('channel_goods_batch')
+            ->whereIn('mc_id', $mcIds)
+            ->whereIn('status', [1, 2, 3])
+            ->count();
     }
 
     /**
@@ -511,11 +540,19 @@ class MachineCurrencyPriceService
             $mcUnchanged = 0;
             if ($channels) {
                 if (!$fullMode) {
-                    $this->assertOrdinaryChannels($channels);
+                    $this->assertOrdinaryChannels($channels, $this->isDeviceMultiGoodsEnabled($config));
                 }
                 $mcIds = array_values(array_unique(array_map(function ($row) {
                     return intval($row['mc_id']);
                 }, $channels)));
+                // 全量模式只把“在售多商品批次”视为多商品货道；设备未开启多商品时批次不参与售卖，不参与判定。
+                $activeBatchMcIds = [];
+                if ($fullMode && $this->isDeviceMultiGoodsEnabled($config) && $mcIds) {
+                    $activeBatchMcIds = array_map('intval', Db::name('channel_goods_batch')
+                        ->whereIn('mc_id', $mcIds)
+                        ->whereIn('status', [1, 2, 3])
+                        ->column('mc_id'));
+                }
                 $channelExistingRows = Db::name('machine_channel_currency_price')
                     ->whereIn('mc_id', $mcIds)
                     ->where('currency_code', $currencyCode)
@@ -543,7 +580,7 @@ class MachineCurrencyPriceService
                             $skipped[] = 'mc_id:' . $mcId . '(单货道多商品货道不支持同步币种价格)';
                             continue;
                         }
-                        if (Db::name('channel_goods_batch')->where('mc_id', $mcId)->count() > 0) {
+                        if (in_array($mcId, $activeBatchMcIds, true)) {
                             $skipped[] = 'mc_id:' . $mcId . '(货道存在多商品批次，不支持同步币种价格)';
                             continue;
                         }
@@ -683,7 +720,7 @@ class MachineCurrencyPriceService
 
             // 普通单商品货道 + 货道与设备商品绑定一致性校验（防止事实行归属串号）
             if ($mcList) {
-                $this->assertOrdinaryChannels($mcList);
+                $this->assertOrdinaryChannels($mcList, $this->isDeviceMultiGoodsEnabled($config));
                 $mcMgIds = array_values(array_unique(array_map(function ($mc) {
                     return intval($mc['mg_id']);
                 }, $mcList)));
@@ -766,9 +803,10 @@ class MachineCurrencyPriceService
     }
 
     /**
-     * 批量校验货道均为普通单商品货道：绑定有效设备商品、非多商品模式、无历史多商品批次。
+     * 批量校验货道均为普通单商品货道：绑定有效设备商品、非多商品模式、无在售多商品批次。
+     * 设备未开启单货道多商品时，历史/已取消批次不参与判定，避免普通货道被误拦。
      */
-    protected function assertOrdinaryChannels(array $rows)
+    protected function assertOrdinaryChannels(array $rows, $deviceMultiGoodsEnabled = false)
     {
         foreach ($rows as $mc) {
             if (intval($mc['g_id']) <= 0 || intval($mc['mg_id']) <= 0) {
@@ -778,11 +816,13 @@ class MachineCurrencyPriceService
                 throw new \InvalidArgumentException('本期不支持单货道多商品的多币种价格');
             }
         }
+        if (!$deviceMultiGoodsEnabled) {
+            return;
+        }
         $mcIds = array_values(array_unique(array_map(function ($row) {
             return intval($row['mc_id']);
         }, $rows)));
-        $batchCount = Db::name('channel_goods_batch')->whereIn('mc_id', $mcIds)->count();
-        if ($batchCount > 0) {
+        if ($this->countActiveChannelBatch($mcIds) > 0) {
             throw new \InvalidArgumentException('货道存在多商品批次，本期不支持同步币种价格');
         }
     }
