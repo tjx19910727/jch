@@ -36,6 +36,8 @@ class Common extends AuthController
         "/management/template.template_plugins/getList",
         "/management/machine.machine_config/getList",
         "/management/auth.auth_node/getList",
+        // 启用币种下拉为公共基础数据，不做组织数据隔离
+        "/management/currency.currency/getEnabledList",
     ];
 
     public $originAoIds = ['0', '17', '19'];

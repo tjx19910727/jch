@@ -50,6 +50,8 @@ class AuthManagerRoleClient extends ManagementClient
         "/management/config.config_lang/getList",
         "/management/auth.auth_manager/getEnabledManagerList",
         "/management/config.pay_type/getList",
+        // 启用币种下拉为后台公共基础数据，不参与权限节点/角色模板隔离，登录即可调用
+        "/management/currency.currency/getEnabledList",
     ];
 
     /**

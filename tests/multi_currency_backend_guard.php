@@ -39,6 +39,8 @@ $machineGoodsController = $read('app/management/controller/machine/MachineGoods.
 $machineChannelController = $read('app/management/controller/machine/MachineChannel.php');
 $machineGoodsClient = $read('app/AppFactory/Management/Machine/MachineGoodsClient.php');
 $currencyPriceService = $read('app/AppFactory/Kernel/Service/Currency/MachineCurrencyPriceService.php');
+$authManagerRoleClient = $read('app/AppFactory/Management/Auth/AuthManagerRoleClient.php');
+$managementCommonController = $read('app/management/controller/Common.php');
 $apifox = $read('文档说明/多货币商品价格体系.apifox.openapi.json');
 $apifoxDoc = json_decode($apifox, true);
 
@@ -86,6 +88,8 @@ $checks = [
     ])) === 4,
     'no automatic unlock price overwrite' => strpos($channel, '解锁只修改锁定状态') !== false
         && strpos($channel, "getGoodsFind(['g_id' => \$value['g_id']],'cost_price,market_price,retail_price')") === false,
+    'currency enabled list bypasses permission isolation' => strpos($authManagerRoleClient, '"/management/currency.currency/getEnabledList",') !== false
+        && strpos($managementCommonController, '"/management/currency.currency/getEnabledList",') !== false,
     'multi currency sync entrypoints exist' => strpos($machineGoodsController, 'public function synchronizationGoods') !== false
         && strpos($machineChannelController, 'public function synchronizationMachineGoodsPrice') !== false
         && strpos($machineGoodsClient, 'public function synchronizationGoodsPrice') !== false
