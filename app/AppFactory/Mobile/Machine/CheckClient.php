@@ -91,12 +91,7 @@ class CheckClient extends MobileBase
                 "create_date" => strtotime(date("Y-m-d")),
                 "creator" => $this->tokenArr['manager_id'],
             ];
-            $insertGChange = [
-                "m_id" => $machine['m_id'],
-                "machine_id" => $machine['machine_id'],
-                "machine_name" => $machine['machine_name'],
-                "ao_id" => $machine['ao_id'],
-            ];
+            // 盘点只登记观察值；未实际修改库存时不生成商品变化流水。
             $insertAll = [];
 
             foreach ($checkList as $cv) {
@@ -105,8 +100,7 @@ class CheckClient extends MobileBase
                 // 盘点明细只接收允许字段，避免请求覆盖设备、批次和审计字段。
                 $insertCs = array_merge($insert, [
                     "type" => $type,
-                    "check_stock" => $cv['check_stock'],
-                    "status" => $cv['status'],
+                    "check_stock" => intval($cv['check_stock']),
                 ]);
 
                 if ($type === 1) {
@@ -119,27 +113,9 @@ class CheckClient extends MobileBase
                         return $this->rFail($this->lang("MachineCheck.mc_no_data"));
                     }
                     $mc = $mc->toArray();
-                    $barCode = $mc['bar_code'];
                     unset($mc['bar_code']);
+                    $insertCs['status'] = $this->resolveCheckStockStatus($cv['check_stock'], $mc['system_stock']);
                     $insertCs = array_merge($insertCs, $mc);
-                    $this->addGoodsChange(array_merge($insertGChange, [
-                        "mc_id" => $mc['mc_id'],
-                        "channel_code" => $mc['channel_code'],
-                        "mg_id" => $mc['mg_id'],
-                        "g_id" => $mc['g_id'],
-                        "g_name" => $mc['g_name'],
-                        "gc_id" => $mc['gc_id'],
-                        "gc_name" => $mc['gc_name'],
-                        "pic" => $mc['pic'],
-                        "sku" => $mc['sku'],
-                        "bar_code" => $barCode,
-                        "change_value" => bcsub($cv['check_stock'], $mc['system_stock']),
-                        "type" => $cv['status'] == 3 ? 5 : 4,
-                        "desc" => $cv['status'] == 3
-                            ? $this->lang("goodsChange.check_stock_shortage")
-                            : $this->lang("goodsChange.check_stock_surplus"),
-                        "position" => 1,
-                    ]));
                 }
 
                 if ($type === 2) {
@@ -152,28 +128,11 @@ class CheckClient extends MobileBase
                         return $this->r(100, $this->lang("MachineCheck.mg_no_data"));
                     }
                     $mg = $mg->toArray();
+                    $insertCs['status'] = $this->resolveCheckStockStatus($cv['check_stock'], $mg['system_stock']);
                     $insertCs = array_merge($insertCs, [
                         "mc_id" => 0,
                         "channel_code" => "",
                     ], $mg);
-                    $this->addGoodsChange(array_merge($insertGChange, [
-                        "mc_id" => 0,
-                        "channel_code" => "",
-                        "mg_id" => $mg['mg_id'],
-                        "g_id" => $mg['g_id'],
-                        "g_name" => $mg['g_name'],
-                        "gc_id" => $mg['gc_id'],
-                        "gc_name" => $mg['gc_name'],
-                        "pic" => $mg['pic'],
-                        "sku" => $mg['sku'],
-                        "bar_code" => $mg['bar_code'],
-                        "change_value" => bcsub($cv['check_stock'], $mg['system_stock']),
-                        "type" => $cv['status'] == 3 ? 5 : 4,
-                        "desc" => $cv['status'] == 3
-                            ? $this->lang("goodsChange.check_stock_shortage")
-                            : $this->lang("goodsChange.check_stock_surplus"),
-                        "position" => 2,
-                    ]));
                 }
                 $insertAll[] = $insertCs;
             }
@@ -213,75 +172,42 @@ class CheckClient extends MobileBase
                 "create_date" => strtotime(date("Y-m-d")),
                 "creator" => $this->tokenArr['manager_id'],
             ];
-            // 商品变化基础数据
-            $insertGChange = [
-                "m_id" => $machine['m_id'],
-                "machine_id" => $machine['machine_id'],
-                "machine_name" => $machine['machine_name'],
-                "ao_id" => $machine['ao_id'],
-            ];
+            // 旧接口保持兼容，但同样只登记观察值，不生成未实际发生的库存变化流水。
             $insertAll = [];
             foreach ($checkList as $ck => $cv) {
                 validate(VMachineCheck::class)->scene("checkList" . $postData['type'])->check($cv);
-                $insertCs = array_merge($insert,$cv);
+                $insertCs = array_merge($insert, [
+                    'type' => intval($postData['type']),
+                    'check_stock' => intval($cv['check_stock']),
+                ]);
                 if ($postData['type'] == 1 && $cv['mc_id'] && $cv['mc_id'] > 0) {
-                    $mc = $this->getMachineChannelFind(['mc_id' =>$cv['mc_id']],'mc_id,channel_code,mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_id,gc_name,stock system_stock');
+                    $mc = $this->getMachineChannelFind(
+                        ['mc_id' => $cv['mc_id'], 'm_id' => $machine['m_id']],
+                        'mc_id,channel_code,mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_id,gc_name,stock system_stock'
+                    );
                     if (!$mc) {
                         $this->rollbackTrans();
                         return $this->rFail($this->lang("MachineCheck.mc_no_data"));
                     }
                     $mc = $mc->toArray();
-                    $bar_code = $mc['bar_code'];
                     unset($mc['bar_code']);
 
+                    $insertCs['status'] = $this->resolveCheckStockStatus($cv['check_stock'], $mc['system_stock']);
                     $insertCs = array_merge($insertCs,$mc);
-
-                    // 20250604 盘点商品变化，库存盘盈、库存盘亏（货架）
-                    $insertGc = array_merge($insertGChange,[
-                        "mc_id" => $mc['mc_id'],
-                        "channel_code" => $mc['channel_code'],
-                        "mg_id" => $mc['mg_id'],
-                        "g_id" => $mc['g_id'],
-                        "g_name" => $mc['g_name'],
-                        "gc_id" => $mc['gc_id'],
-                        "gc_name" => $mc['gc_name'],
-                        "pic" => $mc['pic'],
-                        "sku" => $mc['sku'],
-                        "bar_code" => $bar_code,
-                        "change_value" => bcsub($cv['check_stock'],$mc['system_stock']),  // 盘点库存-系统库存，商品变化数量
-                        "type" => $cv['status'] == 3 ? 5 : 4,  //  3 库存盘亏 5，1、2 库存盘盈 4，
-                        "desc" => ($cv['status'] == 3 ? $this->lang("goodsChange.check_stock_shortage") : $this->lang("goodsChange.check_stock_surplus")),
-                        "position" => 1,
-                    ]);
-                    $this->addGoodsChange($insertGc);
                 }
                 if ($postData['type'] == 2 && $cv['mg_id'] && $cv['mg_id'] > 0) {
-                    $mg = $this->getMachineGoodsFind(['mg_id' => $cv['mg_id']], 'mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_name, standby_stock system_stock');
+                    $mg = $this->getMachineGoodsFind(
+                        ['mg_id' => $cv['mg_id'], 'm_id' => $machine['m_id']],
+                        'mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_name, standby_stock system_stock'
+                    );
                     if (!$mg) {
                         $this->rollbackTrans();
                         return $this->r(100, $this->lang("MachineCheck.mg_no_data"));
                     }
                     $mg = $mg->toArray();
+                    $insertCs['status'] = $this->resolveCheckStockStatus($cv['check_stock'], $mg['system_stock']);
                     $insertCs = array_merge($insertCs,$mg);
 
-                    // 20250604 盘点商品变化，库存盘盈、库存盘亏（设备商品库）
-                    $insertGc = array_merge($insertGChange,[
-                        "mc_id" => $mc['mc_id'] ?? 0,
-                        "channel_code" => $mc['channel_code'] ?? "",
-                        "mg_id" => $mg['mg_id'],
-                        "g_id" => $mg['g_id'],
-                        "g_name" => $mg['g_name'],
-                        "gc_id" => $mg['gc_id'],
-                        "gc_name" => $mg['gc_name'],
-                        "pic" => $mg['pic'],
-                        "sku" => $mg['sku'],
-                        "bar_code" => $mg['bar_code'],
-                        "change_value" => bcsub($cv['check_stock'],$mg['system_stock']),  // 盘点库存-系统库存，商品变化数量
-                        "type" => $cv['status'] == 3 ? 5 : 4,   //  3 库存盘亏 5，1、2 库存盘盈 4，
-                        "desc" => ($cv['status'] == 3 ? $this->lang("goodsChange.check_stock_shortage") : $this->lang("goodsChange.check_stock_surplus")),
-                        "position" => 2,
-                    ]);
-                    $this->addGoodsChange($insertGc);
                 }
                 $insertAll[] = $insertCs;
             }
@@ -292,6 +218,12 @@ class CheckClient extends MobileBase
             actionException($e,1);
             return $this->rValidate($e->getMessage());
         }
+    }
+
+    protected function resolveCheckStockStatus($checkStock, $systemStock)
+    {
+        if (intval($checkStock) === intval($systemStock)) return 1;
+        return intval($checkStock) > intval($systemStock) ? 2 : 3;
     }
 
 }

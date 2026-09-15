@@ -174,6 +174,7 @@ trait OutGoodsTrait
             "machine_id" => $this->machine['machine_id'],
             "machine_name" => $this->machine['machine_name'],
             "ao_id" => $this->machine['ao_id'],
+            "create_time" => time(),
         ];
 
         foreach ($this->message['main'] as $key => $value) {
@@ -213,14 +214,18 @@ trait OutGoodsTrait
                 $whereMc['channel_code'] = $channel_code;
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
-                $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,out_fail_stock,stock_warning');
+                $mc = Db::name('machine_channel')->where($whereMc)
+                    ->field('mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,out_fail_stock,stock_warning')
+                    ->lock(true)->find();
                 if (!$mc) {
                     actionLog($whereMc, '未找到货道，跳过货道库存处理', 'OutGoods');
                     continue;
                 }
+                $useFrozenStock = $this->order['apc_id']
+                    && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']], 'pick_type') == 3;
                 if ($success > 0 && (in_array($status, [21, 3]) || $this->message['main'])) {
                     // 外部预订提货码订单，减冻结库存
-                    if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
+                    if ($useFrozenStock) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
                         $stock = $mc['stock'];
                         //单货道多商品开始
@@ -228,6 +233,7 @@ trait OutGoodsTrait
                             $batch = Db::name('channel_goods_batch')
                                 ->where('batch_id', $sod['batch_id'])
                                 ->field('batch_id,stock,frozen_stock,sold_quantity')
+                                ->lock(true)
                                 ->find();
                             if ($batch) {
                                 $flag[] = Db::name('channel_goods_batch')
@@ -247,6 +253,7 @@ trait OutGoodsTrait
                             $batch = Db::name('channel_goods_batch')
                                 ->where('batch_id', $sod['batch_id'])
                                 ->field('batch_id,stock,frozen_stock,sold_quantity')
+                                ->lock(true)
                                 ->find();
                             if ($batch) {
                                 $flag[] = Db::name('channel_goods_batch')
@@ -310,24 +317,53 @@ trait OutGoodsTrait
                 if ($fail > 0) {
 //                    $updateMc['status'] = 3;
                     $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
-                    $currentStock = isset($updateMc['stock']) ? intval($updateMc['stock']) : intval($mc['stock']);
-                    $updateMc['stock'] = max(0, $currentStock - $fail);
+                    $sourceField = $useFrozenStock ? 'frozen_stock' : 'stock';
+                    $currentStock = isset($updateMc[$sourceField])
+                        ? intval($updateMc[$sourceField]) : intval($mc[$sourceField]);
+                    if ($currentStock < $fail) {
+                        throw new \RuntimeException('出货失败数量超过来源库存，sod_id=' . intval($sod['sod_id']));
+                    }
+                    $updateMc[$sourceField] = $currentStock - $fail;
                     $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + $fail;
                     //单货道多商品开始
                     if (!empty($sod['batch_id'])) {
                         $batch = Db::name('channel_goods_batch')
                             ->where('batch_id', $sod['batch_id'])
-                            ->field('batch_id,stock')
+                            ->field('batch_id,stock,frozen_stock')
+                            ->lock(true)
                             ->find();
-                        if ($batch && intval($batch['stock']) > 0) {
+                        $batchSourceField = $useFrozenStock ? 'frozen_stock' : 'stock';
+                        if ($batch) {
+                            if (intval($batch[$batchSourceField]) < $fail) {
+                                throw new \RuntimeException('出货失败数量超过批次库存，sod_id=' . intval($sod['sod_id']));
+                            }
                             $flag[] = Db::name('channel_goods_batch')
                                 ->where('batch_id', $sod['batch_id'])
                                 ->update([
-                                    'stock' => max(0, intval($batch['stock']) - $fail),
+                                    $batchSourceField => intval($batch[$batchSourceField]) - $fail,
                                 ]);
                         }
                     }
                     //单货道多商品结束
+
+                    $flag[] = $this->addGoodsChange(array_merge($insertGChange, [
+                        "mc_id" => $mc['mc_id'],
+                        "channel_code" => $mc['channel_code'],
+                        "mg_id" => $mc['mg_id'],
+                        "g_id" => $mc['g_id'],
+                        "g_name" => $mc['g_name'],
+                        "gc_id" => $mc['gc_id'],
+                        "gc_name" => $mc['gc_name'],
+                        "pic" => $mc['pic'],
+                        "sku" => $mc['sku'],
+                        "bar_code" => $mc['bar_code'],
+                        "change_value" => $fail,
+                        "type" => 3,
+                        "desc" => '普通出货失败：订单' . $this->order['trade_no']
+                            . '，明细' . $sod['sod_id'] . '，'
+                            . ($useFrozenStock ? '冻结库存' : '货道库存') . '转入失败待处理库存',
+                        "position" => 1,
+                    ]));
 
                     // 出货失败上报新版故障通知
                     try {

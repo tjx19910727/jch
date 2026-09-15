@@ -166,6 +166,7 @@ trait MachineChannelReplenishmentTrait
                 "machine_name" => $this->machine['machine_name'],
                 "ao_id" => $this->machine['ao_id'],
                 "creator" => $this->data['operator'],
+                "create_time" => time(),
             ];
             foreach ($repMap as $value) {
                 $insertGc = $insertGChange;
@@ -694,7 +695,8 @@ trait MachineChannelReplenishmentTrait
             "before" => $before,
             "quantity" => $quantity,
             "after" => $after,
-            "creator" => $this->data['operator'] ?? 0
+            "creator" => $this->data['operator'] ?? 0,
+            "create_time" => time(),
         ];
         return $repData;
     }

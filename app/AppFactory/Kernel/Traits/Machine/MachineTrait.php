@@ -1087,7 +1087,8 @@ trait MachineTrait
             // status=21/3/4 首次处理库存；status=4 记录出货失败库存，BAD恢复时再回补。
             $shouldProcessRemoteStock = in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true);
             $shouldMarkRemoteFailStock = $status === 4 && $previousStatus === 21;
-            if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock) {
+            $shouldRecordRemoteSuccess = $status === 3 && $previousStatus === 21;
+            if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock || $shouldRecordRemoteSuccess) {
                 $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($this->message);
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? $detail['channel_code']);
                 if (!$channelCode) {
@@ -1115,6 +1116,11 @@ trait MachineTrait
                     return false;
                 }
                 $mc = is_object($mc) ? $mc->toArray() : $mc;
+                if ($shouldProcessRemoteStock && intval($mc['stock']) < 1) {
+                    $this->rollbackTrans();
+                    actionLog(['mc_id' => $mc['mc_id'], 'stock' => $mc['stock']], '远程出货库存不足，拒绝处理', 'remoteOutGoods');
+                    return false;
+                }
                 $updateSod['channel_code'] = $mc['channel_code'];
                 $updateSod['channel_position'] = $mc['channel_position'];
                 $updateFields[] = 'channel_code';
@@ -1143,13 +1149,17 @@ trait MachineTrait
                 if ($status === 4) {
                     $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + 1;
                 }
-                $flag[] = $this->updateMachineChannel($updateMc);
+                if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock) {
+                    $flag[] = $this->updateMachineChannel($updateMc);
+                }
                 if ($changeValue > 0) {
-                    $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    $flag[] = $this->addRemoteOutGoodsChange($mc, $changeValue, $status);
                     //单货道多少功能
                     $this->trySwitchNextBatch($mc['mc_id']);
+                } elseif (in_array($status, [3, 4], true) && $previousStatus === 21) {
+                    $flag[] = $this->addRemoteOutGoodsChange($mc, 0, $status);
                 }
-                if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
+                if ($shouldProcessRemoteStock && $this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
                 actionLog($this->getLS(), '【SQL】远程出货(status=21/3/4)修改货道', 'remoteOutGoods');
@@ -1335,7 +1345,8 @@ trait MachineTrait
 
             $shouldProcessRemoteStock = in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true);
             $shouldMarkRemoteFailStock = $status === 4 && $previousStatus === 21;
-            if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock) {
+            $shouldRecordRemoteSuccess = $status === 3 && $previousStatus === 21;
+            if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock || $shouldRecordRemoteSuccess) {
                 $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($this->message);
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? '');
                 if (!$channelCode) {
@@ -1367,6 +1378,11 @@ trait MachineTrait
                     return false;
                 }
                 $mc = is_object($mc) ? $mc->toArray() : $mc;
+                if ($shouldProcessRemoteStock && intval($mc['stock']) < 1) {
+                    $this->rollbackTrans();
+                    actionLog(['mc_id' => $mc['mc_id'], 'stock' => $mc['stock']], '无订单远程出货库存不足，拒绝处理', 'remoteOutGoods');
+                    return false;
+                }
 
                 $changeValue = $shouldProcessRemoteStock ? min(1, max(0, intval($mc['stock']))) : 0;
                 $newStock = $shouldProcessRemoteStock ? max(0, intval($mc['stock']) - 1) : intval($mc['stock']);
@@ -1377,13 +1393,17 @@ trait MachineTrait
                 if ($status === 4) {
                     $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + 1;
                 }
-                $flag[] = $this->updateMachineChannel($updateMc);
+                if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock) {
+                    $flag[] = $this->updateMachineChannel($updateMc);
+                }
                 if ($changeValue > 0) {
-                    $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    $flag[] = $this->addRemoteOutGoodsChange($mc, $changeValue, $status);
                     //单货道多商品功能
                     $this->trySwitchNextBatch($mc['mc_id']);
+                } elseif (in_array($status, [3, 4], true) && $previousStatus === 21) {
+                    $flag[] = $this->addRemoteOutGoodsChange($mc, 0, $status);
                 }
-                if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
+                if ($shouldProcessRemoteStock && $this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
                 actionLog($this->getLS(), '【SQL】无订单远程出货修改货道', 'remoteOutGoods');
@@ -1456,10 +1476,11 @@ trait MachineTrait
         }
     }
 
-    protected function addRemoteOutGoodsChange(array $mc, $changeValue)
+    protected function addRemoteOutGoodsChange(array $mc, $changeValue, $status)
     {
         $changeValue = intval($changeValue);
-        if ($changeValue <= 0) {
+        $status = intval($status);
+        if ($changeValue < 0 || ($changeValue === 0 && !in_array($status, [3, 4], true))) {
             return false;
         }
         if (!method_exists($this, 'addGoodsChange')) {
@@ -1480,6 +1501,11 @@ trait MachineTrait
             }
         }
 
+        $descMap = [
+            21 => '远程出货结果待确认：库存已扣减',
+            3 => $changeValue > 0 ? '远程出货成功：库存已扣减' : '远程出货成功：结果确认，未重复扣库存',
+            4 => $changeValue > 0 ? '远程出货失败：库存转入失败待处理库存' : '远程出货失败：结果确认，未重复扣库存',
+        ];
         $insertGChange = [
             "m_id" => $machineMId,
             "machine_id" => $machine['machine_id'] ?? ($mc['machine_id'] ?? ''),
@@ -1496,9 +1522,10 @@ trait MachineTrait
             "bar_code" => $mc['bar_code'] ?? "",
             "ao_id" => $machine['ao_id'] ?? 0,
             "change_value" => $changeValue,
-            "desc" => $this->lang("goodsChange.terminal_sale_dec_stock"),
+            "desc" => $descMap[$status] ?? '远程出货结果未知',
             "position" => 1,
             "type" => 3,
+            "create_time" => time(),
         ];
         $changeId = $this->addGoodsChange($insertGChange);
         actionLog(['change_id' => $changeId, 'data' => $insertGChange], '【SQL】远程出货添加商品变化数据', 'remoteOutGoods');
