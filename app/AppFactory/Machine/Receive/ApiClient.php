@@ -1124,6 +1124,10 @@ class ApiClient extends ReceiveBaseClient
                 $mc['stock'] += $this->data['quantity'];
             }
             $flag[] = $this->updateMachineChannel($mc);
+            // 换货改写货道商品身份后，同一事务内自愈该货道各启用币种价格事实行，避免旧商品价格残留阻断切币。
+            if ($oldGId !== $newGId) {
+                $this->repairMachineChannelCurrencyIdentities(intval($mc['mc_id'] ?? 0), intval($this->machine['m_id'] ?? 0));
+            }
             actionLog($this->getLS(), '【SQL】修改货道信息');
             $result = $this->checkFlag($flag);
             $result ? $this->commitTrans() : $this->rollbackTrans();
