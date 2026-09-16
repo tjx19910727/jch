@@ -2169,7 +2169,9 @@ class ApiClient extends ReceiveBaseClient
     public function otaVersionPlan()
     {
         $where['m_id'] = $this->machine['m_id'];
-        $where[] = ['publish_time', '<', time()];
+        // 即时发布计划可能在创建并下发 MQ 后的同一秒被设备请求，
+        // 当前秒应视为已经到达发布时间。
+        $where[] = ['publish_time', '<=', time()];
         $result = $this->getOtaVersionPlanFind($where, 'ovp_id,ov_id,version_no,path,`desc`,size,update_time,status', 'ovp_id desc');
         actionLog($result, '查询OTA固件更新计划');
         actionLog($this->getLS(), '【SQL】查询OTA固件更新计划');

@@ -47,8 +47,8 @@ class MachineBaseClient extends BaseClient
             }
         }
         @$this->getMqQueue();
-        // 设备离线状态下收到数据，认为已上线，触发发送上线通知
-        @$this->sendOnline();
+        // 上线通知业务已停用，不再在机器客户端初始化时触发。
+        // @$this->sendOnline();
     }
 
     /**
