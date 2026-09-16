@@ -27,16 +27,27 @@ class AuthManager extends Common
 
     /**
      * 获取管理员列表
+     * 支持传 m_id：查询该设备已关联（auth_manager_machine）的所有后台账号。
      * @return mixed
      */
     public function getList()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        // m_id 是“设备关联账号”筛选条件，auth_manager 表没有该字段，先摘除避免被拼成 au.m_id 条件。
+        $mId = intval($postData['m_id'] ?? 0);
+        unset($postData['m_id']);
         $where = $this->getWhere($postData,false,['nickname' => "like"],'au.');
         if (isset($where['ao_id'])) {
             $where['au.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
+        }
+        if ($mId > 0) {
+            // 设备关联账号：取绑定该设备的 manager_id 集合（含主账号与子账号），与数据权限条件取交集。
+            // 集合为空时 ThinkPHP 会把 IN 渲染成 0 = 1，返回空列表而不是退化成全量账号。
+            $managerIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['m_id' => $mId], 'manager_id');
+            $managerIds = array_values(array_unique(array_map('intval', (array)$managerIds)));
+            $where[] = ['au.manager_id', 'in', $managerIds];
         }
         $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.audit_status,
         au.bill_account,au.real_name,au.level,au.sex,au.pic,au.status,au.creator,au.ao_id,au.wx_notice,au.email_notice,au.email,au.openid,
