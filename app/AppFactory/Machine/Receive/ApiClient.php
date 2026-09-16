@@ -1510,11 +1510,68 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
-     * 商品行三价按设备当前币种覆盖（goods_currency_price），支持扁平数组或分页 {data:[]} 结构；缺配给 0 占位并附币种信息。
+     * 本机设备商品在指定币种下的三价映射：g_id => ['mg_id' => int, 'price' => ['cost_price'=>..,'market_price'=>..,'retail_price'=>..]]。
+     *
+     * 供商品库/组织商品列表按“设备对应三价”展示时使用：
+     *   - 同一 g_id 在本机存在多条设备商品（绑定到不同货道）时，优先已上架（is_shelf=1），其次取 mg_id 最大的一条，取价稳定可预期；
+     *   - 该币种下没有设备商品价的商品不会出现在映射里，调用方回退核心商品库价。
+     *
+     * @param array  $gIds
+     * @param string $currencyCode
+     * @return array
+     */
+    protected function machineGoodsPriceMapByGId(array $gIds, $currencyCode)
+    {
+        $gIds = array_values(array_unique(array_filter(array_map('intval', $gIds))));
+        if (!$gIds) {
+            return [];
+        }
+        $mgRows = Db::name('machine_goods')
+            ->where('m_id', intval($this->machine['m_id']))
+            ->whereIn('g_id', $gIds)
+            ->field('mg_id,g_id,is_shelf')
+            ->order('is_shelf asc,mg_id desc')
+            ->select()
+            ->toArray();
+        $mgIdByG = [];
+        foreach ($mgRows as $mg) {
+            $gId = intval($mg['g_id']);
+            if (isset($mgIdByG[$gId])) {
+                continue;
+            }
+            $mgIdByG[$gId] = intval($mg['mg_id']);
+        }
+        if (!$mgIdByG) {
+            return [];
+        }
+        $priceRows = Db::name('machine_goods_currency_price')
+            ->whereIn('mg_id', array_values($mgIdByG))
+            ->where('currency_code', $currencyCode)
+            ->select()
+            ->toArray();
+        $priceByMg = [];
+        foreach ($priceRows as $row) {
+            $priceByMg[intval($row['mg_id'])] = $row;
+        }
+        $map = [];
+        foreach ($mgIdByG as $gId => $mgId) {
+            if (!isset($priceByMg[$mgId])) {
+                continue;
+            }
+            $map[$gId] = ['mg_id' => $mgId, 'price' => $priceByMg[$mgId]];
+        }
+        return $map;
+    }
+
+    /**
+     * 商品行三价按设备当前币种覆盖，支持扁平数组或分页 {data:[]} 结构；缺配给 0 占位并附币种信息。
+     *
      * @param mixed $data
+     * @param bool  $preferMachineGoods 为 true 时优先取本机设备商品三价（machine_goods_currency_price），
+     *                                  取不到再回退核心商品库价（goods_currency_price）；默认 false 保持原口径。
      * @return mixed
      */
-    protected function patchGoodsCurrencyPrice($data)
+    protected function patchGoodsCurrencyPrice($data, $preferMachineGoods = false)
     {
         if (!is_array($data)) {
             return $data;
@@ -1533,9 +1590,17 @@ class ApiClient extends ReceiveBaseClient
         foreach ($map as $row) {
             $priceByG[intval($row['g_id'])] = $row;
         }
+        $machinePriceByG = $preferMachineGoods ? $this->machineGoodsPriceMapByGId($gIds, $currency['currency_code']) : [];
         foreach ($items as &$row) {
             $gId = intval(isset($row['g_id']) ? $row['g_id'] : 0);
-            if (isset($priceByG[$gId])) {
+            if ($preferMachineGoods) {
+                // 设备对应三价：绑定本机且该币种有设备商品价时取设备价，否则回退核心商品库价；
+                // 同时补 mg_id（未绑定本机为 0），便于调用方识别价格来源，其他接口不注入该字段。
+                $row['mg_id'] = isset($machinePriceByG[$gId]) ? intval($machinePriceByG[$gId]['mg_id']) : 0;
+            }
+            if (isset($machinePriceByG[$gId])) {
+                $price = $machinePriceByG[$gId]['price'];
+            } elseif (isset($priceByG[$gId])) {
                 $price = $priceByG[$gId];
             } elseif ($currency['currency_code'] === 'CNY') {
                 $price = [
@@ -1592,6 +1657,7 @@ class ApiClient extends ReceiveBaseClient
     /**
      * 按分类获取指定组织核心商品库的已上架商品。
      * 请求其他组织时必须由设备配置显式放行。
+     * 三价按“设备对应三价”返回：本机设备商品价优先，未绑定/该币种无设备价时回退核心商品库价。
      * @return array|string
      */
     public function getOrgGoods()
@@ -1614,7 +1680,8 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail($goodsList);
         }
         $goodsList = $goodsList ? $goodsList->toArray() : [];
-        $goodsList = $this->patchGoodsCurrencyPrice($goodsList);
+        // 设备对应三价：绑定本机的商品取 machine_goods_currency_price，未绑定或该币种缺价回退核心商品库价。
+        $goodsList = $this->patchGoodsCurrencyPrice($goodsList, true);
 
         $categoryMap = [];
         foreach ($goodsList as $goods) {
