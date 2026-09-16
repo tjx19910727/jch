@@ -30,6 +30,7 @@ trait MachineConfigTrait
 
     public function addMachineConfig($insert)
     {
+        $insert = $this->normalizeShelfCaptureExposureConfig($insert);
         $insert = $this->normalizeOtherOrgGoodsConfig($insert);
         $insert = $this->normalizeSubCarMixConfig($insert);
         $insert = $this->normalizeAmountDisplayConfig($insert);
@@ -41,6 +42,7 @@ trait MachineConfigTrait
 
     public function updateMachineConfig($update, $where = [], $field = [])
     {
+        $update = $this->normalizeShelfCaptureExposureConfig($update);
         $update = $this->normalizeOtherOrgGoodsConfig($update);
         $update = $this->normalizeSubCarMixConfig($update);
         $update = $this->normalizeAmountDisplayConfig($update);
@@ -195,6 +197,40 @@ trait MachineConfigTrait
             }
             $data[$field] = intval($data[$field]);
         }
+        return $data;
+    }
+
+    /**
+     * 货架拍摄曝光度统一按一位小数保存。
+     * 合法值为 -0.8 至 0.8，步长 0.1。
+     */
+    protected function normalizeShelfCaptureExposureConfig($data)
+    {
+        if (!array_key_exists('shelf_capture_exposure', $data)) {
+            return $data;
+        }
+
+        $value = $data['shelf_capture_exposure'];
+        if (!is_numeric($value)) {
+            throw new \InvalidArgumentException('货架拍摄曝光度必须为数字');
+        }
+
+        $value = (float)$value;
+        $scaledValue = $value * 10;
+        if (
+            $value < -0.8
+            || $value > 0.8
+            || abs($scaledValue - round($scaledValue)) > 0.000001
+        ) {
+            throw new \InvalidArgumentException('货架拍摄曝光度范围为-0.8至0.8，且只能保留1位小数');
+        }
+
+        $data['shelf_capture_exposure'] = number_format(
+            round($scaledValue) / 10,
+            1,
+            '.',
+            ''
+        );
         return $data;
     }
 }
