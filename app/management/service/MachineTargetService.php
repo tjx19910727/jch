@@ -249,7 +249,7 @@ class MachineTargetService
             $excelRow = intval($index) + 2;
             $machineId = $cellText($rawRow['machine_id'] ?? '');
             $machineName = $cellText($rawRow['machine_name'] ?? '');
-            $month = $cellText($rawRow['month'] ?? '');
+            $month = $this->normalizeImportMonth($rawRow['month'] ?? '');
             $monthlyRaw = $cellText($rawRow['monthly_target_amount'] ?? '');
             $defaultRaw = $cellText($rawRow['default_target_amount'] ?? '');
             $managerAccount = $cellText($rawRow['manager_account'] ?? '');
@@ -583,6 +583,34 @@ class MachineTargetService
             return ['state' => 100, 'msg' => $fieldName . '超出允许范围'];
         }
         return ['state' => 200, 'amount' => $amount];
+    }
+
+    /**
+     * Excel 日期单元格会以序列值返回，这里统一转换为目标月份格式。
+     * 文本单元格仍按原值返回，交由后续格式校验处理。
+     *
+     * @param mixed $raw
+     */
+    protected function normalizeImportMonth($raw): string
+    {
+        if ($raw instanceof \PHPExcel_RichText) {
+            $raw = $raw->getPlainText();
+        }
+        if (!is_int($raw) && !is_float($raw)) {
+            return is_scalar($raw) ? trim((string) $raw) : '';
+        }
+
+        $serial = (float) $raw;
+        if (!is_finite($serial) || $serial < 1 || $serial > 2958465) {
+            return trim((string) $raw);
+        }
+
+        try {
+            $date = \PHPExcel_Shared_Date::ExcelToPHPObject($serial);
+            return $date instanceof \DateTimeInterface ? $date->format('Y-m') : trim((string) $raw);
+        } catch (\Throwable $e) {
+            return trim((string) $raw);
+        }
     }
 
     /**
