@@ -84,6 +84,8 @@ $checks = [
     '控制器仍按 updateAll 场景校验后进入 client' => $batchUpdate !== ''
         && strpos($batchUpdate, '$this->validate($postData, $this->validatePath . \'.updateAll\');') !== false
         && strpos($batchUpdate, 'batchUpdateMc($postData, $where)') !== false,
+    '批量场景显式要求 m_id（避免空 where 走到框架 find 兜底）' => strpos($validator, '"updateAll" => ["m_id", "mc_ids"]') !== false
+        && strpos($batchUpdate, "\$this->getWhere(['m_id'=>\$postData['m_id']], false, [])") !== false,
 ];
 
 $failed = [];

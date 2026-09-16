@@ -1806,6 +1806,9 @@ class MachineChannelClient extends ManagementClient
                 $saveData = $updateData;
                 // 只要传了这个字段，就要保存当前值为旧值
                 if ($priceInput) {
+                    // 仅留痕：批量还原对零售价仍按多货币规则拒绝（见 batchRestoreMc），
+                    // 因为这里没记录「当时的设备币种」，切币后直接还原会串价；
+                    // 若后续要支持还原，需先补旧价币种字段再放开。
                     $saveData['old_retail_price'] = $mc['retail_price'];
                 }
                 if (isset($updateData['gift_points'])) {
@@ -1862,6 +1865,9 @@ class MachineChannelClient extends ManagementClient
         if (!$mc_ids || !$fields) return $this->r(100, $this->lang("VMachineChannel.mc_id_require"));
 
         if (in_array('retail_price', $fields, true)) {
+            // 零售价不在此接口还原：old_retail_price 未记录「当时的设备币种」，
+            // 设备切币后直接写回会串价（多货币改造的既定规则），统一改走选中货道的币种价格同步接口。
+            // 下方零售价还原分支仅作历史兼容保留，当前不可达。
             return $this->r(100, '普通货道售价不再使用旧值还原，请使用选中货道币种价格同步接口');
         }
         $this->startTrans();

@@ -34,7 +34,7 @@ class VMachineChannel extends VCommon
         'interruptRemoteRemoval' => ['mc_id'],
         "add" => ["m_id", "machine_id", "channel_code"],
         "update" => ["mc_id"],
-        "updateAll" => ["mc_ids"],
+        "updateAll" => ["m_id", "mc_ids"],
         "remoteRemoval" => ["mc_id"],
         "del" => ["mc_id"],
     ];
