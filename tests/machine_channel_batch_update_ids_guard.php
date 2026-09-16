@@ -34,6 +34,7 @@ function guardBatchUpdateBody($source, $methodName)
 $checkMcIds = guardBatchUpdateBody($validator, 'checkMcIds');
 $normalize = guardBatchUpdateBody($client, 'normalizeBatchMcIds');
 $batchUpdateMc = guardBatchUpdateBody($client, 'batchUpdateMc');
+$batchRestoreMc = guardBatchUpdateBody($client, 'batchRestoreMc');
 $batchUpdate = guardBatchUpdateBody($controller, 'batchUpdate');
 
 $checks = [
@@ -55,6 +56,8 @@ $checks = [
         && strpos($batchUpdateMc, '$this->normalizeBatchMcIds($postData[\'mc_ids\'] ?? \'\')') !== false
         && strpos($batchUpdateMc, 'explode(",",$mc_ids)') === false
         && strpos($batchUpdateMc, 'explode(",", $mc_ids)') === false,
+    '批量还原同样走归一化（同一 updateAll 场景）' => $batchRestoreMc !== ''
+        && strpos($batchRestoreMc, '$this->normalizeBatchMcIds($postData[\'mc_ids\'] ?? [])') !== false,
     'client 保持非法/空值提示' => strpos($batchUpdateMc, 'VMachineChannel.mc_id_require') !== false,
     '普通货道售价仍走目标币种改价接口' => strpos($batchUpdateMc, '普通货道售价请使用目标币种改价接口') !== false,
     '控制器仍按 updateAll 场景校验后进入 client' => $batchUpdate !== ''

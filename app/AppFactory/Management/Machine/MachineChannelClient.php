@@ -1823,7 +1823,8 @@ class MachineChannelClient extends ManagementClient
         //先查询是否有这台设备的权限
         $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id');
         if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
-        $mc_ids = $postData['mc_ids'] ?? [];
+        // mc_ids 同样兼容数组与英文逗号分隔字符串（与 batchUpdateMc 共用归一化）。
+        $mc_ids = $this->normalizeBatchMcIds($postData['mc_ids'] ?? []);
         $fields = $postData['fields'] ?? []; // ['retail_price', 'gift_points', 'stock_warning']
         if (!$mc_ids || !$fields) return $this->r(100, $this->lang("VMachineChannel.mc_id_require"));
 
