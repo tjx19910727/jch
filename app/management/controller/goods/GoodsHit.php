@@ -18,14 +18,32 @@ class GoodsHit extends Common
 
     /**
      * 获取商品点击统计报表
+     *
+     * 数据库版本要求：MySQL 8.x。V3 的线上商品销量聚合依赖 JSON_TABLE，
+     * 不支持 MySQL 5.7 及更低版本。
+     *
      * @return array|string
      */
     public function getList()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+
+        // 分组和排序属于查询控制参数，不能传入 getWhere()，
+        // 否则会被错误地当成数据库字段生成筛选条件。
+        $groupType = $postData['group_type'] ?? ($postData['groupType'] ?? 'goods');
+        $sortName = $postData['sort_name'] ?? '';
+        $sortOrder = $postData['sort_order'] ?? 'desc';
+        unset($postData['group_type'], $postData['groupType'], $postData['sort_name'], $postData['sort_order']);
+
         $where = $this->getWhere($postData);
-        return $this->app->goodsHit->getTotalListV2($where,$pageNum,$this->field,'g_id desc');
+        return $this->app->goodsHit->getTotalListV3(
+            $where,
+            $pageNum,
+            $groupType,
+            $sortName,
+            $sortOrder
+        );
     }
 
     /**

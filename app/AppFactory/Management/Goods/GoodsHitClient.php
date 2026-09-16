@@ -32,16 +32,119 @@ class GoodsHitClient extends ManagementClient
         return $return;
     }
 
-    public function getTotalListV2($where,$pageNum = 0,$field = "*",$order = "")
+    /**
+     * 获取互动报表列表，支持按商品或按设备汇总。
+     *
+     * 销量和转化率在分页前完成计算，确保排序针对全部结果，
+     * 而不是只对当前页的数据进行排序。
+     */
+    public function getTotalListV2($where,$pageNum = 0,$groupType = 'goods',$sortName = '',$sortOrder = 'desc')
     {
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
-        $return = $this->rQ($this->getVersionedGoodsHitList($where,$pageNum,'goods','g_id desc',function ($item) use ($where) {
-            $item['saleNum'] = $this->getNetSaleQuantity($where, $item);
-            $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
-            return $item;
-        }));
-        return $return;
+
+        $groupType = $this->normalizeGoodsHitGroupType($groupType);
+        $internalGroupType = $groupType === 'machine' ? 'device' : 'goods';
+        $behaviorQuery = $this->buildVersionedGoodsHitQuery($where, $internalGroupType);
+
+        $saleQuery = $this->buildGoodsHitSaleQuantityQuery($where, $internalGroupType);
+        $saleSql = $saleQuery->buildSql(false);
+        $metricQuery = Db::table($behaviorQuery->buildSql() . ' hit_stats')
+            ->fieldRaw("hit_stats.*,IFNULL(({$saleSql}),0) saleNum");
+
+        $query = Db::table($metricQuery->buildSql() . ' metric_stats')
+            ->fieldRaw(
+                'metric_stats.*,CASE WHEN metric_stats.hits > 0 AND metric_stats.saleNum > 0 '
+                . 'THEN metric_stats.saleNum / metric_stats.hits * 100 ELSE 0 END conversion_rate_value'
+            );
+        $query->orderRaw($this->buildGoodsHitMetricOrder($groupType, $sortName, $sortOrder));
+
+        if ($pageNum) {
+            $list = $query->paginate($pageNum, false, ["query" => request()->param()]);
+        } else {
+            $list = $query->select();
+        }
+
+        if (method_exists($list, 'each')) {
+            $list = $list->each(function ($item) {
+                $item['saleNum'] = intval($item['saleNum'] ?? 0);
+                $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
+                unset($item['conversion_rate_value'], $item['goods_out_no']);
+                return $item;
+            });
+        }
+
+        return $this->rQ($list);
+    }
+
+    /**
+     * Aggregate sales once and join the result to the versioned behavior data.
+     * This keeps V2 result semantics without executing a correlated sales
+     * subquery for every behavior row.
+     */
+    public function getTotalListV3($where,$pageNum = 0,$groupType = 'goods',$sortName = '',$sortOrder = 'desc')
+    {
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
+
+        $groupType = $this->normalizeGoodsHitGroupType($groupType);
+        $internalGroupType = $groupType === 'machine' ? 'device' : 'goods';
+        $behaviorQuery = $this->buildVersionedGoodsHitQuery($where, $internalGroupType);
+        $metricQuery = Db::table($behaviorQuery->buildSql() . ' hit_stats');
+
+        if ($internalGroupType === 'device') {
+            $saleQuery = $this->buildGoodsHitDeviceSaleAggregateQuery($where);
+            $metricQuery
+                ->leftJoin([$saleQuery->buildSql() => 'sale_stats'], 'sale_stats.m_id = hit_stats.m_id')
+                ->fieldRaw('hit_stats.*,IFNULL(sale_stats.saleNum,0) saleNum');
+        } else {
+            $offlineSaleQuery = $this->buildGoodsHitOfflineSaleAggregateQuery($where);
+            $onlineSaleQuery = $this->buildGoodsHitOnlineSaleAggregateQuery($where);
+            $metricQuery
+                ->leftJoin(
+                    [$offlineSaleQuery->buildSql() => 'offline_sale_stats'],
+                    'hit_stats.is_online <> 1 AND offline_sale_stats.g_id = hit_stats.g_id'
+                )
+                ->leftJoin(
+                    [$onlineSaleQuery->buildSql() => 'online_sale_stats'],
+                    "hit_stats.is_online = 1 AND online_sale_stats.out_no = hit_stats.goods_out_no"
+                )
+                ->fieldRaw(
+                    'hit_stats.*,CASE WHEN hit_stats.is_online = 1 '
+                    . 'THEN IFNULL(online_sale_stats.saleNum,0) '
+                    . 'ELSE IFNULL(offline_sale_stats.saleNum,0) END saleNum'
+                );
+        }
+
+        $query = Db::table($metricQuery->buildSql() . ' metric_stats')
+            ->fieldRaw(
+                'metric_stats.*,CASE WHEN metric_stats.hits > 0 AND metric_stats.saleNum > 0 '
+                . 'THEN metric_stats.saleNum / metric_stats.hits * 100 ELSE 0 END conversion_rate_value'
+            );
+        $query->orderRaw($this->buildGoodsHitMetricOrder($groupType, $sortName, $sortOrder));
+
+        if ($pageNum) {
+            // Count behavior groups only. Counting the metric query would parse
+            // and aggregate all order JSON a second time.
+            $total = Db::table($behaviorQuery->buildSql() . ' hit_count_stats')->count();
+            $list = $query->paginate([
+                'list_rows' => $pageNum,
+                'query' => request()->param(),
+            ], intval($total));
+        } else {
+            $list = $query->select();
+        }
+
+        if (method_exists($list, 'each')) {
+            $list = $list->each(function ($item) {
+                $item['saleNum'] = intval($item['saleNum'] ?? 0);
+                $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
+                unset($item['conversion_rate_value'], $item['goods_out_no']);
+                return $item;
+            });
+        }
+
+        return $this->rQ($list);
     }
 
     public function getHitList($where,$pageNum = 0,$field = "*",$order = "",$eachFun = "",$group = "")
@@ -162,8 +265,8 @@ class GoodsHitClient extends ManagementClient
     }
 
     /**
-     * Normalize both goods sources before MAX so deployments with different
-     * column collations can be aggregated safely.
+     * 在执行 MAX 聚合前统一两种商品来源的字符集和排序规则，
+     * 避免不同部署环境中的字段排序规则不一致导致聚合失败。
      */
     protected function getGoodsBehaviorTrackingAggregateFields()
     {
@@ -174,6 +277,26 @@ class GoodsHitClient extends ManagementClient
     }
 
     protected function getVersionedGoodsHitList($where,$pageNum = 0,$groupType = 'goods',$order = '',$eachFun = '')
+    {
+        $query = $this->buildVersionedGoodsHitQuery($where, $groupType);
+
+        if ($order) $query->order($order);
+
+        if (!$pageNum) {
+            $list = $query->select();
+        } else {
+            $list = $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }
+        if ($eachFun && is_callable($eachFun) && method_exists($list, 'each')) {
+            $list = $list->each($eachFun);
+        }
+        return $list;
+    }
+
+    /**
+     * 构建兼容新旧版本行为数据的聚合查询，但不立即执行。
+     */
+    protected function buildVersionedGoodsHitQuery($where,$groupType = 'goods')
     {
         $cutoverSql = $this->getBehaviorVersionCutoverSubQuery();
         $oldQuery = Db::name('goods_hit')->alias('gh')
@@ -201,29 +324,26 @@ class GoodsHitClient extends ManagementClient
         $query = Db::table($oldQuery->buildSql() . ' behavior_stats')
             ->field($this->getVersionedGoodsHitAggregateFields($groupType))
             ->group($this->getVersionedGoodsHitAggregateGroup($groupType));
-
-        if ($order) $query->order($order);
-
-        if (!$pageNum) {
-            $list = $query->select();
-        } else {
-            $list = $query->paginate($pageNum, false, ["query" => request()->param()]);
-        }
-        if ($eachFun && is_callable($eachFun) && method_exists($list, 'each')) {
-            $list = $list->each($eachFun);
-        }
-        return $list;
+        return $query;
     }
 
     protected function getVersionedGoodsHitSourceFields($source,$groupType)
     {
-        $isMachineGroup = in_array($groupType, ['machine', 'machine_date'], true);
+        $isDeviceGroup = $groupType === 'device';
+        $isMachineGroup = in_array($groupType, ['machine', 'machine_date', 'device'], true);
         $isDateGroup = $groupType === 'machine_date';
 
         if ($source === 'old') {
             $machineFields = $isMachineGroup
                 ? "gh.m_id,MAX(CONVERT(gh.machine_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) machine_id,MAX(CONVERT(gh.machine_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) machine_name"
                 : "0 m_id,'' machine_id,'' machine_name";
+
+            if ($isDeviceGroup) {
+                return "{$machineFields},"
+                    . "FROM_UNIXTIME(MAX(gh.create_time),'%Y-%m-%d %H:%i:%s') create_time,"
+                    . "COUNT(gh.gh_id) hits,0 cart_add_count,0 retry_dispense_count,0 help_count";
+            }
+
             $createDate = $isDateGroup
                 ? "DATE(FROM_UNIXTIME(gh.create_time)) create_date"
                 : "NULL create_date";
@@ -240,6 +360,14 @@ class GoodsHitClient extends ManagementClient
         $machineFields = $isMachineGroup
             ? "gbt.m_id,MAX(CONVERT(gbt.machine_id USING utf8mb4) COLLATE utf8mb4_unicode_ci) machine_id,MAX(CONVERT(m.machine_name USING utf8mb4) COLLATE utf8mb4_unicode_ci) machine_name"
             : "0 m_id,'' machine_id,'' machine_name";
+
+        if ($isDeviceGroup) {
+            return "{$machineFields},"
+                . "DATE_FORMAT(MAX(gbt.updated_at),'%Y-%m-%d %H:%i:%s') create_time,"
+                . "SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,"
+                . "SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        }
+
         $createDate = $isDateGroup ? 'gbt.report_date create_date' : 'NULL create_date';
         $goodsFields = $this->getGoodsBehaviorTrackingAggregateFields();
 
@@ -252,6 +380,8 @@ class GoodsHitClient extends ManagementClient
     protected function getVersionedGoodsHitSourceGroup($source,$groupType)
     {
         $prefix = $source === 'old' ? 'gh' : 'gbt';
+        if ($groupType === 'device') return "{$prefix}.m_id";
+
         $goodsId = $source === 'old' ? 'g_id' : 'goods_id';
         $group = "{$prefix}.{$goodsId}";
         if ($source === 'new') $group .= ',gbt.is_online';
@@ -264,6 +394,16 @@ class GoodsHitClient extends ManagementClient
 
     protected function getVersionedGoodsHitAggregateFields($groupType)
     {
+        if ($groupType === 'device') {
+            return "behavior_stats.m_id,MAX(behavior_stats.machine_id) machine_id,"
+                . "MAX(behavior_stats.machine_name) machine_name,"
+                . "MAX(behavior_stats.create_time) create_time,"
+                . "SUM(behavior_stats.hits) hits,"
+                . "SUM(behavior_stats.cart_add_count) cart_add_count,"
+                . "SUM(behavior_stats.retry_dispense_count) retry_dispense_count,"
+                . "SUM(behavior_stats.help_count) help_count";
+        }
+
         $field = "behavior_stats.g_id,behavior_stats.is_online,"
             . "MAX(behavior_stats.goods_out_no) goods_out_no,"
             . "MAX(behavior_stats.g_name) g_name,MAX(behavior_stats.sku) sku,"
@@ -286,6 +426,8 @@ class GoodsHitClient extends ManagementClient
 
     protected function getVersionedGoodsHitAggregateGroup($groupType)
     {
+        if ($groupType === 'device') return 'behavior_stats.m_id';
+
         $group = 'behavior_stats.g_id,behavior_stats.is_online';
         if (in_array($groupType, ['machine', 'machine_date'], true)) {
             $group .= ',behavior_stats.m_id';
@@ -294,6 +436,152 @@ class GoodsHitClient extends ManagementClient
             $group .= ',behavior_stats.create_date';
         }
         return $group;
+    }
+
+    /**
+     * 统一外部传入的分组类型，并兼容部分旧管理页面使用的数字类型。
+     */
+    protected function normalizeGoodsHitGroupType($groupType)
+    {
+        $groupType = strtolower(trim(strval($groupType)));
+        if (in_array($groupType, ['machine', 'device', '2'], true)) return 'machine';
+        return 'goods';
+    }
+
+    /**
+     * 根据白名单生成排序语句，禁止前端参数直接进入 ORDER BY。
+     * 同时追加固定的次级排序，避免指标相同时翻页数据顺序不稳定。
+     */
+    protected function buildGoodsHitMetricOrder($groupType,$sortName,$sortOrder)
+    {
+        $sortName = strtolower(trim(strval($sortName)));
+        $sortOrder = strtolower(trim(strval($sortOrder))) === 'asc' ? 'asc' : 'desc';
+        $sortMap = [
+            'hits' => 'hits',
+            'click_count' => 'hits',
+            'sale_num' => 'saleNum',
+            'salenum' => 'saleNum',
+            'conversion_rate' => 'conversion_rate_value',
+        ];
+        $stableOrder = $groupType === 'machine' ? 'm_id desc' : 'g_id desc,is_online desc';
+
+        if (!isset($sortMap[$sortName])) return $stableOrder;
+        return $sortMap[$sortName] . " {$sortOrder},{$stableOrder}";
+    }
+
+    /**
+     * 构建销量关联聚合子查询。
+     *
+     * 销量作为列表查询的一部分在分页前完成计算，既能参与全量排序，
+     * 又能避免原来通过回调逐行查询销量产生的 N+1 查询问题。
+     */
+    protected function buildGoodsHitSaleQuantityQuery($where,$groupType)
+    {
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3);
+
+        if ($groupType === 'device') {
+            $query->whereRaw('so.m_id = hit_stats.m_id');
+        } else {
+            $query->whereRaw(
+                "((hit_stats.is_online = 1 AND hit_stats.goods_out_no <> '' "
+                . "AND JSON_SEARCH(IF(JSON_VALID(sod.wc_order_no), sod.wc_order_no, JSON_OBJECT()), "
+                . "'one', hit_stats.goods_out_no, NULL, '$.*.out_no') IS NOT NULL) "
+                . "OR (hit_stats.is_online <> 1 AND sod.g_id = hit_stats.g_id))"
+            );
+        }
+
+        $this->applyGoodsHitSaleWhere($query, $where);
+        return $query->fieldRaw(
+            'IFNULL(SUM(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)),0)'
+        );
+    }
+
+    /**
+     * Aggregate net sales by device for the device report.
+     */
+    protected function buildGoodsHitDeviceSaleAggregateQuery($where)
+    {
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3);
+        $this->applyGoodsHitSaleWhere($query, $where);
+        return $query
+            ->fieldRaw(
+                'so.m_id,SUM(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)) saleNum'
+            )
+            ->group('so.m_id');
+    }
+
+    /**
+     * Aggregate ordinary-goods net sales by goods ID.
+     */
+    protected function buildGoodsHitOfflineSaleAggregateQuery($where)
+    {
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3);
+        $this->applyGoodsHitSaleWhere($query, $where);
+        return $query
+            ->fieldRaw(
+                'sod.g_id,SUM(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)) saleNum'
+            )
+            ->group('sod.g_id');
+    }
+
+    /**
+     * Expand online-order JSON once, de-duplicate repeated out_no values in a
+     * detail row, and then aggregate net sales by out_no.
+     */
+    protected function buildGoodsHitOnlineSaleAggregateQuery($where)
+    {
+        $jsonTable = "JSON_TABLE("
+            . "IF(JSON_VALID(sod.wc_order_no),sod.wc_order_no,JSON_OBJECT()),"
+            . "'$.*' COLUMNS ("
+            . "out_no VARCHAR(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci "
+            . "PATH '$.out_no' NULL ON EMPTY NULL ON ERROR"
+            . ")) jt";
+
+        $detailQuery = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->join($jsonTable, 'TRUE')
+            ->where('so.pay_status', 3)
+            ->whereNotNull('jt.out_no')
+            ->where('jt.out_no', '<>', '');
+        $this->applyGoodsHitSaleWhere($detailQuery, $where);
+        $detailQuery
+            ->fieldRaw(
+                'sod.sod_id,jt.out_no,'
+                . 'MAX(IFNULL(sod.quantity,0) - IFNULL(sod.refund_quantity,0)) net_quantity'
+            )
+            ->group('sod.sod_id,jt.out_no');
+
+        return Db::table($detailQuery->buildSql() . ' online_sale_rows')
+            ->fieldRaw('out_no,SUM(net_quantity) saleNum')
+            ->group('out_no');
+    }
+
+    /**
+     * 将互动报表的公共筛选范围转换为订单表字段，并应用到销量查询。
+     */
+    protected function applyGoodsHitSaleWhere($query,$where)
+    {
+        foreach ($where as $key => $value) {
+            if (!is_array($value)) {
+                if ($key == 'ao_id') $query->where('so.ao_id', $value);
+                continue;
+            }
+
+            $field = $value[0] ?? '';
+            $op = $value[1] ?? '=';
+            $val = $value[2] ?? '';
+            if ($field == 'm_id') $query->where('so.m_id', $op, $val);
+            if ($field == 'machine_id') $query->where('so.machine_id', $op, $val);
+            if ($field == 'create_time') $query->where('so.create_time', $op, $val);
+            if ($field == 'ao_id') $query->where('so.ao_id', $op, $val);
+        }
+        return $query;
     }
 
     protected function formatOldGoodsHitWhere($where)
