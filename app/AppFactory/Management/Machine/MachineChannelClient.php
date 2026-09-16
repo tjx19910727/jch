@@ -1732,6 +1732,31 @@ class MachineChannelClient extends ManagementClient
 
     
     /**
+     * 批量货道ID归一化：兼容数组与英文逗号分隔字符串（历史调用方一直传 "1,2,3"），
+     * 过滤非正整数并去重，返回 int 数组；全非法时返回空数组由调用方决定提示。
+     *
+     * 说明：刻意放在本管理端客户端内，而不是共享的 MachineChannelTrait——
+     * 设备端/MQ 侧（MqClient）也 use 了该 trait，不把管理端专用逻辑塞进共享文件。
+     *
+     * @param mixed $mcIds
+     * @return array
+     */
+    protected function normalizeBatchMcIds($mcIds)
+    {
+        if (!is_array($mcIds)) {
+            $mcIds = explode(',', (string)$mcIds);
+        }
+        $result = [];
+        foreach ($mcIds as $mcId) {
+            $mcId = intval(trim((string)$mcId));
+            if ($mcId > 0) {
+                $result[$mcId] = $mcId;
+            }
+        }
+        return array_values($result);
+    }
+
+    /**
      * 批量修改货道信息
      * @param $postData
      * @return array|string
@@ -1741,8 +1766,8 @@ class MachineChannelClient extends ManagementClient
         //先查询是否有这台设备的权限
         $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id');
         if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
-        $mc_ids = $postData['mc_ids'] ?? '';
-        $mc_ids = explode(",",$mc_ids);
+        // mc_ids 兼容数组与英文逗号分隔字符串（历史调用方一直传 "1,2,3"；校验层同样两种都放行）。
+        $mc_ids = $this->normalizeBatchMcIds($postData['mc_ids'] ?? '');
 
         if (!$mc_ids) return $this->r(100, $this->lang("VMachineChannel.mc_id_require"));
 
