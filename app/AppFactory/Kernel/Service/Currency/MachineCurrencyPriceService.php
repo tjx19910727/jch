@@ -140,6 +140,125 @@ class MachineCurrencyPriceService
     }
 
     /**
+     * 货道商品身份（mg_id/g_id）变化后的币种价格事实行自愈。
+     *
+     * 设备端换货、终端换货上报、后台换货与商品导入只改写 machine_channel 的商品身份，
+     * 不会重建 machine_channel_currency_price；旧商品价格残留会让切币预检报
+     * MACHINE_CHANNEL_PRICE_STALE（货道目标币种价格属于旧商品）。
+     * 统一规则：
+     *   1) 事实行身份已与货道一致的行情保留，不覆盖货道自维护价格；
+     *   2) 当前币种只把身份拉回货道，三价沿用货道活跃快照，避免反向覆盖设备正在售卖的价格；
+     *   3) 其余启用币种按货道当前设备商品的该币种事实行重建身份与三价（与人工同步同一投影规则）；
+     *   4) 新商品没有该币种价格时删除旧行，宁可缺价阻断也不串价，缺行交由缺价预检 + 人工同步补齐。
+     * 多商品货道与未绑定商品的货道不在本期币种价格范围内，直接跳过。
+     *
+     * @param int   $mId
+     * @param array $mcIds
+     * @param int   $operatorId
+     * @param bool  $manageTransaction 由调用方事务包裹时传 false，避免嵌套事务
+     * @return array
+     */
+    public function repairMachineChannelCurrencyIdentities($mId, $mcIds, $operatorId = 0, $manageTransaction = true)
+    {
+        $mId = intval($mId);
+        $mcIds = array_values(array_unique(array_filter(array_map('intval', (array)$mcIds), function ($mcId) {
+            return $mcId > 0;
+        })));
+        $empty = ['m_id' => $mId, 'fixed_count' => 0, 'removed_count' => 0, 'skipped_count' => 0];
+        if ($mId <= 0 || !$mcIds) {
+            return $empty;
+        }
+        $save = function () use ($mId, $mcIds, $operatorId, $empty) {
+            $config = $this->getMachineCurrency($mId);
+            $currencyCodes = $this->catalog->getEnabledCodes();
+            if (!$currencyCodes) {
+                return $empty;
+            }
+            $channels = Db::name('machine_channel')->where('m_id', $mId)->whereIn('mc_id', $mcIds)
+                ->field('mc_id,m_id,mg_id,g_id,is_multi_goods,cost_price,market_price,retail_price')
+                ->select()
+                ->toArray();
+            $factRows = Db::name('machine_channel_currency_price')
+                ->whereIn('mc_id', $mcIds)
+                ->whereIn('currency_code', $currencyCodes)
+                ->lock(true)
+                ->select()
+                ->toArray();
+            $factMap = [];
+            foreach ($factRows as $fact) {
+                $factMap[intval($fact['mc_id'])][$fact['currency_code']] = $fact;
+            }
+            $fixed = 0;
+            $removed = 0;
+            $skipped = 0;
+            $pending = [];
+            foreach ($channels as $mc) {
+                if (intval(isset($mc['is_multi_goods']) ? $mc['is_multi_goods'] : 2) === 1
+                    || intval($mc['mg_id']) <= 0 || intval($mc['g_id']) <= 0) {
+                    $skipped++;
+                    continue;
+                }
+                $mcId = intval($mc['mc_id']);
+                foreach ($currencyCodes as $currencyCode) {
+                    if (!isset($factMap[$mcId][$currencyCode])) {
+                        // 缺行由缺价预检发现，等待人工同步，这里不造行。
+                        continue;
+                    }
+                    $fact = $factMap[$mcId][$currencyCode];
+                    if (intval($fact['m_id']) === $mId
+                        && intval($fact['mg_id']) === intval($mc['mg_id'])
+                        && intval($fact['g_id']) === intval($mc['g_id'])) {
+                        continue;
+                    }
+                    if ($currencyCode === $config['currency_code']) {
+                        Db::name('machine_channel_currency_price')->where('mccp_id', $fact['mccp_id'])->update([
+                            'm_id' => $mId,
+                            'mg_id' => intval($mc['mg_id']),
+                            'g_id' => intval($mc['g_id']),
+                            'cost_price' => $mc['cost_price'],
+                            'market_price' => $mc['market_price'],
+                            'retail_price' => $mc['retail_price'],
+                            'update_id' => intval($operatorId),
+                        ]);
+                        $fixed++;
+                        continue;
+                    }
+                    $pending[$currencyCode][] = ['mc' => $mc, 'fact' => $fact];
+                }
+            }
+            foreach ($pending as $currencyCode => $items) {
+                $mgIds = array_values(array_unique(array_map(function ($item) {
+                    return intval($item['mc']['mg_id']);
+                }, $items)));
+                $sourceMap = $this->getMachineGoodsPriceMap($mgIds, $currencyCode);
+                foreach ($items as $item) {
+                    $mc = $item['mc'];
+                    $fact = $item['fact'];
+                    $source = isset($sourceMap[intval($mc['mg_id'])]) ? $sourceMap[intval($mc['mg_id'])] : null;
+                    if (!$source || intval($source['m_id']) !== $mId || intval($source['g_id']) !== intval($mc['g_id'])) {
+                        // 新商品在该币种下没有可信价格：删掉旧商品价格，宁可缺价也不串价。
+                        Db::name('machine_channel_currency_price')->where('mccp_id', $fact['mccp_id'])->delete();
+                        $removed++;
+                        continue;
+                    }
+                    Db::name('machine_channel_currency_price')->where('mccp_id', $fact['mccp_id'])->update([
+                        'm_id' => $mId,
+                        'mg_id' => intval($mc['mg_id']),
+                        'g_id' => intval($mc['g_id']),
+                        'cost_price' => $source['cost_price'],
+                        'market_price' => $source['market_price'],
+                        'retail_price' => $source['retail_price'],
+                        'update_id' => intval($operatorId),
+                    ]);
+                    $fixed++;
+                }
+            }
+            return ['m_id' => $mId, 'fixed_count' => $fixed, 'removed_count' => $removed, 'skipped_count' => $skipped];
+        };
+        return $manageTransaction ? Db::transaction($save) : $save();
+    }
+
+    /**
      * 将选中的核心商品币种价格人工同步到设备商品，不通过定时任务或消息队列自动传播。
      */
     public function syncMachineGoods($mId, $currencyCode, $mgIds, $operatorId = 0, $manageTransaction = true)

@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Mall\MallMachineModel;
 use app\AppFactory\Kernel\Model\Mall\MallModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
 use app\AppFactory\Kernel\Support\Validate\Machine\VChannel;
 use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
 use app\AppFactory\Kernel\Traits\ThirdParty\ThirdPartySyncReportTrait;
@@ -221,6 +222,32 @@ trait MachineChannelTrait
         return $update;
     }
 
+    /**
+     * 货道商品身份（mg_id/g_id）变化后，自愈该货道各启用币种的币种价格事实行。
+     *
+     * 换货/上货只改写 machine_channel 的商品身份，币种价事实行不跟着改就会残留旧商品价格，
+     * 导致切币预检报 MACHINE_CHANNEL_PRICE_STALE。这里统一委托币种价格服务处理，
+     * 并保持与调用方同一事务；币种价不属于换货主流程，异常只记日志不回滚已生效的换货。
+     *
+     * @param int $mcId
+     * @param int $mId
+     * @return void
+     */
+    protected function repairMachineChannelCurrencyIdentities($mcId, $mId)
+    {
+        $mcId = intval($mcId);
+        $mId = intval($mId);
+        if ($mcId <= 0 || $mId <= 0) {
+            return;
+        }
+        try {
+            $operatorId = intval($this->manager['manager_id'] ?? 0);
+            (new MachineCurrencyPriceService())->repairMachineChannelCurrencyIdentities($mId, [$mcId], $operatorId, false);
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'repairMachineChannelCurrencyIdentities');
+        }
+    }
+
     public function delMachineChannel($where)
     {
         $machineIds = $this->collectChannelMachineIdsForSync([], $where);
@@ -381,6 +408,8 @@ trait MachineChannelTrait
                         $mc = $mc->toArray() ?? obj2arr($mc);
                         // 多商品处理会刷新 $mc 的队首快照，需先保留原商品ID用于二维码变化判断。
                         $oldGId = intval($mc['g_id'] ?? 0);
+                        // 上报换货后需要按货道ID自愈币种价事实行，这里先固定货道ID（后续 $mc 会被上报值覆盖）。
+                        $reportMcId = intval($mc['mc_id'] ?? 0);
                         // ==================== 单货道多商品相关开始 ====================
                         $multiStateChanging = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) !== intval($mc['is_multi_goods'] ?? 2);
                         if (intval($mc['frozen_stock'] ?? 0) > 0 && ($multiStateChanging || !empty($batchArr))) {
@@ -498,6 +527,10 @@ trait MachineChannelTrait
                         if (!$mc) {
                             $this->rollbackTrans();
                             return $this->rFail($this->lang("VChannel.update_channel_fail") . ":" . $mc['channel_code']);
+                        }
+                        // 上报换货改写货道商品身份后，同一事务内自愈该货道各启用币种价格事实行。
+                        if ($newGId !== $oldGId) {
+                            $this->repairMachineChannelCurrencyIdentities($reportMcId, intval($value['m_id'] ?? 0));
                         }
                     }
                     $channelList[] = $mc;

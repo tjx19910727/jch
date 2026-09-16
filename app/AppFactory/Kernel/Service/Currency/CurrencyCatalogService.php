@@ -28,6 +28,26 @@ class CurrencyCatalogService
         return Db::name('currency_info')->where($where)->order('sort asc,currency_code asc')->select()->toArray();
     }
 
+    /**
+     * 启用币种编码集合（大写）。币种价格事实行维护统一按启用范围收敛，避免把停用币种也纳入。
+     * @return array
+     */
+    public function getEnabledCodes()
+    {
+        $codes = Db::name('currency_info')
+            ->where('status', CurrencyStatus::ENABLED)
+            ->column('currency_code');
+        $result = [];
+        foreach ((array)$codes as $code) {
+            try {
+                $result[] = $this->normalizeCode($code);
+            } catch (\InvalidArgumentException $e) {
+                continue;
+            }
+        }
+        return array_values(array_unique($result));
+    }
+
     public function getByCode($currencyCode, $enabledOnly = false)
     {
         $where = ['currency_code' => $this->normalizeCode($currencyCode)];

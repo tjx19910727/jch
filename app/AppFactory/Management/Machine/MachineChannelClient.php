@@ -1228,6 +1228,8 @@ class MachineChannelClient extends ManagementClient
                     intval(isset($this->manager['manager_id']) ? $this->manager['manager_id'] : 0),
                     false
                 );
+                // 其余启用币种事实行同一事务内自愈，避免旧商品价格残留导致后续切币被 MACHINE_CHANNEL_PRICE_STALE 阻断。
+                $this->repairMachineChannelCurrencyIdentities($mc['mc_id'], $mc['m_id']);
             }
 
             $this->commitTrans();

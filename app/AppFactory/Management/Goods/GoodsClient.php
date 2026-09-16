@@ -1205,7 +1205,8 @@ class GoodsClient extends ManagementClient
      * 遍历绑定本商品（g_id）的 machine_goods / machine_channel（普通单商品货道），
      * 若 machine_goods_currency_price / machine_channel_currency_price 中缺少对应
      * 币种（如人民币 CNY / 港币 HKD）三价记录，则按本次导入后核心商品库中该币种的三价新增；
-     * 已存在的记录不更新，保留设备侧自有维护价，后续由用户在设备商品/货道页面自行维护。
+     * 已存在且身份正确的记录不更新，保留设备侧自有维护价，后续由用户在设备商品/货道页面自行维护；
+     * 已存在但身份仍指向旧商品（换货后未同步）的记录，按货道当前设备商品的币种事实行自愈身份。
      * 必须在调用方开启的事务内执行，本方法不自行启停事务。
      *
      * @param int   $gId
@@ -1314,6 +1315,8 @@ class GoodsClient extends ManagementClient
      * 给绑定指定商品（g_id）的普通货道补齐缺失的币种三价事实行。
      * 仅排除真正开启单货道多商品（is_multi_goods=1）的货道；
      * 不因 channel_goods_batch 存在历史/补货批次记录而整批跳过（否则会把带批次记录的普通货道漏掉）。
+     * 已存在但身份（m_id/mg_id/g_id）仍指向旧商品的行，交由币种价格服务按货道当前设备商品自愈，
+     * 避免导入后切币仍被 MACHINE_CHANNEL_PRICE_STALE 阻断。
      * @param int    $gId
      * @param string $currencyCode
      * @param array  $price
@@ -1338,14 +1341,22 @@ class GoodsClient extends ManagementClient
             ->lock(true)
             ->select()
             ->toArray();
-        $existIds = [];
+        $existMap = [];
         foreach ($existRows as $row) {
-            $existIds[intval($row['mc_id'])] = true;
+            $existMap[intval($row['mc_id'])] = $row;
         }
         $insertRows = [];
+        // 身份自愈按设备分组，统一由币种价格服务按货道当前设备商品重建，保持与换货链路同一规则。
+        $staleMcIdsByMachine = [];
         foreach ($mcRows as $mc) {
             $mcId = intval($mc['mc_id']);
-            if (isset($existIds[$mcId])) {
+            if (isset($existMap[$mcId])) {
+                $exist = $existMap[$mcId];
+                if (intval($exist['m_id']) !== intval($mc['m_id'])
+                    || intval($exist['mg_id']) !== intval($mc['mg_id'])
+                    || intval($exist['g_id']) !== intval($mc['g_id'])) {
+                    $staleMcIdsByMachine[intval($mc['m_id'])][] = $mcId;
+                }
                 continue;
             }
             $insertRows[] = array_merge($price, [
@@ -1365,6 +1376,24 @@ class GoodsClient extends ManagementClient
                 'currency_code' => $currencyCode,
                 'insert_count' => count($insertRows),
             ], '导入补齐货道币种价缺失记录', 'ensureMissingMachineCurrencyPriceRows');
+        }
+        foreach ($staleMcIdsByMachine as $mId => $machineMcIds) {
+            try {
+                $repair = (new MachineCurrencyPriceService())->repairMachineChannelCurrencyIdentities(
+                    intval($mId),
+                    $machineMcIds,
+                    intval($operatorId),
+                    false
+                );
+                if (!empty($repair['fixed_count']) || !empty($repair['removed_count'])) {
+                    actionLog(array_merge([
+                        'g_id' => $gId,
+                        'currency_code' => $currencyCode,
+                    ], $repair), '导入自愈货道币种价身份', 'ensureMissingMachineCurrencyPriceRows');
+                }
+            } catch (\Throwable $e) {
+                actionException($e, 1, 'ensureMissingMachineCurrencyPriceRows');
+            }
         }
     }
 

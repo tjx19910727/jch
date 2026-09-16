@@ -116,3 +116,70 @@ SELECT mc.`mc_id`,mc.`m_id`,IFNULL(mc.`mg_id`,0),mc.`g_id`,'CNY',mc.`cost_price`
 FROM `machine_channel` mc
 LEFT JOIN `machine_channel_currency_price` p ON p.`mc_id`=mc.`mc_id` AND p.`currency_code`='CNY'
 WHERE p.`mccp_id` IS NULL AND IFNULL(mc.`is_multi_goods`,2)<>1 AND mc.`g_id`>0;
+
+-- ============================================================================
+-- 【可重复执行】货道币种价格事实行身份自愈（多货币商品价格体系 v2.1）
+--
+-- 背景：设备端换货、终端换货上报、后台换货与商品导入只改写 machine_channel 的商品身份
+--       （mg_id/g_id），不会重建 machine_channel_currency_price；旧商品价格残留会让切币预检
+--       返回 MACHINE_CHANNEL_PRICE_STALE（货道目标币种价格属于旧商品，请重新同步）。
+-- 规则与 MachineCurrencyPriceService::repairMachineChannelCurrencyIdentities 完全一致：
+--   1) 身份已与货道一致的行不动，保留货道自维护价格；
+--   2) 当前币种（machine_config.currency_code）：身份与三价都以货道活跃快照为准，禁止反向覆盖；
+--   3) 其余启用币种：身份与三价按货道当前设备商品的该币种事实行重建；
+--   4) 新商品没有该币种价格时删除旧行，宁可缺价阻断也不串价（缺行由缺价预检 + 人工同步补齐）。
+-- 仅处理普通单商品货道（IFNULL(is_multi_goods,2)<>1）且 mg_id/g_id 有效的货道。
+-- 本段为纯数据修复，可重复执行；执行前仍建议先备份。
+-- ============================================================================
+
+-- 1) 当前币种：身份与三价都以货道活跃快照为准
+UPDATE `machine_channel_currency_price` p
+JOIN `machine_channel` mc ON mc.`mc_id` = p.`mc_id`
+JOIN `machine_config` mcfg ON mcfg.`m_id` = mc.`m_id`
+SET p.`m_id` = mc.`m_id`,
+    p.`mg_id` = mc.`mg_id`,
+    p.`g_id` = mc.`g_id`,
+    p.`cost_price` = mc.`cost_price`,
+    p.`market_price` = mc.`market_price`,
+    p.`retail_price` = mc.`retail_price`
+WHERE p.`currency_code` = mcfg.`currency_code`
+  AND IFNULL(mc.`is_multi_goods`, 2) <> 1
+  AND mc.`mg_id` > 0
+  AND mc.`g_id` > 0
+  AND (p.`m_id` <> mc.`m_id` OR p.`mg_id` <> mc.`mg_id` OR p.`g_id` <> mc.`g_id`);
+
+-- 2) 其余启用币种：身份与三价按设备商品该币种事实行重建
+UPDATE `machine_channel_currency_price` p
+JOIN `machine_channel` mc ON mc.`mc_id` = p.`mc_id`
+JOIN `machine_config` mcfg ON mcfg.`m_id` = mc.`m_id`
+JOIN `currency_info` ci ON ci.`currency_code` = p.`currency_code` AND ci.`status` = 1
+JOIN `machine_goods_currency_price` s ON s.`mg_id` = mc.`mg_id` AND s.`currency_code` = p.`currency_code`
+SET p.`m_id` = mc.`m_id`,
+    p.`mg_id` = mc.`mg_id`,
+    p.`g_id` = mc.`g_id`,
+    p.`cost_price` = s.`cost_price`,
+    p.`market_price` = s.`market_price`,
+    p.`retail_price` = s.`retail_price`
+WHERE p.`currency_code` <> mcfg.`currency_code`
+  AND s.`m_id` = mc.`m_id`
+  AND s.`g_id` = mc.`g_id`
+  AND IFNULL(mc.`is_multi_goods`, 2) <> 1
+  AND mc.`mg_id` > 0
+  AND mc.`g_id` > 0
+  AND (p.`m_id` <> mc.`m_id` OR p.`mg_id` <> mc.`mg_id` OR p.`g_id` <> mc.`g_id`);
+
+-- 3) 新商品没有该币种价格的旧行：删除，避免切币时串价
+DELETE p
+FROM `machine_channel_currency_price` p
+JOIN `machine_channel` mc ON mc.`mc_id` = p.`mc_id`
+JOIN `machine_config` mcfg ON mcfg.`m_id` = mc.`m_id`
+JOIN `currency_info` ci ON ci.`currency_code` = p.`currency_code` AND ci.`status` = 1
+LEFT JOIN `machine_goods_currency_price` s ON s.`mg_id` = mc.`mg_id`
+  AND s.`currency_code` = p.`currency_code` AND s.`m_id` = mc.`m_id` AND s.`g_id` = mc.`g_id`
+WHERE p.`currency_code` <> mcfg.`currency_code`
+  AND s.`mgcp_id` IS NULL
+  AND IFNULL(mc.`is_multi_goods`, 2) <> 1
+  AND mc.`mg_id` > 0
+  AND mc.`g_id` > 0
+  AND (p.`m_id` <> mc.`m_id` OR p.`mg_id` <> mc.`mg_id` OR p.`g_id` <> mc.`g_id`);
+

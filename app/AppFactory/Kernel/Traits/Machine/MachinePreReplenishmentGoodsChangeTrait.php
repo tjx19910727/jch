@@ -2,6 +2,8 @@
 
 namespace app\AppFactory\Kernel\Traits\Machine;
 
+use app\AppFactory\Kernel\Service\Currency\MachineCurrencyPriceService;
+
 trait MachinePreReplenishmentGoodsChangeTrait
 {
     /**
@@ -137,6 +139,20 @@ trait MachinePreReplenishmentGoodsChangeTrait
         $targetMc['stock'] = $quantity;
         if (!$this->updateMachineChannel($targetMc)) {
             throw new \Exception('货道商品更新失败');
+        }
+        // 预补货换品改写货道商品身份后，自愈该货道各启用币种价格事实行，避免旧商品价格残留阻断切币。
+        if (intval($mc['g_id'] ?? 0) !== intval($targetMc['g_id'] ?? 0)) {
+            try {
+                $operatorId = intval($this->manager['manager_id'] ?? 0);
+                (new MachineCurrencyPriceService())->repairMachineChannelCurrencyIdentities(
+                    intval($targetMc['m_id'] ?? ($this->machine['m_id'] ?? 0)),
+                    [intval($targetMc['mc_id'] ?? 0)],
+                    $operatorId ?: intval($operator),
+                    false
+                );
+            } catch (\Throwable $e) {
+                actionException($e, 1, 'repairMachineChannelCurrencyIdentities');
+            }
         }
 
         return $targetMc;
