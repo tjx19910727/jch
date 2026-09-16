@@ -1178,6 +1178,19 @@ class ApiClient extends ReceiveBaseClient
             && in_array($data['show_amount_decimals'], [0, 1, '0', '1'], true)
             ? intval($data['show_amount_decimals'])
             : 1;
+        if (!isset($data['shelf_capture_exposure'])
+            || !is_numeric($data['shelf_capture_exposure'])
+            || (float)$data['shelf_capture_exposure'] < -0.8
+            || (float)$data['shelf_capture_exposure'] > 0.8) {
+            $data['shelf_capture_exposure'] = '-0.4';
+        } else {
+            $data['shelf_capture_exposure'] = number_format(
+                (float)$data['shelf_capture_exposure'],
+                1,
+                '.',
+                ''
+            );
+        }
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
             if ($pay_type) {

@@ -538,4 +538,21 @@ class Laser extends BaseController
         return $this->machineApp->laser->reportStatus();
     }
 
+    /**
+     * 设备一次性上传完整理货批次。
+     * @return array|\think\response\Json
+     */
+    public function uploadTallyRecords()
+    {
+        return $this->machineApp->laser->uploadTallyRecords();
+    }
+
+    /**
+     * 分页查询当前设备的理货批次及批次下全部记录。
+     * @return array|\think\response\Json
+     */
+    public function getTallyRecords()
+    {
+        return $this->machineApp->laser->getTallyRecords();
+    }
 }
