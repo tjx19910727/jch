@@ -72,6 +72,24 @@ class MachineTarget extends Common
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '保存失败'), $res['data'] ?? []);
     }
 
+    /**
+     * 导入设备目标值
+     */
+    public function import()
+    {
+        $postData = input();
+        $filePath = trim((string) ($postData['file_path'] ?? ''));
+        if ($filePath === '') {
+            return returnState(100, '请先上传导入文件', []);
+        }
+
+        $svc = new MachineTargetService($this->app);
+        $res = $svc->import([
+            'file_path' => $filePath,
+            'auth_where' => $this->getWhere([]),
+        ]);
+        return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '导入失败'), $res['data'] ?? []);
+    }
 
     /**
      * 读取目标配置详情
