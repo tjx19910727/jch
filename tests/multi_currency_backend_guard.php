@@ -95,7 +95,7 @@ $checks = [
         && strpos($currencyPriceService, "Db::name('channel_goods_batch')->where('mc_id', intval(\$mc['mc_id']))->count()") === false
         && strpos($currencyPriceService, "Db::name('channel_goods_batch')->whereIn('mc_id', \$mcIds)->count()") === false,
     'channel batch guard requires device multi goods switch' => strpos($currencyPriceService, 'protected function isDeviceMultiGoodsEnabled($config)') !== false
-        && substr_count($currencyPriceService, '$this->assertOrdinaryChannels(') === 3
+        && substr_count($currencyPriceService, '$this->assertOrdinaryChannels(') === 4
         && substr_count($currencyPriceService, '$this->isDeviceMultiGoodsEnabled($config)') >= 4,
     'multi currency sync entrypoints exist' => strpos($machineGoodsController, 'public function synchronizationGoods') !== false
         && strpos($machineChannelController, 'public function synchronizationMachineGoodsPrice') !== false

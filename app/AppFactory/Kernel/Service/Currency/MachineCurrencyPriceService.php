@@ -345,6 +345,80 @@ class MachineCurrencyPriceService
     }
 
     /**
+     * 批量保存选中普通单商品货道的一个币种价格（人工填值），货道之间相互独立。
+     *
+     * 与 syncMachineChannelCurrencies 的区别：价格来源是本次请求填写的三价
+     * （只传部分字段时用该货道现有事实行补齐），而不是设备商品的币种价格。
+     * 规则：
+     *   1) 只接受普通单商品货道，出现未绑定设备商品/多商品货道/在售多商品批次时整批回滚；
+     *   2) 逐条写 machine_channel_currency_price 事实行，缺失即新增；
+     *   3) 币种等于设备当前币种时同步回写 machine_channel 活跃快照，保持事实行与快照一致；
+     *   4) 全批共用一个事务，活跃快照变化时 currency_version 只递增一次。
+     *
+     * @param int    $mId
+     * @param array  $mcIds
+     * @param array  $priceInput 三价片段，例如 ['retail_price' => '6.500']
+     * @param string $currencyCode 留空表示设备当前币种
+     * @param int    $operatorId
+     * @param bool   $manageTransaction 由调用方事务包裹时传 false，避免嵌套事务
+     * @return array
+     */
+    public function saveMachineChannelPrices($mId, array $mcIds, array $priceInput, $currencyCode = '', $operatorId = 0, $manageTransaction = true)
+    {
+        $mId = intval($mId);
+        $mcIds = CurrencyPriceSupport::normalizeIds($mcIds, $this->syncLimit);
+        $save = function () use ($mId, $mcIds, $priceInput, $currencyCode, $operatorId) {
+            $config = $this->getMachineCurrency($mId, true);
+            if ($currencyCode === '') {
+                $currencyCode = $config['currency_code'];
+            } else {
+                $currencyCode = $this->catalog->normalizeCode($currencyCode);
+            }
+            $this->catalog->assertEnabled($currencyCode);
+            $rows = Db::name('machine_channel')->where('m_id', $mId)->whereIn('mc_id', $mcIds)->lock(true)->select()->toArray();
+            if (count($rows) !== count($mcIds)) {
+                throw new \InvalidArgumentException('选中的货道包含不存在或不属于当前设备的记录');
+            }
+            $this->assertOrdinaryChannels($rows, $this->isDeviceMultiGoodsEnabled($config));
+            $existingRows = Db::name('machine_channel_currency_price')
+                ->whereIn('mc_id', $mcIds)
+                ->where('currency_code', $currencyCode)
+                ->lock(true)
+                ->select()
+                ->toArray();
+            $existingMap = [];
+            foreach ($existingRows as $existing) {
+                $existingMap[intval($existing['mc_id'])] = $existing;
+            }
+
+            $changed = 0;
+            $unchanged = 0;
+            $snapshotChanged = false;
+            foreach ($rows as $mc) {
+                $mcId = intval($mc['mc_id']);
+                $existing = isset($existingMap[$mcId]) ? $existingMap[$mcId] : null;
+                // 只传部分价格字段时用现有事实行补齐；首次保存必须提供完整三价。
+                $price = CurrencyPriceSupport::normalizePriceRow($priceInput, $existing ?: []);
+                if (!$existing && CurrencyPriceSupport::isZeroPrice($price)) {
+                    throw new \InvalidArgumentException('该币种价格尚未配置，不能直接保存全为0的三价，请填写真实三价后提交');
+                }
+                if ($this->upsertMachineChannelPrice($mc, $currencyCode, $price, $operatorId, $existing)) {
+                    $changed++;
+                } else {
+                    $unchanged++;
+                }
+                if ($currencyCode === $config['currency_code'] && !CurrencyPriceSupport::pricesEqual($mc, $price)) {
+                    Db::name('machine_channel')->where('mc_id', $mcId)->update($price);
+                    $snapshotChanged = true;
+                }
+            }
+            $version = $snapshotChanged ? $this->bumpCurrencyVersion($mId) : $config['currency_version'];
+            return $this->buildResult($config, $currencyCode, $version, $changed, $unchanged, $snapshotChanged);
+        };
+        return $manageTransaction ? Db::transaction($save) : $save();
+    }
+
+    /**
      * 将选中货道的一个币种价格从设备商品同步（兼容薄壳）。
      */
     public function syncMachineChannels($mId, $currencyCode, $mcIds, $operatorId = 0, $manageTransaction = true)

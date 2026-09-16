@@ -1758,6 +1758,12 @@ class MachineChannelClient extends ManagementClient
 
     /**
      * 批量修改货道信息
+     *
+     * 支持：批量设置赠分/库存预警/到期时间；批量修改所选货道「设备当前币种」的零售价。
+     * 零售价由币种价格服务同事务写入 machine_channel_currency_price 事实行，
+     * 并回写 machine_channel 活跃快照，整批只递增一次 currency_version、只通知设备一次；
+     * 任一货道失败（不存在/未绑定设备商品/多商品货道/价格非法）整批回滚。
+     *
      * @param $postData
      * @return array|string
      */
@@ -1772,8 +1778,10 @@ class MachineChannelClient extends ManagementClient
         if (!$mc_ids) return $this->r(100, $this->lang("VMachineChannel.mc_id_require"));
 
         $updateData = [];
-        if(isset($postData['retail_price'])){
-            return $this->r(100, '普通货道售价请使用目标币种改价接口');
+        // 普通货道零售价：只作用于设备当前币种，交给币种价格服务同事务写事实表 + 活跃快照。
+        $priceInput = [];
+        if (isset($postData['retail_price']) && trim((string)$postData['retail_price']) !== '') {
+            $priceInput['retail_price'] = $postData['retail_price'];
         }
         if(isset($postData['gift_points'])){
             $updateData['gift_points'] = $postData['gift_points'] < 0 ? 0 : $postData['gift_points'];
@@ -1785,8 +1793,11 @@ class MachineChannelClient extends ManagementClient
             $exp_arr = explode(" ",$postData['expire_time']);
             $updateData['expire_time'] = strtotime($exp_arr[0] . ' 23:59:59');
         }
-        if (!$updateData) return $this->r(100, $this->lang("action_fail"));
+        if (!$updateData && !$priceInput) return $this->r(100, $this->lang("action_fail"));
 
+        $priceMcIds = [];
+        $priceResult = null;
+        $this->startTrans();
         try {
             foreach ($mc_ids as $mc_id) {
                 $mc = $this->getMachineChannelFind(['mc_id' => $mc_id,'m_id' => $machine['m_id']], 'mc_id,retail_price,gift_points,stock_warning,old_retail_price,old_gift_points,old_stock_warning,machine_id');
@@ -1794,7 +1805,7 @@ class MachineChannelClient extends ManagementClient
 
                 $saveData = $updateData;
                 // 只要传了这个字段，就要保存当前值为旧值
-                if (isset($updateData['retail_price'])) {
+                if ($priceInput) {
                     $saveData['old_retail_price'] = $mc['retail_price'];
                 }
                 if (isset($updateData['gift_points'])) {
@@ -1803,14 +1814,36 @@ class MachineChannelClient extends ManagementClient
                 if (isset($updateData['stock_warning'])) {
                     $saveData['old_stock_warning'] = $mc['stock_warning'];
                 }
-                $this->updateMachineChannel($saveData, ['mc_id' => $mc_id]);
+                if ($saveData) {
+                    $this->updateMachineChannel($saveData, ['mc_id' => $mc_id]);
+                }
+                if ($priceInput) {
+                    $priceMcIds[] = intval($mc_id);
+                }
                 // 发送触发货道更新数据
                 $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => (int)$mc_id]);
             }
-            return $this->r(200, $this->lang("action_success"));
+            if ($priceInput) {
+                if (!$priceMcIds) throw new \InvalidArgumentException($this->lang("VMachineChannel.mc_data_empty"));
+                // 普通货道改价仅当前币种有效：同事务写币种事实表与活跃快照，整批只递增一次版本。
+                $priceResult = (new MachineCurrencyPriceService())->saveMachineChannelPrices(
+                    intval($machine['m_id']),
+                    $priceMcIds,
+                    $priceInput,
+                    '',
+                    intval(isset($this->manager['manager_id']) ? $this->manager['manager_id'] : 0),
+                    false
+                );
+            }
+            $this->commitTrans();
         } catch (\Exception $e) {
+            $this->rollbackTrans();
             return $this->r(100, $e->getMessage());
         }
+        if ($priceResult) {
+            $this->notifyCurrencySnapshot($priceResult);
+        }
+        return $this->r(200, $this->lang("action_success"));
     }
 
     /**

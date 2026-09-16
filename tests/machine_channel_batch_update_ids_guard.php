@@ -11,7 +11,8 @@ $validator = file_get_contents($root . '/app/management/validate/Machine/VMachin
 $client = file_get_contents($root . '/app/AppFactory/Management/Machine/MachineChannelClient.php');
 $trait = file_get_contents($root . '/app/AppFactory/Kernel/Traits/Machine/MachineChannelTrait.php');
 $controller = file_get_contents($root . '/app/management/controller/machine/MachineChannel.php');
-if ($validator === false || $client === false || $trait === false || $controller === false) {
+$service = file_get_contents($root . '/app/AppFactory/Kernel/Service/Currency/MachineCurrencyPriceService.php');
+if ($validator === false || $client === false || $trait === false || $controller === false || $service === false) {
     throw new RuntimeException('cannot read machine channel files');
 }
 
@@ -36,6 +37,7 @@ $normalize = guardBatchUpdateBody($client, 'normalizeBatchMcIds');
 $batchUpdateMc = guardBatchUpdateBody($client, 'batchUpdateMc');
 $batchRestoreMc = guardBatchUpdateBody($client, 'batchRestoreMc');
 $batchUpdate = guardBatchUpdateBody($controller, 'batchUpdate');
+$saveChannelPrices = guardBatchUpdateBody($service, 'saveMachineChannelPrices');
 
 $checks = [
     '校验规则不再强制数组' => strpos($validator, '"mc_ids" => "require|checkMcIds"') !== false
@@ -59,7 +61,26 @@ $checks = [
     '批量还原同样走归一化（同一 updateAll 场景）' => $batchRestoreMc !== ''
         && strpos($batchRestoreMc, '$this->normalizeBatchMcIds($postData[\'mc_ids\'] ?? [])') !== false,
     'client 保持非法/空值提示' => strpos($batchUpdateMc, 'VMachineChannel.mc_id_require') !== false,
-    '普通货道售价仍走目标币种改价接口' => strpos($batchUpdateMc, '普通货道售价请使用目标币种改价接口') !== false,
+    '零售价不再被直接拦截，改为收集 priceInput' => strpos($batchUpdateMc, "isset(\$postData['retail_price']) && trim((string)\$postData['retail_price']) !== ''") !== false
+        && strpos($batchUpdateMc, "\$priceInput['retail_price'] = \$postData['retail_price']") !== false
+        && strpos($batchUpdateMc, '普通货道售价请使用目标币种改价接口') === false,
+    '零售价走币种价格服务并交出事务控制' => strpos($batchUpdateMc, 'saveMachineChannelPrices(') !== false
+        && preg_match('/saveMachineChannelPrices\([^;]*?false\s*\);/s', $batchUpdateMc) === 1,
+    '批改整体包在事务内且失败整批回滚' => strpos($batchUpdateMc, '$this->startTrans();') !== false
+        && strpos($batchUpdateMc, '$this->commitTrans();') !== false
+        && strpos($batchUpdateMc, '$this->rollbackTrans();') !== false,
+    '提交后只通知一次币种快照' => strpos($batchUpdateMc, 'if ($priceResult) {') !== false
+        && strpos($batchUpdateMc, '$this->notifyCurrencySnapshot($priceResult);') !== false,
+    '服务层批量改价写事实表 + 当前币种回写快照' => $saveChannelPrices !== ''
+        && strpos($saveChannelPrices, 'upsertMachineChannelPrice(') !== false
+        && strpos($saveChannelPrices, "Db::name('machine_channel')->where('mc_id', \$mcId)->update(\$price);") !== false,
+    '服务层整批只递增一次版本' => $saveChannelPrices !== ''
+        && substr_count($saveChannelPrices, 'bumpCurrencyVersion(') === 1
+        && strpos($saveChannelPrices, '$snapshotChanged ? $this->bumpCurrencyVersion($mId) : $config[\'currency_version\']') !== false,
+    '服务层沿用普通单商品货道与三价校验' => $saveChannelPrices !== ''
+        && strpos($saveChannelPrices, 'assertOrdinaryChannels(') !== false
+        && strpos($saveChannelPrices, 'normalizePriceRow($priceInput, $existing ?: [])') !== false
+        && strpos($saveChannelPrices, 'CurrencyPriceSupport::isZeroPrice($price)') !== false,
     '控制器仍按 updateAll 场景校验后进入 client' => $batchUpdate !== ''
         && strpos($batchUpdate, '$this->validate($postData, $this->validatePath . \'.updateAll\');') !== false
         && strpos($batchUpdate, 'batchUpdateMc($postData, $where)') !== false,
