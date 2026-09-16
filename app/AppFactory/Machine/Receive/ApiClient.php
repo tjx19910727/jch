@@ -650,7 +650,9 @@ class ApiClient extends ReceiveBaseClient
         $where['mg.m_id'] = $this->machine['m_id'];
         $goodsField = "mg.mg_id,mg.m_id,mg.machine_id,mg.g_id,mg.g_name,mg.gc_id,mg.gc_name,mg.pic,mg.sku,mg.bar_code,mg.cost_price,mg.market_price,mg.retail_price,mg.gift_points,mg.available_stock,
         mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf,g.sell_channel,g.exter_url";
-        $data = $this->getMachineGoodsListJoinGoods($where, $this->data['pageNum'] ?? 0, $goodsField);
+        // 设备商品列表按 g_id 倒序；mg/g 两表都有 g_id，必须带表别名避免 ORDER BY 歧义。
+        // 同一 m_id 下同一 g_id 可能有多条设备商品（会绑定到不同货道），追加 mg_id 兜底保证 pageNum 翻页顺序稳定。
+        $data = $this->getMachineGoodsListJoinGoods($where, $this->data['pageNum'] ?? 0, $goodsField, 'mg.g_id desc,mg.mg_id desc');
         $data = is_object($data) && method_exists($data, 'toArray') ? $data->toArray() : $data;
         $items = is_array($data) && isset($data['data']) && is_array($data['data']) ? $data['data'] : $data;
         if (is_array($items)) {
