@@ -107,6 +107,16 @@ class Goods extends Common
     }
 
     /**
+     * 按商品维度统计指定设备状态下的备用库存。
+     * @return mixed
+     */
+    public function getOperatingStandbyGoodsList()
+    {
+        $postData = input();
+        return $this->app->goods->getOperatingStandbyGoodsList($postData);
+    }
+
+    /**
      * 导出商品维度在营设备上架、货道库存与周期销量
      * @return mixed
      */

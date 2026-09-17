@@ -30,6 +30,30 @@ class MachineGoodsModel extends BaseModel
         . '(SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock';
 
     /**
+     * 管理端设备商品列表只展示已上架或仍有任一库存的商品。
+     *
+     * 已有货道的商品需要保留，由列表现有逻辑将可能滞后的 is_shelf 修正为已上架；
+     * 三类货道库存必须沿用 STOCK_FIELDS 的实时汇总口径，不能读取历史遗留列。
+     *
+     * @return string
+     */
+    public static function managementListVisibleWhereRaw()
+    {
+        return '('
+            . 'COALESCE(a.is_shelf, 2) <> 2'
+            . ' OR EXISTS(SELECT 1 FROM machine_channel mc_shelf'
+            . ' WHERE mc_shelf.m_id = a.m_id AND mc_shelf.g_id = a.g_id)'
+            . ' OR COALESCE((SELECT SUM(mc_available.stock) FROM machine_channel mc_available'
+            . ' WHERE mc_available.m_id = a.m_id AND mc_available.status = 1 AND mc_available.mg_id = a.mg_id), 0) <> 0'
+            . ' OR COALESCE((SELECT SUM(mc_disabled.stock) FROM machine_channel mc_disabled'
+            . ' WHERE mc_disabled.m_id = a.m_id AND mc_disabled.status > 1 AND mc_disabled.mg_id = a.mg_id), 0) <> 0'
+            . ' OR COALESCE((SELECT SUM(mc_reserved.frozen_stock) FROM machine_channel mc_reserved'
+            . ' WHERE mc_reserved.m_id = a.m_id AND mc_reserved.mg_id = a.mg_id), 0) <> 0'
+            . ' OR COALESCE(a.standby_stock, 0) <> 0'
+            . ')';
+    }
+
+    /**
      * 新增后下发通知设备更新
      * @param Model $model
      */

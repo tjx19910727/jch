@@ -19,6 +19,61 @@ class MachineChannelStockReportClient extends ManagementClient
     use MachineChannelStockReportTrait, MachineTrait;
 
     /**
+     * 报表视图中的备用库存会按货道重复累计，查询时改为每个设备商品只读取一次。
+     *
+     * @param string $alias
+     * @return string
+     */
+    protected function getStandbyStockExpression()
+    {
+        return 'COALESCE(mg_stock.standby_stock, 0)';
+    }
+
+    /**
+     * 查询页与按商品导出共用商品维度库存字段。
+     *
+     * @param bool $withCategory
+     * @return string
+     */
+    protected function getSkuStockFields($withCategory = false)
+    {
+        $standbyStock = $this->getStandbyStockExpression();
+        $fields = 'a.sku,a.g_name,a.bar_code,a.model,';
+        if ($withCategory) {
+            $fields .= 'a.gc_name,';
+        } else {
+            $fields .= 'a.g_id,';
+        }
+        return $fields
+            . 'a.retail_price,'
+            . 'sum(a.mc_stock) mc_stock,'
+            . 'sum(a.pre_stock) pre_stock,'
+            . 'sum(' . $standbyStock . ') standby_stock,'
+            . 'sum(a.bad_stock) bad_stock,'
+            . 'sum(COALESCE(a.total_stock, 0) + ' . $standbyStock . ') total_stock';
+    }
+
+    /**
+     * 查询库存报表（按商品汇总）。
+     *
+     * @param array $where
+     * @param int $pageNum
+     * @param mixed $isOperating
+     * @return array|string
+     */
+    public function getSkuStockList($where, $pageNum = 0, $isOperating = null)
+    {
+        return $this->getMcsList(
+            $where,
+            $pageNum,
+            $this->getSkuStockFields(false),
+            'total_stock desc',
+            'g_id',
+            $isOperating
+        );
+    }
+
+    /**
      * 查询库存报表
      * @param $where
      * @param int $pageNum
@@ -98,20 +153,19 @@ class MachineChannelStockReportClient extends ManagementClient
         if ($eType == 1) {
             $where = $this->applyStockReportOperatingWhere($where, $isOperating);
             $where = $this->applyStockReportDataScope($where);
-            $field = "sku,g_name,bar_code,model,gc_name,
-        retail_price,
-        sum(mc_stock) mc_stock,
-        sum(pre_stock) pre_stock,
-        sum(standby_stock) standby_stock,
-        sum(bad_stock) bad_stock,
-        sum(total_stock) total_stock";
+            $field = $this->getSkuStockFields(true);
             $group = "g_id";
             $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);
         }
         if ($eType == 2) {
             $where = $this->applyStockReportOperatingWhere($where, $isOperating, 'mcs.m_id');
             $where = $this->applyStockReportDataScope($where, 'mcs.m_id', 'mcs.ao_id');
-            $field = "mcs.machine_id,mcs.machine_name,mcs.sku,mcs.g_name,mcs.model,mcs.gc_name,mcs.retail_price,mcs.mc_stock,mcs.pre_stock,mcs.standby_stock,mcs.bad_stock,mcs.total_stock,m.factory,m.inventory_location";
+            $standbyStock = $this->getStandbyStockExpression();
+            $field = 'mcs.machine_id,mcs.machine_name,mcs.sku,mcs.g_name,mcs.model,mcs.gc_name,'
+                . 'mcs.retail_price,mcs.mc_stock,mcs.pre_stock,'
+                . $standbyStock . ' standby_stock,mcs.bad_stock,'
+                . '(COALESCE(mcs.total_stock, 0) + ' . $standbyStock . ') total_stock,'
+                . 'm.factory,m.inventory_location';
             $list = $this->getMachineChannelStockReportJoinMchList($where,0,$field,"total_stock desc",$group);
         }
         $list = isset($list) && $list ? $list->toArray() : [];

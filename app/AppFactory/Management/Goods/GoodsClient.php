@@ -1708,6 +1708,42 @@ class GoodsClient extends ManagementClient
     }
 
     /**
+     * 按商品维度统计指定设备状态下的备用库存。
+     * 请求和响应结构与 getOperatingGoodsList 保持一致，operating_stock 表示备用库存。
+     *
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function getOperatingStandbyGoodsList($postData)
+    {
+        if (!$this->validateOperatingGoodsStatus($postData)) {
+            return $this->rValidate('在营状态参数错误');
+        }
+
+        $pageNum = intval($postData['pageNum'] ?? 0);
+        $pageIndex = max(1, intval($postData['page'] ?? 1));
+        $query = $this->buildOperatingStandbyGoodsQuery($postData);
+        $query->orderRaw($this->getOperatingStandbyGoodsOrder($postData));
+
+        if ($pageNum > 0) {
+            $page = $query->paginate([
+                'list_rows' => $pageNum,
+                'page' => $pageIndex,
+                'query' => request()->param(),
+            ], false);
+            $result = $page->toArray();
+            $rows = $result['data'] ?? [];
+            $result['data'] = $this->appendOperatingStandbyGoodsDetail($rows, $postData);
+            $result['request_params'] = $this->getOperatingGoodsRequestParams($postData);
+            return $this->rQ($result);
+        }
+
+        $rows = $query->select()->toArray();
+        $rows = $this->appendOperatingStandbyGoodsDetail($rows, $postData);
+        return $this->rQ($rows);
+    }
+
+    /**
      * 返回已生效的业务查询参数，不回传 token 或未知字段。
      * @param array $postData
      * @return array
@@ -1802,6 +1838,111 @@ class GoodsClient extends ManagementClient
 
         $this->applyOperatingGoodsWhere($query, $postData);
         return $query;
+    }
+
+    /**
+     * 构造商品维度备用库存聚合查询。
+     * 备用库存属于设备商品，只按 machine_goods 记录统计，不能按货道数量展开。
+     *
+     * @param array $postData
+     * @return \think\db\Query
+     */
+    private function buildOperatingStandbyGoodsQuery($postData)
+    {
+        $query = Db::table($this->buildOperatingStandbyGoodsSource() . ' mg')
+            ->join('machine m', 'm.m_id = mg.m_id')
+            ->leftJoin('goods g', 'g.g_id = mg.g_id')
+            ->where('m.status', 1)
+            ->where('m.is_operating', $this->getOperatingGoodsStatus($postData))
+            ->where('mg.g_id', '>', 0)
+            ->fieldRaw('
+                mg.g_id,
+                MAX(IFNULL(NULLIF(g.g_name, ""), mg.g_name)) AS g_name,
+                MAX(IFNULL(NULLIF(g.sku, ""), mg.sku)) AS sku,
+                MAX(IFNULL(NULLIF(g.gc_name, ""), mg.gc_name)) AS gc_name,
+                MAX(IFNULL(NULLIF(g.pic, ""), mg.pic)) AS pic,
+                SUM(IFNULL(mg.standby_stock, 0)) AS operating_stock,
+                COUNT(DISTINCT mg.m_id) AS operating_machine_count,
+                0 AS operating_channel_count
+            ')
+            ->group('mg.g_id');
+
+        $this->applyOperatingStandbyGoodsWhere($query, $postData);
+        return $query;
+    }
+
+    /**
+     * 备用库存设备商品基础数据，同一设备同一商品只保留一条。
+     *
+     * @return string
+     */
+    private function buildOperatingStandbyGoodsSource()
+    {
+        return Db::name('machine_goods')
+            ->fieldRaw('m_id,g_id,MAX(mg_id) mg_id,MAX(machine_id) machine_id,'
+                . 'MAX(g_name) g_name,MAX(sku) sku,MAX(gc_name) gc_name,MAX(pic) pic,'
+                . 'MAX(IFNULL(standby_stock,0)) standby_stock')
+            ->where('g_id', '>', 0)
+            ->where('standby_stock', '>', 0)
+            ->group('m_id,g_id')
+            ->buildSql();
+    }
+
+    /**
+     * 备用库存查询条件映射，参数能力与 getOperatingGoodsList 一致。
+     *
+     * @param \think\db\Query $query
+     * @param array $postData
+     */
+    private function applyOperatingStandbyGoodsWhere(&$query, $postData)
+    {
+        $permittedMIds = $this->resolveGoodsOperatingPermittedMachineIds();
+        if ($permittedMIds !== null) {
+            if (!$permittedMIds) {
+                $query->where('mg.m_id', '=', 0);
+            } else {
+                $query->where('mg.m_id', 'in', $permittedMIds);
+            }
+        }
+
+        $gIds = $this->parseOperatingGoodsIds($postData['g_id'] ?? []);
+        if ($gIds) {
+            $query->where('mg.g_id', 'in', $gIds);
+        }
+
+        $mIds = $this->parseOperatingGoodsIds($postData['m_id'] ?? []);
+        if ($mIds) {
+            $query->where('mg.m_id', 'in', $mIds);
+        }
+
+        if (!empty($postData['machine_id'])) {
+            $machineIds = $this->parseOperatingGoodsStrings($postData['machine_id']);
+            if (count($machineIds) > 1) {
+                $query->where('mg.machine_id', 'in', $machineIds);
+            } else {
+                $query->where('mg.machine_id', 'like', '%' . $postData['machine_id'] . '%');
+            }
+        }
+
+        if (!empty($postData['g_name'])) {
+            $gName = $postData['g_name'];
+            $query->where(function ($q) use ($gName) {
+                $q->where('g.g_name', 'like', '%' . $gName . '%')
+                    ->whereOr('mg.g_name', 'like', '%' . $gName . '%');
+            });
+        }
+
+        if (!empty($postData['sku'])) {
+            $sku = $postData['sku'];
+            $query->where(function ($q) use ($sku) {
+                $q->where('g.sku', 'like', '%' . $sku . '%')
+                    ->whereOr('mg.sku', 'like', '%' . $sku . '%');
+            });
+        }
+
+        if (!empty($postData['ao_id'])) {
+            $query->where('m.ao_id', '=', intval($postData['ao_id']));
+        }
     }
 
     /**
@@ -1953,6 +2094,96 @@ class GoodsClient extends ManagementClient
         }
 
         return $rows;
+    }
+
+    /**
+     * 补充备用库存所属设备和周期销量。
+     * 为兼容原接口结构，设备项 channel_stock 承载该设备备用库存，货道明细保持为空。
+     *
+     * @param array $rows
+     * @param array $postData
+     * @return array
+     */
+    private function appendOperatingStandbyGoodsDetail($rows, $postData)
+    {
+        if (!$rows) {
+            return [];
+        }
+
+        $gIds = array_values(array_unique(array_filter(array_map('intval', array_column($rows, 'g_id')))));
+        if (!$gIds) {
+            return $rows;
+        }
+
+        $standbyRows = $this->queryOperatingStandbyGoodsRows($gIds, $postData);
+        $detailMap = [];
+        $goodsMachineMap = [];
+        foreach ($standbyRows as $standby) {
+            $gId = intval($standby['g_id']);
+            $mId = intval($standby['m_id']);
+            if (!isset($detailMap[$gId])) {
+                $detailMap[$gId] = [
+                    'operating_machine_ids' => [],
+                    'operating_machine_list' => [],
+                ];
+            }
+            $detailMap[$gId]['operating_machine_ids'][] = $mId;
+            $detailMap[$gId]['operating_machine_list'][] = [
+                'm_id' => $mId,
+                'machine_id' => $standby['machine_id'],
+                'machine_name' => $standby['machine_name'],
+                'ao_id' => intval($standby['ao_id']),
+                'channel_count' => 0,
+                'channel_stock' => intval($standby['standby_stock']),
+                'channel_list' => [],
+            ];
+            $goodsMachineMap[$gId][$mId] = true;
+        }
+
+        $saleMap = $this->queryOperatingGoodsSales($gIds, $goodsMachineMap, $postData);
+        foreach ($rows as $key => $row) {
+            $gId = intval($row['g_id']);
+            $detail = $detailMap[$gId] ?? [
+                'operating_machine_ids' => [],
+                'operating_machine_list' => [],
+            ];
+            $rows[$key]['g_id'] = $gId;
+            $rows[$key]['operating_stock'] = intval($row['operating_stock'] ?? 0);
+            $rows[$key]['operating_machine_count'] = intval($row['operating_machine_count'] ?? 0);
+            $rows[$key]['operating_channel_count'] = 0;
+            $rows[$key]['operating_machine_ids'] = array_values($detail['operating_machine_ids']);
+            $rows[$key]['operating_machine_list'] = array_values($detail['operating_machine_list']);
+            $rows[$key]['operating_channel_list'] = [];
+            $rows[$key]['period_sale_quantity'] = intval($saleMap[$gId]['period_sale_quantity'] ?? 0);
+            $rows[$key]['period_refund_quantity'] = intval($saleMap[$gId]['period_refund_quantity'] ?? 0);
+            $rows[$key]['period_net_sale_quantity'] = intval($saleMap[$gId]['period_net_sale_quantity'] ?? 0);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * 查询当前页商品的正数备用库存设备商品记录。
+     *
+     * @param array $gIds
+     * @param array $postData
+     * @return array
+     */
+    private function queryOperatingStandbyGoodsRows($gIds, $postData)
+    {
+        $query = Db::table($this->buildOperatingStandbyGoodsSource() . ' mg')
+            ->join('machine m', 'm.m_id = mg.m_id')
+            ->leftJoin('goods g', 'g.g_id = mg.g_id')
+            ->where('m.status', 1)
+            ->where('m.is_operating', $this->getOperatingGoodsStatus($postData))
+            ->where('mg.g_id', 'in', $gIds)
+            ->fieldRaw('mg.g_id,mg.m_id,MAX(mg.machine_id) machine_id,MAX(m.machine_name) machine_name,'
+                . 'MAX(m.ao_id) ao_id,SUM(IFNULL(mg.standby_stock,0)) standby_stock')
+            ->group('mg.g_id,mg.m_id')
+            ->order('mg.g_id desc,mg.m_id asc');
+
+        $this->applyOperatingStandbyGoodsWhere($query, $postData);
+        return $query->select()->toArray();
     }
 
     /**
@@ -2220,6 +2451,26 @@ class GoodsClient extends ManagementClient
         ];
         $field = $sortMap[$sortBy] ?? $sortMap['g_id'];
         return $field . ' ' . $sortOrder . ',mc.g_id desc';
+    }
+
+    /**
+     * 备用库存统计排序，字段能力与 getOperatingGoodsList 一致。
+     *
+     * @param array $postData
+     * @return string
+     */
+    private function getOperatingStandbyGoodsOrder($postData)
+    {
+        $sortBy = $postData['sort_by'] ?? 'g_id';
+        $sortOrder = strtolower($postData['sort_order'] ?? 'desc') == 'asc' ? 'asc' : 'desc';
+        $sortMap = [
+            'g_id' => 'mg.g_id',
+            'operating_stock' => 'operating_stock',
+            'operating_machine_count' => 'operating_machine_count',
+            'operating_channel_count' => 'operating_channel_count',
+        ];
+        $field = $sortMap[$sortBy] ?? $sortMap['g_id'];
+        return $field . ' ' . $sortOrder . ',mg.g_id desc';
     }
 
     /**

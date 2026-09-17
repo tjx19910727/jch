@@ -31,6 +31,7 @@ class MachineGoodsClient extends ManagementClient
 
     public function getMgList($where, $pageNum = 0, $field = "*", $order = "", $currencyCode = '', $hasCostPriceAuth = true)
     {
+        $where = $this->applyManagementListVisibleWhere($where);
         $data = $this->getMachineGoodsList($where, $pageNum, $field, $order);
         if ($pageNum) {
             $isChanged = false;
@@ -60,6 +61,23 @@ class MachineGoodsClient extends ManagementClient
         }
         $data = $this->appendCurrencyPrice($data, $currencyCode, $hasCostPriceAuth);
         return $this->r(200, $this->lang("query_success"), $data);
+    }
+
+    /**
+     * 查询和导出共用设备商品可见范围，避免页面与 Excel 数据集合不一致。
+     *
+     * @param array $where
+     * @return array
+     */
+    protected function applyManagementListVisibleWhere($where)
+    {
+        $visibleWhere = MachineGoodsModel::managementListVisibleWhereRaw();
+        if (isset($where['raw']) && trim($where['raw']) !== '') {
+            $where['raw'] = '(' . $where['raw'] . ') AND ' . $visibleWhere;
+        } else {
+            $where['raw'] = $visibleWhere;
+        }
+        return $where;
     }
 
     public function getGcList($where)
@@ -281,6 +299,7 @@ class MachineGoodsClient extends ManagementClient
 
     public function exportMg($where, $hasCostPriceAuth = true)
     {
+        $where = $this->applyManagementListVisibleWhere($where);
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
         // 可用/不可用/预定量取自 machine_channel 货道库存汇总，与列表接口口径保持一致
         // （machine_goods 上的同名列已废弃且恒为 0，直接取会导致导出的可用库存为 0）。
