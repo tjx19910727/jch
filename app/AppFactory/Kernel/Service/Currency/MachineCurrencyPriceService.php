@@ -120,7 +120,12 @@ class MachineCurrencyPriceService
                 ->where(['mc_id' => intval($mcId), 'currency_code' => $currencyCode])
                 ->lock(true)
                 ->find();
-            $price = CurrencyPriceSupport::normalizePriceRow($priceInput, $existing ?: []);
+            // 缺事实行时用「设备当前币种的 machine_channel 活跃快照」兜底未提交的价格字段，
+            // 避免“编辑时只改了零售价”在缺价货道上直接抛“缺少价格字段：cost_price”。
+            $price = CurrencyPriceSupport::normalizePriceRow(
+                $this->mergeSnapshotPriceFallback($priceInput, $mc, $currencyCode, $config, $existing),
+                $existing ?: []
+            );
             if (!$existing && CurrencyPriceSupport::isZeroPrice($price)) {
                 throw new \InvalidArgumentException('该币种价格尚未配置，不能直接保存全为0的三价，请填写真实三价后提交');
             }
@@ -398,7 +403,12 @@ class MachineCurrencyPriceService
                 $mcId = intval($mc['mc_id']);
                 $existing = isset($existingMap[$mcId]) ? $existingMap[$mcId] : null;
                 // 只传部分价格字段时用现有事实行补齐；首次保存必须提供完整三价。
-                $price = CurrencyPriceSupport::normalizePriceRow($priceInput, $existing ?: []);
+                // 缺事实行时用设备当前币种的 machine_channel 活跃快照兜底（见 mergeSnapshotPriceFallback），
+                // 避免批量改零售价在缺价货道上整批失败。
+                $price = CurrencyPriceSupport::normalizePriceRow(
+                    $this->mergeSnapshotPriceFallback($priceInput, $mc, $currencyCode, $config, $existing),
+                    $existing ?: []
+                );
                 if (!$existing && CurrencyPriceSupport::isZeroPrice($price)) {
                     throw new \InvalidArgumentException('该币种价格尚未配置，不能直接保存全为0的三价，请填写真实三价后提交');
                 }
@@ -566,6 +576,52 @@ class MachineCurrencyPriceService
             Db::name('machine_channel_currency_price')->insert($data);
         }
         return true;
+    }
+
+    /**
+     * 缺事实行时，用「设备当前币种的 machine_channel 活跃快照」补齐未提交的价格字段。
+     *
+     * 背景：普通货道改价入口（machine.machine_channel/update、batchUpdate）只提交用户改动的字段，
+     * 而币种价格服务要求首次保存必须给出完整三价；缺事实行时既无入参也无库值可补，
+     * 只能抛“缺少价格字段：cost_price”，运营侧无法自助恢复。
+     * machine_channel 的这三列保存的正是设备当前币种价格，因此缺事实行时可直接兜底。
+     *
+     * 规则：
+     *   1) 已有事实行时不兜底（事实行才是该币种价格的权威来源：入参优先，其次事实行）；
+     *   2) 保存币种必须等于设备当前币种（快照列只保存活跃币种价，其它币种仍要求完整三价）；
+     *   3) 快照值非法（历史 -1 占位、空值等）时不给兜底，保留原“缺少价格字段”提示，宁可不写也不串价；
+     *   4) 入参为空串视为未提供，交由快照兜底。
+     *
+     * @param array  $priceInput   调用方提交的三价片段
+     * @param mixed  $mc           machine_channel 行（含三价快照列）
+     * @param string $currencyCode 本次保存的币种
+     * @param array  $config       设备币种配置（getMachineCurrency 返回）
+     * @param mixed  $existing     machine_channel_currency_price 现有事实行
+     * @return array
+     */
+    protected function mergeSnapshotPriceFallback(array $priceInput, $mc, $currencyCode, array $config, $existing)
+    {
+        if ($existing || !is_array($mc)) {
+            return $priceInput;
+        }
+        if ($currencyCode !== ($config['currency_code'] ?? '')) {
+            return $priceInput;
+        }
+        foreach (CurrencyPriceSupport::PRICE_FIELDS as $field) {
+            if (array_key_exists($field, $priceInput) && trim((string)$priceInput[$field]) !== '') {
+                continue;
+            }
+            $snapshot = isset($mc[$field]) ? $mc[$field] : null;
+            if ($snapshot === null || $snapshot === '') {
+                continue;
+            }
+            try {
+                $priceInput[$field] = CurrencyPriceSupport::normalizePrice($snapshot, $field);
+            } catch (\InvalidArgumentException $e) {
+                // 快照值非法时保持原提示，避免把 -1 之类的占位价写成真实价格。
+            }
+        }
+        return $priceInput;
     }
 
     protected function assertOrdinaryChannel($mc, $deviceMultiGoodsEnabled = false)

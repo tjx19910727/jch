@@ -1262,7 +1262,7 @@ class MachineChannelClient extends ManagementClient
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
+            return $this->rTryCatch($this->formatChannelPriceFailure($e->getMessage()));
         }
     }
 
@@ -1757,6 +1757,24 @@ class MachineChannelClient extends ManagementClient
     }
 
     /**
+     * 把币种价格服务的内部校验异常转成运营可操作的提示。
+     *
+     * 例：'缺少价格字段：cost_price' 属于服务层内部文案，直接回给前端无法自助恢复
+     * （且历史实现把它包装成 3301 异常态）。这里统一改成“下一步做什么”。
+     *
+     * @param string $message
+     * @return string
+     */
+    protected function formatChannelPriceFailure($message)
+    {
+        $message = (string)$message;
+        if (strpos($message, '缺少价格字段') === 0) {
+            return '该货道当前币种价格尚未初始化，请补全成本价/市场价/零售价后提交，或先执行「货道币种价格同步」补齐币种价格';
+        }
+        return $message;
+    }
+
+    /**
      * 批量修改货道信息
      *
      * 支持：批量设置赠分/库存预警/到期时间；批量修改所选货道「设备当前币种」的零售价。
@@ -1841,7 +1859,8 @@ class MachineChannelClient extends ManagementClient
             $this->commitTrans();
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            return $this->r(100, $e->getMessage());
+            actionException($e, 1);
+            return $this->r(100, $this->formatChannelPriceFailure($e->getMessage()));
         }
         if ($priceResult) {
             $this->notifyCurrencySnapshot($priceResult);

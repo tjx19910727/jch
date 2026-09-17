@@ -79,7 +79,8 @@ $checks = [
         && strpos($saveChannelPrices, '$snapshotChanged ? $this->bumpCurrencyVersion($mId) : $config[\'currency_version\']') !== false,
     '服务层沿用普通单商品货道与三价校验' => $saveChannelPrices !== ''
         && strpos($saveChannelPrices, 'assertOrdinaryChannels(') !== false
-        && strpos($saveChannelPrices, 'normalizePriceRow($priceInput, $existing ?: [])') !== false
+        && strpos($saveChannelPrices, 'mergeSnapshotPriceFallback($priceInput, $mc, $currencyCode, $config, $existing)') !== false
+        && strpos($saveChannelPrices, 'normalizePriceRow(') !== false
         && strpos($saveChannelPrices, 'CurrencyPriceSupport::isZeroPrice($price)') !== false,
     '控制器仍按 updateAll 场景校验后进入 client' => $batchUpdate !== ''
         && strpos($batchUpdate, '$this->validate($postData, $this->validatePath . \'.updateAll\');') !== false
