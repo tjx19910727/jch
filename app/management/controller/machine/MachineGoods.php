@@ -153,4 +153,70 @@ class MachineGoods extends Common
         return $this->app->machineGoods->synchronizationGoodsPrice($postData);
     }
 
+    /**
+     * 设备商品库存变化统计。
+     * 请求参数：m_id、g_id、start_time、end_time（日期 'Y-m-d' 或时间戳）。
+     * 返回区间内的初始库存、累计上架、累计下架、累计销售、剩余库存，
+     * 并附等式校验（初始库存 + 累计上架 = 累计下架 + 累计销售 + 剩余库存）与四方对账差额。
+     * @return array|\think\response\Json
+     */
+    public function getStockChangeStats()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.stockChangeStats');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->getStockChangeStats($postData);
+    }
+
+    /**
+     * 累计上架明细（补货单 quantity > 0，附同刻库存流水日志，可按单据/日志双向追溯）。
+     * 请求参数：m_id、g_id、start_time、end_time、pageNum、pageSize。
+     * @return array|\think\response\Json
+     */
+    public function getStockChangeShelfList()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.stockChangeDetail');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->getStockChangeShelfList($postData);
+    }
+
+    /**
+     * 累计下架明细（补货单 quantity < 0，附同刻库存流水日志）。
+     * 请求参数同 getStockChangeShelfList。
+     * @return array|\think\response\Json
+     */
+    public function getStockChangeUnshelfList()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.stockChangeDetail');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->getStockChangeUnshelfList($postData);
+    }
+
+    /**
+     * 累计销售明细（订单明细，带订单号/子订单ID，可按订单追溯）。
+     * 请求参数同 getStockChangeShelfList。
+     * @return array|\think\response\Json
+     */
+    public function getStockChangeSaleList()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.stockChangeDetail');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->getStockChangeSaleList($postData);
+    }
+
 }

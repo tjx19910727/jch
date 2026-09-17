@@ -18,6 +18,7 @@ use app\AppFactory\Kernel\Support\Currency\CurrencyPriceSupport;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsStockChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -27,6 +28,7 @@ class MachineGoodsClient extends ManagementClient
     use MachineGoodsTrait;
     use MachineChannelTrait;
     use MachineTrait;
+    use MachineGoodsStockChangeTrait;
     use GoodsCategoryTrait,GoodsTrait;
 
     public function getMgList($where, $pageNum = 0, $field = "*", $order = "", $currencyCode = '', $hasCostPriceAuth = true)
@@ -440,5 +442,97 @@ class MachineGoodsClient extends ManagementClient
             'currencySnapshotUpdated',
             ['currency_code' => $result['active_currency_code'], 'currency_version' => intval($result['currency_version'])]
         );
+    }
+
+    /**
+     * 设备商品库存变化统计（m_id + g_id + 起止时间）：
+     * 返回初始库存、累计上架、累计下架、累计销售、剩余库存，并给出等式校验与四方对账差额。
+     */
+    public function getStockChangeStats($postData)
+    {
+        try {
+            $this->assertStockChangeMachineScope($postData['m_id'] ?? 0);
+            $data = $this->getStockChangeStatsData($postData);
+            return $this->r(200, $this->lang('query_success'), $data);
+        } catch (\Exception $e) {
+            actionException($e, 1, 'getStockChangeStats');
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 累计上架明细（补货单 quantity > 0，附同刻库存流水日志佐证）。
+     */
+    public function getStockChangeShelfList($postData)
+    {
+        return $this->stockChangeDetailResponse($postData, 'shelved');
+    }
+
+    /**
+     * 累计下架明细（补货单 quantity < 0，附同刻库存流水日志佐证）。
+     */
+    public function getStockChangeUnshelfList($postData)
+    {
+        return $this->stockChangeDetailResponse($postData, 'unshelved');
+    }
+
+    /**
+     * 累计销售明细（订单明细 + 订单号，可按订单追溯）。
+     */
+    public function getStockChangeSaleList($postData)
+    {
+        return $this->stockChangeDetailResponse($postData, 'sold');
+    }
+
+    /**
+     * 明细接口统一响应（含数据范围校验与异常兜底）。
+     */
+    protected function stockChangeDetailResponse($postData, $direction)
+    {
+        try {
+            $this->assertStockChangeMachineScope($postData['m_id'] ?? 0);
+            if ($direction === 'shelved') {
+                $data = $this->getStockChangeShelfDetailData($postData);
+            } elseif ($direction === 'unshelved') {
+                $data = $this->getStockChangeUnshelfDetailData($postData);
+            } else {
+                $data = $this->getStockChangeSaleDetailData($postData);
+            }
+            return $this->r(200, $this->lang('query_success'), $data);
+        } catch (\Exception $e) {
+            actionException($e, 1, 'getStockChangeDetail_' . $direction);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 数据范围校验：设备存在，且属于当前账号可管范围（主账号按 ao_id、子账号按授权设备）。
+     * 与库存报表 MachineChannelStockReportClient 的数据范围口径保持一致。
+     */
+    protected function assertStockChangeMachineScope($mId)
+    {
+        $mId = intval($mId);
+        if ($mId <= 0) {
+            throw new \InvalidArgumentException($this->lang('VMachineGoods.m_id_require'));
+        }
+        $aoId = intval($this->getMachineValue(['m_id' => $mId], 'ao_id'));
+        if ($aoId <= 0) {
+            throw new \InvalidArgumentException($this->lang('VMachine.machine_no_data'));
+        }
+        if (intval($this->manager['pid'] ?? 0) > 0) {
+            $authed = $this->getAuthManagerMachineColumn(
+                ['manager_id' => intval($this->manager['manager_id'] ?? 0)],
+                'm_id'
+            );
+            $authed = array_map('intval', (array)$authed);
+            if (!in_array($mId, $authed, true)) {
+                throw new \InvalidArgumentException('无权查看该设备的库存数据');
+            }
+            return true;
+        }
+        if ($aoId !== intval($this->manager['ao_id'] ?? 0)) {
+            throw new \InvalidArgumentException('无权查看该设备的库存数据');
+        }
+        return true;
     }
 }
