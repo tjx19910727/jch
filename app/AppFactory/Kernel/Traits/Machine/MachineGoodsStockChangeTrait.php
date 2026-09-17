@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\Machine;
 
+use app\AppFactory\Kernel\Service\Stock\MachineGoodsStockSnapshotService;
 use think\facade\Db;
 
 /**
@@ -171,14 +172,26 @@ trait MachineGoodsStockChangeTrait
         $endTime = $query['end_time'];
 
         $anchor = $this->getMachineGoodsStockAnchor($mId, $gId);
-        // 期末库存：end_time 早于当前时间时，以实物锚点扣除 [end_time, now] 的台账净额回推
+        $snapshotService = new MachineGoodsStockSnapshotService();
+
+        // 期末库存：① end_time >= now → 实物锚点；② 有当日或之前快照 → 快照；③ 否则由锚点按台账回推
         $closingStock = $anchor['total_stock'];
         $closingSource = 'anchor_now';
+        $closingSnapshot = null;
         if ($endTime < time()) {
-            $after = $this->sumStockLedger($mId, $gId, $endTime, time());
-            $closingStock = $anchor['total_stock'] - ($after['shelved'] - $after['unshelved'] - $after['sold']);
-            $closingSource = 'derived_from_anchor';
+            $closingSnapshot = $snapshotService->findSnapshotAt($mId, $gId, $endTime, false);
+            if ($closingSnapshot) {
+                $closingStock = $closingSnapshot['total_stock'];
+                $closingSource = 'snapshot';
+            } else {
+                $after = $this->sumStockLedger($mId, $gId, $endTime, time());
+                $closingStock = $anchor['total_stock'] - ($after['shelved'] - $after['unshelved'] - $after['sold']);
+                $closingSource = 'derived_from_anchor';
+            }
         }
+
+        // 初始库存：① 区间起点之前最近一条日终快照（方案 B，物理事实）；② 否则由期末按台账反推
+        $openingSnapshot = $snapshotService->findSnapshotAt($mId, $gId, $startTime, true);
 
         $ledger = $this->sumStockLedger($mId, $gId, $startTime, $endTime);
         $log = $this->sumGoodsChangeLog($mId, $gId, $startTime, $endTime);
@@ -186,20 +199,35 @@ trait MachineGoodsStockChangeTrait
         $shelved = $ledger['shelved'];
         $unshelved = $ledger['unshelved'];
         $sold = $ledger['sold'];
-        $openingStock = $closingStock - ($shelved - $unshelved - $sold);
+        if ($openingSnapshot) {
+            $openingStock = $openingSnapshot['total_stock'];
+            $openingSource = 'snapshot';
+        } else {
+            $openingStock = $closingStock - ($shelved - $unshelved - $sold);
+            $openingSource = 'derived';
+        }
         $left = $openingStock + $shelved;
         $right = $unshelved + $sold + $closingStock;
         $diff = $left - $right;
 
+        $snapshotInfo = [
+            'opening' => $openingSnapshot,
+            'closing' => $closingSnapshot,
+            'opening_source' => $openingSource,
+            'table' => 'machine_channel_stock',
+            'source_desc' => 'daily=每日 00:10 日终快照（拆分准确）/ backfill=历史回填（仅 total 近似）',
+            'note' => '快照缺失时回退为"实物锚点 − 台账"反推；差额 equation.diff ≠ 0 表示台账与快照之间存在未覆盖的变动',
+        ];
+
         return $this->buildStockChangeStatsResult(
-            $query, $anchor, $closingStock, $closingSource, $ledger, $log, $openingStock, $left, $right, $diff
+            $query, $anchor, $closingStock, $closingSource, $ledger, $log, $openingStock, $left, $right, $diff, $snapshotInfo
         );
     }
 
     /**
      * 组装主统计返回体（含四方对账与口径回显）。
      */
-    protected function buildStockChangeStatsResult(array $query, array $anchor, $closingStock, $closingSource, array $ledger, array $log, $openingStock, $left, $right, $diff)
+    protected function buildStockChangeStatsResult(array $query, array $anchor, $closingStock, $closingSource, array $ledger, array $log, $openingStock, $left, $right, $diff, array $snapshotInfo = [])
     {
         $mId = $query['m_id'];
         $gId = $query['g_id'];
@@ -229,6 +257,8 @@ trait MachineGoodsStockChangeTrait
             'refund_quantity' => $ledger['refund_quantity'],
             'closing_stock' => $closingStock,
             'closing_source' => $closingSource,
+            'opening_source' => $snapshotInfo['opening_source'] ?? 'derived',
+            'snapshot_info' => $snapshotInfo,
             'stock_detail' => $anchor,
             'equation' => [
                 'left' => $left,
@@ -257,6 +287,7 @@ trait MachineGoodsStockChangeTrait
             ],
             'caliber' => [
                 'stock_field' => 'machine_channel.stock（status=1 记 available、status>1 记 disabled，与设备商品列表口径一致）',
+                'snapshot_table' => 'machine_channel_stock（create_date=该日 0 点；source=daily 每日任务 / backfill 历史回填）',
                 'shelved_from' => 'machine_channel_replenishment.quantity > 0',
                 'unshelved_from' => 'machine_channel_replenishment.quantity < 0',
                 'sold_from' => 'sale_orders_details.success_quantity（pay_status=3 且 out_status in (4,6)）',

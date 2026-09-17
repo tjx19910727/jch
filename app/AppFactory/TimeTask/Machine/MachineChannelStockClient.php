@@ -9,6 +9,7 @@
 namespace app\AppFactory\TimeTask\Machine;
 
 
+use app\AppFactory\Kernel\Service\Stock\MachineGoodsStockSnapshotService;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelStockTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -19,31 +20,47 @@ class MachineChannelStockClient extends TimeTaskBase
     use MachineTrait,MachineChannelTrait,MachineChannelStockTrait;
 
     /**
-     * 定时任务-分时段记录库存信息(暂时废弃,改实时获取)
+     * 定时任务-生成设备商品日终库存快照（库存变化统计的"初始库存/剩余库存"数据来源）
+     *
+     * 用法：php think time_task machineChannelStock countMcStock       （每日 00:10，写入昨日日终快照）
+     *       php think stock_snapshot daily --date=2026-09-16           （指定日期补 快照）
+     *
+     * @param string $statDate 快照代表日期（Y-m-d），留空=昨天
      * @return string
      */
-    public function countMcStock()
+    public function countMcStock($statDate = '')
     {
-        $field = "mc.m_id,mc.machine_id,m.machine_name,
-        g.g_id,g.g_name,g.sku,g.bar_code,g.model,
-        sum(CASE mc.status  WHEN 1 THEN mc.stock ELSE 0 END) mc_stock,
-        sum(mc.frozen_stock) pre_stock,
-        sum(CASE WHEN mc.mg_id > 0 THEN IFNULL((SELECT mg.standby_stock FROM machine_goods mg WHERE mg.mg_id = mc.mg_id),0) ELSE 0 END) standby_stock,
-        sum(CASE mc.status  WHEN 3 THEN mc.stock ELSE 0 END) bad_stock,
-        sum(mc.stock) total_stock,
-        g.retail_price,m.ao_id
-        ";
-        $data = $this->getMachineChannelJoinGoodsList([['mc.g_id',">",0]],$field,'','m.ao_id,mc.m_id,mc.g_id');
-        if ($data) {
-            $data = $data->toArray();
-            foreach ($data as $key => $value) {
-                $insert = $value;
-                $insert['create_date'] = strtotime(date("Y-m-d"));
-                $insert['create_time'] = time();
-                $insertAll[] = $insert;
-            }
-            $this->addMachineChannelStockMore($insertAll);
-        }
-        return "处理成功";
+        $result = (new MachineGoodsStockSnapshotService())
+            ->buildSnapshot($statDate, MachineGoodsStockSnapshotService::SOURCE_DAILY);
+        return sprintf(
+            '库存快照完成：stat_date=%s 写入=%d 行（覆盖同日期历史 %d 行）',
+            $result['stat_date'],
+            $result['inserted'],
+            $result['deleted']
+        );
+    }
+
+    /**
+     * 定时任务-历史快照回填（以当前货道库存为锚点，按日台账 上架−下架−销售 逐日反推）
+     *
+     * 用法：php think stock_snapshot backfill --start=2026-06-19 --end=2026-09-16
+     *
+     * @param string $startDate 起始日期（含），留空=90 天前
+     * @param string $endDate   结束日期（含），留空=昨天
+     * @return string
+     */
+    public function backfillMcStock($startDate = '', $endDate = '')
+    {
+        $result = (new MachineGoodsStockSnapshotService())->backfill($startDate, $endDate);
+        $verify = $result['verify_against_check_stock'] ?? [];
+        return sprintf(
+            '历史快照回填完成：%s ~ %s 共 %d 天，%d 个设备商品，写入 %d 行；盘点校验 %d 条',
+            $result['start_date'],
+            $result['end_date'],
+            $result['days'],
+            $result['anchor_count'],
+            $result['inserted'],
+            count($verify)
+        );
     }
 }

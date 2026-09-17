@@ -14,7 +14,12 @@ $client = file_get_contents($root . '/app/AppFactory/Management/Machine/MachineG
 $controller = file_get_contents($root . '/app/management/controller/machine/MachineGoods.php');
 $validator = file_get_contents($root . '/app/management/validate/Machine/VMachineGoods.php');
 $stockFields = file_get_contents($root . '/app/AppFactory/Kernel/Model/Machine/MachineGoodsModel.php');
-if ($trait === false || $client === false || $controller === false || $validator === false || $stockFields === false) {
+$snapshotService = file_get_contents($root . '/app/AppFactory/Kernel/Service/Stock/MachineGoodsStockSnapshotService.php');
+$timeTaskClient = file_get_contents($root . '/app/AppFactory/TimeTask/Machine/MachineChannelStockClient.php');
+$consoleConfig = file_get_contents($root . '/config/console.php');
+$command = file_get_contents($root . '/app/command/StockSnapshot.php');
+if ($trait === false || $client === false || $controller === false || $validator === false || $stockFields === false
+    || $snapshotService === false || $timeTaskClient === false || $consoleConfig === false || $command === false) {
     throw new RuntimeException('cannot read stock change files');
 }
 
@@ -84,6 +89,41 @@ $checks = [
         && strpos($controller, "'.stockChangeDetail'") !== false
         && strpos($validator, '"stockChangeStats" => ["m_id", "g_id", "start_time", "end_time"]') !== false
         && strpos($validator, '"stockChangeDetail" => ["m_id", "g_id", "start_time", "end_time"]') !== false,
+
+    '期初/期末优先取库存快照（方案 B）并回显来源' =>
+        strpos($trait, '$snapshotService = new MachineGoodsStockSnapshotService();') !== false
+        && strpos($trait, '$openingSnapshot = $snapshotService->findSnapshotAt($mId, $gId, $startTime, true);') !== false
+        && strpos($trait, "\$openingSource = 'snapshot';") !== false
+        && strpos($trait, "\$closingSource = 'snapshot';") !== false
+        && strpos($trait, "'opening_source' => \$snapshotInfo['opening_source'] ?? 'derived'") !== false
+        && strpos($trait, "'snapshot_info' => \$snapshotInfo") !== false,
+
+    '快照服务：复用 machine_channel_stock + 幂等 + 来源标记' =>
+        strpos($snapshotService, "Db::name('machine_channel_stock')->where('create_date', \$createDate)->delete();") !== false
+        && strpos($snapshotService, "'source' => \$source,") !== false
+        && strpos($snapshotService, 'SOURCE_DAILY') !== false
+        && strpos($snapshotService, 'SOURCE_BACKFILL') !== false
+        && strpos($snapshotService, "->field('m_id,machine_id,machine_name,g_id,g_name,sku,bar_code,model,mc_stock,pre_stock,standby_stock,bad_stock,total_stock,retail_price,ao_id')") !== false
+        && strpos($snapshotService, 'machine_check_stock_count') !== false,
+
+    '回填只写变化日（首日与盘点日写全量）避免行数爆炸' =>
+        strpos($snapshotService, '$isBaselineDay') !== false
+        && strpos($snapshotService, "\$isFullDay = \$isBaselineDay || isset(\$checkDays[\$createDate]);") !== false
+        && strpos($snapshotService, 'if (!$isFullDay && intval($netsByDay[$dayStart][$key] ?? 0) === 0) {') !== false
+        && strpos($snapshotService, "SELECT DISTINCT create_date FROM machine_check_stock_count WHERE type = 1 AND create_date BETWEEN ? AND ?") !== false,
+
+    '负库存钳制（台账缺口信号保留原值）' =>
+        strpos($snapshotService, "'total_stock' => max(0, \$rawTotal),") !== false
+        && strpos($snapshotService, "'raw_total_stock' => \$rawTotal,") !== false
+        && strpos($snapshotService, "'clamped' => \$rawTotal < 0,") !== false,
+
+    '每日任务与命令入口齐全' =>
+        strpos($timeTaskClient, 'public function countMcStock($statDate = \'\')') !== false
+        && strpos($timeTaskClient, 'public function backfillMcStock($startDate = \'\', $endDate = \'\')') !== false
+        && strpos($consoleConfig, "'stock_snapshot' => 'app\\command\\StockSnapshot',") !== false
+        && strpos($command, "->setName('stock_snapshot')") !== false
+        && strpos($command, "\$action === 'daily'") !== false
+        && strpos($command, "\$action === 'backfill'") !== false,
 ];
 
 $failed = [];
